@@ -75,7 +75,7 @@ test_infer_test_type() {
     bash "$AUTO_SCRIPT" >/dev/null
   )
   subject="$(git -C "$repo" log -1 --pretty=%s)"
-  assert_eq "infer_test_type" "$subject" "test: update 1 file(s)"
+  assert_eq "infer_test_type" "$subject" "test: update tests"
   pass "infer_test_type"
   rm -rf "$repo"
 }
@@ -98,9 +98,9 @@ test_refactor_structured_message() {
   )
   subject="$(git -C "$repo" log -1 --pretty=%s)"
   body="$(git -C "$repo" log -1 --pretty=%B)"
-  assert_eq "refactor_structured_subject" "$subject" "refactor: restructure documentation and add utility scripts"
-  [[ "$body" == *"- Move and reorganize 1 file(s)"* ]] || fail "refactor_structured_body_move"
-  [[ "$body" == *"- Add 1 new utility script file(s)"* ]] || fail "refactor_structured_body_script"
+  assert_eq "refactor_structured_subject" "$subject" "refactor: restructure ai tools documentation and add utility scripts"
+  [[ "$body" == *"- Move AI Tools documentation files to docs directory"* ]] || fail "refactor_structured_body_move"
+  [[ "$body" == *"- Add new utility scripts for file operations"* ]] || fail "refactor_structured_body_script"
   [[ "$body" == *"- Update git encryption documentation"* ]] || fail "refactor_structured_body_docs"
   pass "refactor_structured_message"
   rm -rf "$repo"
@@ -117,6 +117,49 @@ test_custom_message_normalization() {
   subject="$(git -C "$repo" log -1 --pretty=%s)"
   assert_eq "custom_message_normalization" "$subject" "feat(api): add endpoint"
   pass "custom_message_normalization"
+  rm -rf "$repo"
+}
+
+test_mixed_script_and_test_message() {
+  local repo subject body
+  repo="$(make_repo)"
+  (
+    cd "$repo"
+    mkdir -p scripts tests
+    echo "echo v1" > scripts/auto_commit_rewrite.sh
+    echo "ok" > tests/regression.test.js
+    bash "$AUTO_SCRIPT" >/dev/null
+  )
+  subject="$(git -C "$repo" log -1 --pretty=%s)"
+  body="$(git -C "$repo" log -1 --pretty=%B)"
+  assert_eq "mixed_script_and_test_subject" "$subject" "refactor: add utility scripts"
+  [[ "$body" == *"- Add new utility scripts for auto commit rewrite"* ]] || fail "mixed_script_and_test_body_script"
+  [[ "$body" != *"- Update regression tests"* ]] || fail "mixed_script_and_test_body_test"
+  pass "mixed_script_and_test_message"
+  rm -rf "$repo"
+}
+
+test_modified_script_and_test_message() {
+  local repo subject body
+  repo="$(make_repo)"
+  (
+    cd "$repo"
+    mkdir -p scripts tests
+    echo "echo v1" > scripts/auto_commit_rewrite.sh
+    echo "ok1" > tests/regression.test.js
+    git add -A
+    git commit -q -m "chore: seed"
+
+    echo "echo v2" > scripts/auto_commit_rewrite.sh
+    echo "ok2" > tests/regression.test.js
+    bash "$AUTO_SCRIPT" >/dev/null
+  )
+  subject="$(git -C "$repo" log -1 --pretty=%s)"
+  body="$(git -C "$repo" log -1 --pretty=%B)"
+  assert_eq "modified_script_and_test_subject" "$subject" "refactor: update auto commit rewrite scripts"
+  [[ "$body" == *"- Update utility scripts for auto commit rewrite"* ]] || fail "modified_script_and_test_body_script"
+  [[ "$body" != *"- Update regression tests"* ]] || fail "modified_script_and_test_body_test"
+  pass "modified_script_and_test_message"
   rm -rf "$repo"
 }
 
@@ -144,6 +187,8 @@ main() {
   test_infer_test_type
   test_refactor_structured_message
   test_custom_message_normalization
+  test_mixed_script_and_test_message
+  test_modified_script_and_test_message
   test_clean_script_removes_coauthor
   echo "PASS all (${pass_count})"
 }

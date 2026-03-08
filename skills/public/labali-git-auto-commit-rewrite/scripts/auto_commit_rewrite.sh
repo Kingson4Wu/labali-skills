@@ -46,6 +46,24 @@ humanize() {
   echo "$raw" | tr '[:upper:]' '[:lower:]' | sed -E 's/[[:space:]]+/ /g; s/^ +//; s/ +$//'
 }
 
+to_title_case() {
+  local input="$1"
+  [[ -z "$input" ]] && return
+  printf '%s\n' "$input" | awk '{
+    for (i = 1; i <= NF; i++) {
+      lower = tolower($i)
+      if (lower == "ai") {
+        $i = "AI"
+      } else if (lower == "api") {
+        $i = "API"
+      } else {
+        $i = toupper(substr($i,1,1)) tolower(substr($i,2))
+      }
+    }
+    print
+  }'
+}
+
 extract_doc_topic() {
   local path base
   while IFS= read -r path; do
@@ -54,10 +72,46 @@ extract_doc_topic() {
     base="${base%.*}"
     base="$(humanize "$base")"
     case "$base" in
-      readme|changelog|index|skill) continue ;;
+      readme|changelog|index|skill|contributing|security|license|"code of conduct") continue ;;
     esac
     if [[ -n "$base" ]]; then
       echo "$base"
+      return
+    fi
+  done
+}
+
+extract_target_dir() {
+  local path dir
+  path="$1"
+  dir="$(dirname "$path")"
+  dir="${dir##*/}"
+  case "$dir" in
+    .|'') echo "" ;;
+    *) echo "$(humanize "$dir")" ;;
+  esac
+}
+
+extract_script_purpose() {
+  local path base purpose
+  while IFS= read -r path; do
+    [[ -z "$path" ]] && continue
+    base="$(basename "$path")"
+    base="${base%.*}"
+    base="$(humanize "$base")"
+
+    # Remove noisy suffix words.
+    purpose="$(echo "$base" | sed -E 's/(^| )(script|scripts|util|utils|tool|tools)$//g; s/[[:space:]]+/ /g; s/^ +//; s/ +$//')"
+
+    # Keep purpose natural.
+    purpose="$(echo "$purpose" | sed -E 's/ ops$/ operations/; s/ mgmt$/ management/')"
+
+    case "$purpose" in
+      ''|main|index|run) continue ;;
+    esac
+
+    if [[ -n "$purpose" ]]; then
+      echo "$purpose"
       return
     fi
   done
@@ -79,8 +133,8 @@ join_phrases() {
 
 generate_message() {
   local name_status line status path old_path
-  local rename_count=0 add_script_count=0 docs_count=0 other_count=0
-  local -a doc_paths=() content_doc_paths=() phrases=() bullets=()
+  local rename_count=0 add_script_count=0 script_touch_count=0 docs_count=0 other_count=0 test_count=0
+  local -a doc_paths=() content_doc_paths=() renamed_doc_paths=() script_paths=() added_script_paths=() phrases=() bullets=()
 
   name_status="$(git diff --cached --name-status -M)"
   while IFS= read -r line; do
@@ -92,6 +146,9 @@ generate_message() {
         old_path="${old_path%%$'\t'*}"
         path="${line##*$'\t'}"
         rename_count=$((rename_count + 1))
+        if is_doc_path "$path" || is_doc_path "$old_path"; then
+          renamed_doc_paths+=("$path")
+        fi
         ;;
       *)
         path="${line#*$'\t'}"
@@ -105,24 +162,49 @@ generate_message() {
         content_doc_paths+=("$path")
       fi
     elif is_test_path "$path"; then
+      test_count=$((test_count + 1))
       other_count=$((other_count + 1))
-    elif is_script_path "$path" && [[ "$status" == A* ]]; then
-      add_script_count=$((add_script_count + 1))
+    elif is_script_path "$path"; then
+      script_touch_count=$((script_touch_count + 1))
+      script_paths+=("$path")
+      if [[ "$status" == A* ]]; then
+        add_script_count=$((add_script_count + 1))
+        added_script_paths+=("$path")
+      else
+        other_count=$((other_count + 1))
+      fi
     else
       other_count=$((other_count + 1))
     fi
   done <<<"$name_status"
 
-  local topic subject type body=""
+  local topic move_topic move_target_dir script_purpose subject type body=""
   topic=""
+  move_topic=""
+  move_target_dir=""
+  script_purpose=""
+
   if ((${#content_doc_paths[@]} > 0)); then
     topic="$(printf '%s\n' "${content_doc_paths[@]}" | extract_doc_topic || true)"
   elif ((${#doc_paths[@]} > 0)); then
     topic="$(printf '%s\n' "${doc_paths[@]}" | extract_doc_topic || true)"
   fi
 
+  if ((${#renamed_doc_paths[@]} > 0)); then
+    move_topic="$(printf '%s\n' "${renamed_doc_paths[@]}" | extract_doc_topic || true)"
+    move_target_dir="$(extract_target_dir "${renamed_doc_paths[0]}")"
+  fi
+
+  if ((${#added_script_paths[@]} > 0)); then
+    script_purpose="$(printf '%s\n' "${added_script_paths[@]}" | extract_script_purpose || true)"
+  elif ((${#script_paths[@]} > 0)); then
+    script_purpose="$(printf '%s\n' "${script_paths[@]}" | extract_script_purpose || true)"
+  fi
+
   if ((rename_count > 0)); then
-    if ((docs_count > 0)); then
+    if [[ -n "$move_topic" ]]; then
+      phrases+=("restructure ${move_topic} documentation")
+    elif ((docs_count > 0)); then
       phrases+=("restructure documentation")
     else
       phrases+=("restructure project files")
@@ -130,6 +212,12 @@ generate_message() {
   fi
   if ((add_script_count > 0)); then
     phrases+=("add utility scripts")
+  elif ((script_touch_count > 0)); then
+    if [[ -n "$script_purpose" ]]; then
+      phrases+=("update ${script_purpose} scripts")
+    else
+      phrases+=("update utility scripts")
+    fi
   fi
   if ((docs_count > 0)) && ((rename_count == 0)); then
     if [[ -n "$topic" ]]; then
@@ -141,39 +229,56 @@ generate_message() {
 
   subject="$(join_phrases "${phrases[@]-}")"
   if [[ -z "$subject" ]]; then
-    local files_changed
-    files_changed="$(git diff --cached --name-only | wc -l | tr -d ' ')"
-    subject="update ${files_changed} file(s)"
+    if ((test_count > 0)) && ((other_count == test_count)); then
+      subject="update tests"
+    else
+      local files_changed
+      files_changed="$(git diff --cached --name-only | wc -l | tr -d ' ')"
+      subject="update ${files_changed} project files"
+    fi
   fi
 
   if ((rename_count > 0)); then
     type="refactor"
   elif ((docs_count > 0)) && ((other_count == 0)) && ((add_script_count == 0)); then
     type="docs"
-  elif printf '%s\n' "$name_status" | cut -f2- | grep -Eiq '(^|/)(test|tests|__tests__)/|(\.|_)test\.'; then
+  elif ((test_count > 0)) && ((other_count == test_count)) && ((script_touch_count == 0)) && ((docs_count == 0)) && ((rename_count == 0)); then
     type="test"
   else
     type="$(infer_type)"
-    if [[ "$type" == "chore" ]] && ((add_script_count > 0)); then
+    if ((add_script_count > 0 || script_touch_count > 0)); then
       type="refactor"
     fi
   fi
 
   if ((rename_count > 0)); then
-    bullets+=("- Move and reorganize ${rename_count} file(s)")
+    if [[ -n "$move_target_dir" && -n "$move_topic" ]]; then
+      bullets+=("- Move $(to_title_case "$move_topic") documentation files to ${move_target_dir} directory")
+    elif ((docs_count > 0)); then
+      bullets+=("- Move documentation files to organized directories")
+    else
+      bullets+=("- Move files to improve project structure")
+    fi
   fi
   if ((add_script_count > 0)); then
-    bullets+=("- Add ${add_script_count} new utility script file(s)")
+    if [[ -n "$script_purpose" ]]; then
+      bullets+=("- Add new utility scripts for ${script_purpose}")
+    else
+      bullets+=("- Add new utility scripts")
+    fi
+  elif ((script_touch_count > 0)); then
+    if [[ -n "$script_purpose" ]]; then
+      bullets+=("- Update utility scripts for ${script_purpose}")
+    else
+      bullets+=("- Update utility scripts")
+    fi
   fi
   if ((docs_count > 0)); then
     if [[ -n "$topic" ]]; then
       bullets+=("- Update ${topic} documentation")
     else
-      bullets+=("- Update documentation files")
+      bullets+=("- Update documentation content")
     fi
-  fi
-  if ((other_count > 0)); then
-    bullets+=("- Adjust ${other_count} additional file(s)")
   fi
 
   if ((${#bullets[@]} > 0)); then
