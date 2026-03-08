@@ -317,7 +317,13 @@ generate_message() {
     fi
   fi
   if ((docs_count > 0)) && ((rename_count == 0)); then
-    if ((${#doc_actions[@]} >= 2)); then
+    if ((script_touch_count > 0 || add_script_count > 0)) && ((${#doc_actions[@]} >= 1)); then
+      local phrase_mixed
+      phrase_mixed="$(action_to_phrase "${doc_actions[0]}")"
+      if [[ -n "$phrase_mixed" ]]; then
+        phrases+=("${phrase_mixed}")
+      fi
+    elif ((${#doc_actions[@]} >= 2)); then
       local phrase_a phrase_b
       phrase_a="$(action_to_phrase "${doc_actions[0]}")"
       phrase_b="$(action_to_phrase "${doc_actions[1]}")"
@@ -438,11 +444,32 @@ normalize_message() {
   local prefix="${subject%%: *}"
   local normalized_subject="${subject#*: }"
   normalized_subject="$(tr '[:upper:]' '[:lower:]' <<<"${normalized_subject:0:1}")${normalized_subject:1}"
+
+  # Prefer semantic compaction before hard truncation.
+  normalized_subject="$(printf '%s\n' "$normalized_subject" | sed -E \
+    -e 's/auto commit rewrite scripts/auto-commit scripts/g' \
+    -e 's/add Chinese README support/add Chinese README/g' \
+    -e 's/add bilingual readme cross-links/add readme cross-links/g' \
+    -e 's/align installation command/align install command/g' \
+    -e 's/document local symlink setup/document symlink setup/g')"
+
   msg="${prefix}: ${normalized_subject}"
 
   # Keep subject line concise for commit history readability.
   if ((${#msg} > 72)); then
-    msg="${msg:0:69}..."
+    if [[ "$normalized_subject" == *" and "* ]]; then
+      local first_part second_part candidate
+      first_part="${normalized_subject%% and *}"
+      second_part="${normalized_subject#* and }"
+      candidate="${prefix}: ${first_part}; ${second_part}"
+      if ((${#candidate} <= 72)); then
+        msg="$candidate"
+      else
+        msg="${msg:0:69}..."
+      fi
+    else
+      msg="${msg:0:69}..."
+    fi
   fi
 
   if [[ -n "$body" ]]; then

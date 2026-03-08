@@ -84,7 +84,7 @@ DOC
   )
   subject="$(git -C "$repo" log -1 --pretty=%s)"
   body="$(git -C "$repo" log -1 --pretty=%B)"
-  assert_eq "docs_semantic_focus_subject" "$subject" "docs: align installation command and clarify docs ownership"
+  assert_eq "docs_semantic_focus_subject" "$subject" "docs: align install command and clarify docs ownership"
   [[ "$body" == *"- Align installation command with the published skill name"* ]] || fail "docs_semantic_focus_body_install"
   [[ "$body" == *"- Clarify ownership boundaries between AGENTS.md and DEVELOPMENT.md"* ]] || fail "docs_semantic_focus_body_ownership"
   pass "docs_semantic_focus_message"
@@ -108,7 +108,7 @@ DOC
   )
   subject="$(git -C "$repo" log -1 --pretty=%s)"
   body="$(git -C "$repo" log -1 --pretty=%B)"
-  assert_eq "docs_bilingual_readme_subject" "$subject" "docs: add Chinese README support and add bilingual readme cross-links"
+  assert_eq "docs_bilingual_readme_subject" "$subject" "docs: add Chinese README and add readme cross-links"
   [[ "$body" == *"- Add Chinese README support for localized onboarding"* ]] || fail "docs_bilingual_readme_body_cn"
   [[ "$body" == *"- Add bidirectional links between English and Chinese README files"* ]] || fail "docs_bilingual_readme_body_links"
   pass "docs_bilingual_readme_message"
@@ -206,10 +206,36 @@ test_modified_script_and_test_message() {
   )
   subject="$(git -C "$repo" log -1 --pretty=%s)"
   body="$(git -C "$repo" log -1 --pretty=%B)"
-  assert_eq "modified_script_and_test_subject" "$subject" "refactor: update auto commit rewrite scripts"
+  assert_eq "modified_script_and_test_subject" "$subject" "refactor: update auto-commit scripts"
   [[ "$body" == *"- Update utility scripts for auto commit rewrite"* ]] || fail "modified_script_and_test_body_script"
   [[ "$body" != *"- Update regression tests"* ]] || fail "modified_script_and_test_body_test"
   pass "modified_script_and_test_message"
+  rm -rf "$repo"
+}
+
+test_mixed_script_and_docs_no_ellipsis() {
+  local repo subject body
+  repo="$(make_repo)"
+  (
+    cd "$repo"
+    mkdir -p scripts
+    echo "echo v1" > scripts/auto_commit_rewrite.sh
+    cat > README.md <<'DOC'
+# labali-skills
+[中文说明](README.zh-CN.md)
+DOC
+    cat > README.zh-CN.md <<'DOC'
+# labali-skills
+[English](README.md)
+DOC
+    bash "$AUTO_SCRIPT" >/dev/null
+  )
+  subject="$(git -C "$repo" log -1 --pretty=%s)"
+  body="$(git -C "$repo" log -1 --pretty=%B)"
+  assert_eq "mixed_script_and_docs_no_ellipsis_subject" "$subject" "refactor: add utility scripts and add Chinese README"
+  [[ "$subject" != *"..."* ]] || fail "mixed_script_and_docs_no_ellipsis_subject_ellipsis"
+  [[ "$body" == *"- Add Chinese README support for localized onboarding"* ]] || fail "mixed_script_and_docs_no_ellipsis_body_docs"
+  pass "mixed_script_and_docs_no_ellipsis"
   rm -rf "$repo"
 }
 
@@ -241,6 +267,7 @@ main() {
   test_custom_message_normalization
   test_mixed_script_and_test_message
   test_modified_script_and_test_message
+  test_mixed_script_and_docs_no_ellipsis
   test_clean_script_removes_coauthor
   echo "PASS all (${pass_count})"
 }
