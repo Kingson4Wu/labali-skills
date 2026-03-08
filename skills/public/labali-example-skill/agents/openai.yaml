@@ -1,5 +1,0 @@
-version: 1
-interface:
-  display_name: labali-example-skill
-  description: TODO short description
-  default_prompt: TODO default prompt

@@ -1,32 +1,32 @@
 # labali-skills
 
-[中文](README.zh-CN.md)
+[English](README.md)
 
-A skills monorepo for managing reusable skills.
+用于管理可复用 skills 的仓库。
 
-## Install
+## 安装
 
 ```bash
 npx skills add github.com/Kingson4Wu/labali-skills --skill labali-git-auto-commit-rewrite
 ```
 
-Note: `--skill` must match the published skill name.
+说明：`--skill` 必须与发布的 skill 名称一致。
 
-## Local Development
+## 本地开发
 
 ```bash
 git clone git@github.com:Kingson4Wu/labali-skills.git
 ```
 
-Create symlinks:
+建立软链接：
 
 ```bash
-# Ensure local skills directory exists
+# 确保本地 skills 目录存在
 mkdir -p ~/.agents/skills
 
-# Install all public skills
+# 安装全部 public skills
 ln -s ~/programming/kingson4wu/labali-skills/skills/public/* ~/.agents/skills/
 
-# Install only one skill
+# 仅安装单个 skill
 ln -s ~/programming/kingson4wu/labali-skills/skills/public/labali-git-auto-commit-rewrite ~/.agents/skills/
 ```

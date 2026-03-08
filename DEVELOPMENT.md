@@ -1,22 +1,24 @@
 # Skill Monorepo Development Guide
 
-本文档用于统一本仓库中 Skills 的安装方式、开发流程、工程规范与发布门禁。
+This document defines the directory strategy, development flow, engineering standards, and quality gates for skills in this repository.
 
-## 1. 目标与范围
+`DEVELOPMENT.md` is the source of truth for repository standards. `AGENTS.md` only defines assistant execution behavior and references this document.
 
-- 目标：将 Prompt/Skill 作为可维护的软件资产进行工程化管理。
-- 范围：适用于本仓库 `skills/public` 与 `skills/private` 下的全部技能。
+## 1. Goals and Scope
 
-## 2. 核心架构分层
+- Goal: manage prompts/skills as maintainable software assets.
+- Scope: applies to all skills under `skills/public` and `skills/private`.
 
-- Agent 层：负责任务编排与技能选择。
-- Skill 层：能力包（`SKILL.md`、`agents/openai.yaml`、资源、测试）。
-- Prompt 层：行为策略与输出约束（模块化、可版本化）。
-- MCP/Tool 层：外部能力接口（文件、搜索、数据库、API）。
+## 2. Core Architecture Layers
 
-职责边界：Agent 决策，Skill 执行，Prompt 约束，Tool 提供能力。
+- Agent layer: task orchestration and skill selection.
+- Skill layer: capability package (`SKILL.md`, `agents/openai.yaml`, resources, tests).
+- Prompt layer: behavior strategy and output constraints (modular and versioned).
+- MCP/Tool layer: external capabilities (files, search, database, APIs).
 
-## 3. 仓库结构约定
+Responsibility boundary: Agent decides, Skill executes, Prompt constrains, Tools provide capabilities.
+
+## 3. Repository Structure and Directory Strategy
 
 ```text
 .
@@ -31,12 +33,18 @@
 └── DEVELOPMENT.md
 ```
 
-每个 skill 目录至少包含：
+Directory usage rules:
 
-- `SKILL.md`（必须，含 frontmatter：`name`、`description`）
-- `agents/openai.yaml`（建议）
+- `skills/public`: reusable and shareable skills.
+- `skills/private`: internal-only skills (internal workflow, sensitive context, non-public constraints).
+- Keep the dual-directory structure permanently, even if one side is temporarily empty.
 
-可选目录：
+Each skill directory should include at least:
+
+- `SKILL.md` (required, frontmatter: `name`, `description`)
+- `agents/openai.yaml` (recommended)
+
+Optional directories:
 
 - `scripts/`
 - `references/`
@@ -44,71 +52,86 @@
 - `tests/`
 - `eval/`
 
-## 4. 安装与使用
+## 4. Installation and Usage
 
-### 4.1 运行时安装（npx）
+### 4.1 Runtime Installation (npx)
 
 ```bash
 npx skills add github.com/<owner>/<repo> --skill <skill-name>
 ```
 
-默认运行时目录通常为：
+Repository example:
+
+```bash
+npx skills add github.com/Kingson4Wu/labali-skills --skill labali-git-auto-commit-rewrite
+```
+
+Default runtime directory is usually:
 
 ```text
 ~/.skills/skills/<skill-name>
 ```
 
-若设置 `SKILLS_HOME`，则使用：
+If `SKILLS_HOME` is set, use:
 
 ```text
 $SKILLS_HOME/skills/<skill-name>
 ```
 
-说明：`npx skills add` 安装的是运行时副本，不建议直接在该目录进行开发。
+Note: `npx skills add` installs a runtime copy. Do not use that directory as your development workspace.
 
-### 4.2 本仓库本地命令
+Current local agent runtime path for this repo:
+
+```text
+~/.agents/skills/
+```
+
+### 4.2 Local Repository Commands
 
 ```bash
-# 初始化 skill
+# Initialize a skill
 npm run skill:init -- <name> --path skills/public --resources scripts,references,assets
 
-# 校验单个 skill
+# Validate one skill
 npm run skill:validate -- skills/public/<name>
 
-# 校验全部 skill
+# Validate all skills
 npm run skills:validate
 ```
 
-## 5. 开发流程（标准）
+## 5. Standard Development Flow
 
-1. 在开发仓库创建/修改 skill（不要直接改运行时副本）。
-2. 本地执行功能验证（必要时运行 skill 内脚本）。
-3. 执行结构与元数据校验：`npm run skills:validate`。
-4. 提交代码并发起 PR。
-5. CI 自动执行校验与测试。
-6. 合并后发布，用户通过 `npx skills add ...` 安装。
+1. Create or update skills in this development repository (not in runtime copies).
+2. Run functional checks locally (run skill scripts where needed).
+3. Run structure and metadata validation: `npm run skills:validate`.
+4. If skill behavior logic changes, run corresponding tests (example: `tests/test_regression.sh`).
+5. Commit and open a PR.
 
-## 6. 本地调试推荐（软链接）
+## 6. Local Debugging with Symlinks
 
-开发目录与运行目录分离，调试时使用 symlink：
+Keep development and runtime directories separated. Use symlinks for local debugging:
 
 ```bash
-ln -s <dev-skill-path> ~/.skills/skills/<skill-name>
+# Install all public skills
+ln -s ~/programming/kingson4wu/labali-skills/skills/public/* ~/.agents/skills/
+
+# Install a single skill
+ln -s ~/programming/kingson4wu/labali-skills/skills/public/labali-git-auto-commit-rewrite ~/.agents/skills/
 ```
 
-优点：
+Advantages:
 
-- 修改即时生效
-- 保留完整 git 历史
-- 无需重复安装
+- Changes take effect immediately.
+- Full git history stays in one place.
+- No repeated reinstall required.
 
-## 7. Prompt 工程规范
+## 7. Prompt Engineering Standards
 
-- 禁止超大单文件 Prompt，采用模块化拆分。
-- 公共规则抽取到共享片段，减少重复。
-- Prompt 修改必须可追溯（版本、变更说明、评估结果）。
+- Avoid oversized monolithic prompt files; use modular decomposition.
+- Extract shared rules into reusable fragments.
+- Prompt changes must be traceable (version, change note, evaluation result).
 
-建议结构：
+Suggested layout:
 
 ```text
 skills/<name>/prompts/
@@ -118,68 +141,60 @@ skills/<name>/prompts/
     domain-rules.md
 ```
 
-## 8. Skill 规范（强制）
+## 8. Skill Standards (Mandatory)
 
-- 命名：小写字母、数字、连字符，最长 64。
-- Frontmatter：仅允许 `name` 与 `description` 必填字段。
-- `name` 必须与 skill 文件夹同名。
-- 资源最小化加载：只在需要时读取 references/scripts。
+- Naming: lowercase letters, numbers, hyphens; max length 64.
+- Frontmatter: only `name` and `description` are required and allowed.
+- `name` must match skill folder name.
+- Minimize resource loading: read `references/` and `scripts/` only when needed.
 
-## 9. 测试与回归
+## 9. Commit Message Standards (Semantic First)
 
-### 9.1 功能测试
+- Preferred format: `<type>(<scope>): <subject>` or `<type>: <subject>`.
+- Subject should describe intent clearly; do not default to `update N files`.
+- For mixed changes, prioritize the primary change in the subject (scripts/docs/refactor). Put test details in body when needed.
+- Use `test:` only for pure test changes.
 
-每个 skill 建议包含测试用例（如 `tests/cases.yaml`）：
+## 10. Testing and Regression
 
-- `input`
-- `expected` 或 `expected_contains`
+### 10.1 Functional Tests
 
-### 9.2 回归评估
+Each skill should include test cases (for example `tests/test_regression.sh` or `tests/cases.yaml`) that:
 
-Prompt 变更必须对比基线：
+- cover key paths,
+- cover fallback branches,
+- cover historically regression-prone scenarios.
 
-- `baseline score` vs `new score`
-- 若低于阈值（例如 -2 分）则阻断合并
-- 增加关键红线用例（must-pass）防止关键能力退化
+### 10.2 Regression Evaluation
 
-## 10. 版本管理
+Prompt or generation-logic changes should be compared against a baseline:
 
-Skill 必须采用语义化版本：
+- baseline vs new behavior,
+- no regression on critical scenarios,
+- must-pass cases for key behavior.
 
-- `MAJOR`：行为或契约不兼容变化
-- `MINOR`：新增能力或显著优化
-- `PATCH`：修复与小幅调整
+## 11. Suggested CI Gates
 
-发布记录至少包含：
-
-- skill version
-- prompt hash（或版本标识）
-- model
-- benchmark score
-
-## 11. CI 门禁建议
-
-建议 PR 流水线顺序：
+Recommended PR pipeline order:
 
 1. `python3 scripts/validate_all.py`
-2. skill tests（按变更范围执行）
-3. regression eval（阈值校验）
+2. Skill tests (run by changed scope)
+3. Regression eval (threshold checks)
 
-任一步失败即阻断合并。
+Any failure should block merge.
 
-## 12. 分支与提交流程建议
+## 12. Branch and Commit Workflow Suggestions
 
-- 分支命名：`feat/<skill-name>-<topic>`、`fix/<skill-name>-<topic>`
-- 提交信息：`feat(skill): ...`、`fix(skill): ...`、`chore(skill): ...`
-- PR 描述需包含：变更目的、影响范围、测试结果、回归结果。
+- Branch naming: `feat/<skill-name>-<topic>`, `fix/<skill-name>-<topic>`
+- Commit types: `feat(skill): ...`, `fix(skill): ...`, `refactor(skill): ...`, `chore(skill): ...`
+- PR description should include: goal, impact scope, test results, regression results.
 
-## 13. 快速检查清单
+## 13. Quick Checklist
 
-提交前至少确认：
+Before commit, confirm:
 
-- 已通过 `npm run skills:validate`
-- `SKILL.md` frontmatter 合法
-- 命名规范与目录结构正确
-- Prompt 变更有测试或评估证据
-- 版本号与变更等级匹配
-
+- `npm run skills:validate` passed,
+- `SKILL.md` frontmatter is valid,
+- naming and directory rules are satisfied,
+- tests were added/updated for rule or logic changes,
+- documentation matches actual behavior.

@@ -131,10 +131,100 @@ join_phrases() {
   echo "$joined"
 }
 
+extract_doc_focuses() {
+  local diff_lines lower
+  local -a themes=()
+
+  diff_lines="$(git diff --cached --unified=0 | awk '/^[+-]/ && !/^\+\+\+ / && !/^--- / {print substr($0,2)}')"
+  lower="$(printf '%s\n' "$diff_lines" | tr '[:upper:]' '[:lower:]')"
+
+  if echo "$lower" | grep -Eiq 'npx skills add|ln -s|git clone|install|installation'; then
+    themes+=("installation guidance")
+  fi
+  if echo "$lower" | grep -Eiq 'development\.md|source of truth|engineering standards|development standards'; then
+    themes+=("development standards")
+  fi
+  if echo "$lower" | grep -Eiq 'agents\.md|agent|assistant|execution contract'; then
+    themes+=("agent guidelines")
+  fi
+  if echo "$lower" | grep -Eiq 'language policy|written in english|english unless'; then
+    themes+=("language policy")
+  fi
+  if echo "$lower" | grep -Eiq 'validate|validation|regression|test'; then
+    themes+=("validation guidance")
+  fi
+  if echo "$lower" | grep -Eiq 'public/private|directory strategy|repository structure'; then
+    themes+=("repository structure guidance")
+  fi
+  if echo "$lower" | grep -Eiq 'commit message|conventional commit'; then
+    themes+=("commit guidelines")
+  fi
+  if echo "$lower" | grep -Eiq 'readme|quick start|local development'; then
+    themes+=("readme usage guidance")
+  fi
+
+  if ((${#themes[@]} > 0)); then
+    printf '%s\n' "${themes[@]}"
+  fi
+}
+
+extract_doc_actions() {
+  local name_status diff_text lower
+  local -a actions=()
+
+  name_status="$(git diff --cached --name-status -M)"
+  diff_text="$(git diff --cached --unified=0)"
+  lower="$(printf '%s\n' "$diff_text" | tr '[:upper:]' '[:lower:]')"
+
+  if printf '%s\n' "$name_status" | grep -Eq '^A[[:space:]]+README\.zh-CN\.md$'; then
+    actions+=("Add Chinese README support for localized onboarding")
+  fi
+  if echo "$diff_text" | grep -Fq '[中文说明](README.zh-CN.md)' && echo "$diff_text" | grep -Fq '[English](README.md)'; then
+    actions+=("Add bidirectional links between English and Chinese README files")
+  fi
+  if echo "$lower" | grep -Eiq 'npx skills add' && echo "$lower" | grep -Eiq -- '--skill[[:space:]]+labali-git-auto-commit-rewrite'; then
+    actions+=("Align installation command with the published skill name")
+  fi
+  if echo "$lower" | grep -Eiq 'source of truth' && echo "$lower" | grep -Eiq 'agents\.md' && echo "$lower" | grep -Eiq 'development\.md'; then
+    actions+=("Clarify ownership boundaries between AGENTS.md and DEVELOPMENT.md")
+  fi
+  if echo "$lower" | grep -Eiq 'mkdir -p ~/.agents/skills|~/.agents/skills/'; then
+    actions+=("Document local symlink setup for ~/.agents/skills")
+  fi
+
+  if ((${#actions[@]} > 0)); then
+    printf '%s\n' "${actions[@]}"
+  fi
+}
+
+action_to_phrase() {
+  local action="$1"
+  case "$action" in
+    "Add Chinese README support for localized onboarding")
+      echo "add Chinese README support"
+      ;;
+    "Add bidirectional links between English and Chinese README files")
+      echo "add bilingual readme cross-links"
+      ;;
+    "Align installation command with the published skill name")
+      echo "align installation command"
+      ;;
+    "Clarify ownership boundaries between AGENTS.md and DEVELOPMENT.md")
+      echo "clarify docs ownership"
+      ;;
+    "Document local symlink setup for ~/.agents/skills")
+      echo "document local symlink setup"
+      ;;
+    *)
+      echo ""
+      ;;
+  esac
+}
+
 generate_message() {
   local name_status line status path old_path
   local rename_count=0 add_script_count=0 script_touch_count=0 docs_count=0 other_count=0 test_count=0
-  local -a doc_paths=() content_doc_paths=() renamed_doc_paths=() script_paths=() added_script_paths=() phrases=() bullets=()
+  local -a doc_paths=() content_doc_paths=() renamed_doc_paths=() script_paths=() added_script_paths=() doc_focuses=() doc_actions=() phrases=() bullets=()
 
   name_status="$(git diff --cached --name-status -M)"
   while IFS= read -r line; do
@@ -201,6 +291,13 @@ generate_message() {
     script_purpose="$(printf '%s\n' "${script_paths[@]}" | extract_script_purpose || true)"
   fi
 
+  while IFS= read -r line; do
+    [[ -n "$line" ]] && doc_focuses+=("$line")
+  done < <(extract_doc_focuses || true)
+  while IFS= read -r line; do
+    [[ -n "$line" ]] && doc_actions+=("$line")
+  done < <(extract_doc_actions || true)
+
   if ((rename_count > 0)); then
     if [[ -n "$move_topic" ]]; then
       phrases+=("restructure ${move_topic} documentation")
@@ -220,7 +317,26 @@ generate_message() {
     fi
   fi
   if ((docs_count > 0)) && ((rename_count == 0)); then
-    if [[ -n "$topic" ]]; then
+    if ((${#doc_actions[@]} >= 2)); then
+      local phrase_a phrase_b
+      phrase_a="$(action_to_phrase "${doc_actions[0]}")"
+      phrase_b="$(action_to_phrase "${doc_actions[1]}")"
+      if [[ -n "$phrase_a" && -n "$phrase_b" ]]; then
+        phrases+=("${phrase_a} and ${phrase_b}")
+      elif [[ -n "$phrase_a" ]]; then
+        phrases+=("${phrase_a}")
+      fi
+    elif ((${#doc_actions[@]} == 1)); then
+      local phrase_single
+      phrase_single="$(action_to_phrase "${doc_actions[0]}")"
+      if [[ -n "$phrase_single" ]]; then
+        phrases+=("${phrase_single}")
+      fi
+    elif ((${#doc_focuses[@]} >= 2)); then
+      phrases+=("update ${doc_focuses[0]} and ${doc_focuses[1]}")
+    elif ((${#doc_focuses[@]} == 1)); then
+      phrases+=("update ${doc_focuses[0]}")
+    elif [[ -n "$topic" ]]; then
       phrases+=("update ${topic} documentation")
     else
       phrases+=("update documentation")
@@ -274,7 +390,25 @@ generate_message() {
     fi
   fi
   if ((docs_count > 0)); then
-    if [[ -n "$topic" ]]; then
+    if ((${#doc_actions[@]} > 0)); then
+      local i max_action
+      max_action=${#doc_actions[@]}
+      if ((max_action > 4)); then
+        max_action=4
+      fi
+      for ((i=0; i<max_action; i++)); do
+        bullets+=("- ${doc_actions[$i]}")
+      done
+    elif ((${#doc_focuses[@]} > 0)); then
+      local i max_focus
+      max_focus=${#doc_focuses[@]}
+      if ((max_focus > 3)); then
+        max_focus=3
+      fi
+      for ((i=0; i<max_focus; i++)); do
+        bullets+=("- Update ${doc_focuses[$i]}")
+      done
+    elif [[ -n "$topic" ]]; then
       bullets+=("- Update ${topic} documentation")
     else
       bullets+=("- Update documentation content")

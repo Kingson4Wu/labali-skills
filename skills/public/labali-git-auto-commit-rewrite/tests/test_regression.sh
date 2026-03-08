@@ -65,6 +65,56 @@ test_infer_docs_type() {
   rm -rf "$repo"
 }
 
+test_docs_semantic_focus_message() {
+  local repo subject body
+  repo="$(make_repo)"
+  (
+    cd "$repo"
+    cat > README.md <<'DOC'
+## Install
+npx skills add github.com/Kingson4Wu/labali-skills --skill labali-git-auto-commit-rewrite
+DOC
+    cat > DEVELOPMENT.md <<'DOC'
+This document is the source of truth for engineering standards.
+DOC
+    cat > AGENTS.md <<'DOC'
+This file defines the assistant execution contract.
+DOC
+    bash "$AUTO_SCRIPT" >/dev/null
+  )
+  subject="$(git -C "$repo" log -1 --pretty=%s)"
+  body="$(git -C "$repo" log -1 --pretty=%B)"
+  assert_eq "docs_semantic_focus_subject" "$subject" "docs: align installation command and clarify docs ownership"
+  [[ "$body" == *"- Align installation command with the published skill name"* ]] || fail "docs_semantic_focus_body_install"
+  [[ "$body" == *"- Clarify ownership boundaries between AGENTS.md and DEVELOPMENT.md"* ]] || fail "docs_semantic_focus_body_ownership"
+  pass "docs_semantic_focus_message"
+  rm -rf "$repo"
+}
+
+test_docs_bilingual_readme_message() {
+  local repo subject body
+  repo="$(make_repo)"
+  (
+    cd "$repo"
+    cat > README.md <<'DOC'
+# labali-skills
+[中文说明](README.zh-CN.md)
+DOC
+    cat > README.zh-CN.md <<'DOC'
+# labali-skills
+[English](README.md)
+DOC
+    bash "$AUTO_SCRIPT" >/dev/null
+  )
+  subject="$(git -C "$repo" log -1 --pretty=%s)"
+  body="$(git -C "$repo" log -1 --pretty=%B)"
+  assert_eq "docs_bilingual_readme_subject" "$subject" "docs: add Chinese README support and add bilingual readme cross-links"
+  [[ "$body" == *"- Add Chinese README support for localized onboarding"* ]] || fail "docs_bilingual_readme_body_cn"
+  [[ "$body" == *"- Add bidirectional links between English and Chinese README files"* ]] || fail "docs_bilingual_readme_body_links"
+  pass "docs_bilingual_readme_message"
+  rm -rf "$repo"
+}
+
 test_infer_test_type() {
   local repo subject
   repo="$(make_repo)"
@@ -184,6 +234,8 @@ test_clean_script_removes_coauthor() {
 main() {
   test_no_changes
   test_infer_docs_type
+  test_docs_semantic_focus_message
+  test_docs_bilingual_readme_message
   test_infer_test_type
   test_refactor_structured_message
   test_custom_message_normalization

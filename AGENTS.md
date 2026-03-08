@@ -1,101 +1,57 @@
 # AGENTS.md
 
-本文件定义 AI 助手在本仓库中的协作规则。目标是让后续 AI 辅助编程稳定、可复现、低风险。
+This file defines the AI execution contract for this repository.
 
-## 1. 项目定位
+## 1. Scope and Priority
 
-- 仓库类型：Skills Monorepo
-- 主要目录：`skills/public`、`skills/private`
-- 当前工具链：Python 脚本 + npm scripts
-- 规范主文档：`DEVELOPMENT.md`
+- This is an execution-layer document for assistants.
+- Detailed engineering standards live in `DEVELOPMENT.md`.
 
-当本文件与口头请求冲突时：
+Conflict priority:
 
-1. 用户当前请求优先
-2. 其次遵循本文件
-3. 最后参考 `DEVELOPMENT.md`
+1. Direct user request
+2. `AGENTS.md`
+3. `DEVELOPMENT.md`
 
-## 2. AI 工作目标
+## 2. Source of Truth Split
 
-- 优先完成可执行变更，不只停留在建议。
-- 保持改动最小闭环：实现 + 必要校验 + 结果说明。
-- 保持仓库整洁，不引入无关文件或临时产物。
+Use this split to avoid duplication:
 
-## 3. 仓库结构认知
+- `AGENTS.md`: what the assistant must do while executing tasks.
+- `DEVELOPMENT.md`: repository standards, structure, release, testing, and workflow details.
 
-```text
-.
-├── skills/
-│   ├── public/
-│   └── private/
-├── scripts/
-│   ├── init_skill.py
-│   ├── quick_validate.py
-│   └── validate_all.py
-├── DEVELOPMENT.md
-├── README.md
-└── AGENTS.md
-```
+When a rule already exists in `DEVELOPMENT.md`, reference it instead of restating it.
 
-## 4. 常用命令（优先使用）
+## 3. Assistant Must-Do Rules
 
-- 初始化 skill：
-  - `npm run skill:init -- <name> --path skills/public --resources scripts,references,assets`
-- 校验单个 skill：
-  - `npm run skill:validate -- skills/public/<name>`
-- 校验全部 skill：
-  - `npm run skills:validate`
+- Deliver executable changes, not suggestion-only responses.
+- Keep changes minimal and task-scoped.
+- Read relevant files first, then edit.
+- Announce the intended edit scope before modifying files.
+- Validate after changes:
+  - Always run `npm run skills:validate`.
+  - If skill behavior logic changed, also run corresponding skill tests.
+- Report outcome with:
+  - what changed,
+  - why,
+  - validation result.
 
-如果只改文档，通常不需要额外安装依赖。
+## 4. Assistant Must-Not Rules
 
-## 5. Skill 文件与命名规范
+- Do not edit runtime install directories directly (for example `~/.skills/skills/...` or `~/.agents/skills/...`).
+- Do not add unrelated scaffolding or dependencies.
+- Do not commit secrets, tokens, or private credentials.
+- Do not fabricate test results.
 
-- skill 目录名：小写字母/数字/连字符，长度 <= 64。
-- 每个 skill 最少包含：
-  - `SKILL.md`（必须，frontmatter 仅 `name`、`description`）
-  - `agents/openai.yaml`（建议）
-- `SKILL.md` 的 `name` 必须与目录名一致。
-- 可选目录：`scripts/`、`references/`、`assets/`、`tests/`、`eval/`。
+## 5. Quick Links to Standards
 
-## 6. 代码与文档变更原则
+- Repository structure and `public/private` policy: `DEVELOPMENT.md` section 3.
+- Installation and local linking: `DEVELOPMENT.md` sections 4 and 6.
+- Skill naming/frontmatter standards: `DEVELOPMENT.md` section 8.
+- Commit message standards: `DEVELOPMENT.md` section 9.
+- Testing/regression expectations: `DEVELOPMENT.md` section 10.
+- CI and branch/commit workflow: `DEVELOPMENT.md` sections 11 and 12.
 
-- 仅修改与当前任务直接相关的文件。
-- 不重命名、不搬迁无关文件。
-- 不删除用户已有内容，除非请求明确要求。
-- 文档优先中文，命令与路径保持原文（英文）。
-- README 保持简洁，详细规范放 `DEVELOPMENT.md`。
+## 6. Language Policy
 
-## 7. 执行流程（AI 操作模板）
-
-1. 先读取相关文件（最小范围）。
-2. 给出简短执行说明后再改文件。
-3. 完成改动后执行必要校验（至少 `npm run skills:validate`，若变更影响 skill 结构）。
-4. 输出变更结果：
-   - 改了什么
-   - 为什么这样改
-   - 校验是否通过
-
-## 8. 禁止事项
-
-- 不要在运行时目录（如 `~/.skills/skills/...`）直接做开发性改动。
-- 不要引入与任务无关的大型脚手架或依赖。
-- 不要提交密钥、token、凭据或隐私数据。
-- 不要伪造测试结果；无法执行时要明确说明。
-
-## 9. 提交前检查清单
-
-- 变更是否最小且可解释。
-- 目录和命名是否符合规范。
-- 文档是否与实际代码一致。
-- 需要时已执行：`npm run skills:validate`。
-- 最终说明包含文件路径与验证结论。
-
-## 10. 面向后续扩展的约定
-
-当仓库新增自动化测试后，按以下顺序执行：
-
-1. `python3 scripts/validate_all.py`
-2. skill tests（如存在）
-3. regression eval（如存在）
-
-新增脚本时优先放在 `scripts/`，并在 `README.md` 或 `DEVELOPMENT.md` 补充入口命令。
+- Repository docs, prompts, and comments should be written in English unless a user explicitly requests another language.
