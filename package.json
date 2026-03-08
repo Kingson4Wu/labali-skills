@@ -1,0 +1,11 @@
+{
+  "name": "labali-skills",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Monorepo for managing Codex skills",
+  "scripts": {
+    "skill:init": "python3 -B scripts/init_skill.py",
+    "skill:validate": "python3 -B scripts/quick_validate.py",
+    "skills:validate": "python3 -B scripts/validate_all.py"
+  }
+}
