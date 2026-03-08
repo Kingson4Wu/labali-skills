@@ -1,29 +1,29 @@
 ---
-name: git-auto-commit-rewrite
+name: labali-git-auto-commit-rewrite
 description: Automatically stage all git changes, generate and normalize a conventional commit message from current staged diff context, then commit locally without confirmation. Use when user asks to batch commit repository changes quickly with standardized commit wording.
 ---
 
-# git-auto-commit-rewrite
+# labali-git-auto-commit-rewrite
 
 Use this skill for one-shot local commit workflows.
 
 ## Quick Use
 
 ```bash
-skills/public/git-auto-commit-rewrite/scripts/auto_commit_rewrite.sh
+skills/public/labali-git-auto-commit-rewrite/scripts/auto_commit_rewrite.sh
 ```
 
 Optional override:
 
 ```bash
 COMMIT_MSG="feat(api): add user profile endpoint" \
-skills/public/git-auto-commit-rewrite/scripts/auto_commit_rewrite.sh
+skills/public/labali-git-auto-commit-rewrite/scripts/auto_commit_rewrite.sh
 ```
 
 Regression tests:
 
 ```bash
-skills/public/git-auto-commit-rewrite/tests/test_regression.sh
+skills/public/labali-git-auto-commit-rewrite/tests/test_regression.sh
 ```
 
 ## Workflow

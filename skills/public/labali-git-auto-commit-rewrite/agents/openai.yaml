@@ -1,5 +1,5 @@
 version: 1
 interface:
-  display_name: Git Auto Commit Rewrite
+  display_name: Labali Git Auto Commit Rewrite
   description: Stage all changes, generate normalized conventional commit messages, and commit locally in a self-contained workflow.
   default_prompt: Commit all current changes in this repository using a normalized conventional commit message.

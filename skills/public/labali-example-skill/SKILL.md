@@ -1,9 +1,9 @@
 ---
-name: example-skill
+name: labali-example-skill
 description: TODO describe what this skill does and when to use it
 ---
 
-# example-skill
+# labali-example-skill
 
 ## Workflow
 
