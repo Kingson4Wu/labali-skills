@@ -16,16 +16,29 @@ Use this layered model for complex UI automation. For simple one-step skills, a 
 
 ### Execution Layer (`scripts/*.ts`)
 - Scope: concrete automated implementation and runtime glue.
-- Scripts may be:
-  - deterministic helpers (stable, hand-authored utilities), or
-  - inference-derived cache (best-known flow snapshots for speed).
-- Inference-derived scripts should be considered replaceable when UI drifts.
+- Scripts may be deterministic trajectory executors, policy executors (strategy cache), or helper utilities.
+- Policy executor means:
+  - keep a stable orchestration skeleton (stage detection, guards, verification),
+  - allow bounded semantic inference per step (candidate sets + fallbacks),
+  - avoid full per-run re-planning unless recovery is needed.
+- Any script is replaceable when UI drifts; the policy layer remains the stable source of intent.
 - Current decomposition:
   - `core.ts`: shared browser/runtime primitives
   - `stage-detector.ts`: page/stage inference and navigation recovery
   - `publisher.ts`: review/publish actions and required-field handling
   - `verifier.ts`: post-publish business-state validation
   - `executor.ts`: orchestration only
+
+### Execution Asset Taxonomy
+
+- Deterministic trajectory script:
+  - replay-oriented, low inference, high fragility.
+- Policy executor / strategy cache:
+  - pattern-oriented, bounded inference, balanced robustness and speed.
+- Fully deliberative run:
+  - inference-oriented, high adaptability, highest variance.
+
+For this skill, treat `executor.ts` as a policy executor rather than a pure trajectory replay.
 
 ## 2) Execution Model
 
@@ -46,7 +59,7 @@ Use this layered model for complex UI automation. For simple one-step skills, a 
 ## 4) Publish Correctness Standards
 
 - Treat review-step required fields as blockers.
-- If `Publish date*(required)` appears, explicitly satisfy immediate/schedule selection.
+- If immediate/schedule controls are visible (for example `Now` / `Schedule`), explicitly set the intended mode before publish.
 - Do not assume defaults are applied unless state confirms it.
 - Post-publish verification must include:
   - title exists in `Published`,

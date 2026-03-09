@@ -15,8 +15,24 @@ Treat this skill as a layered system, not a single script.
 2. `references/architecture.md` is the strategy layer.
    - Define execution model, failure handling, and quality standards.
 3. `scripts/*.ts` is the execution layer.
-   - Scripts may be deterministic helpers or inference-derived execution cache.
-   - Inference-derived flow scripts may become stale and should be replaceable.
+   - Scripts are execution assets, not the skill definition itself.
+   - Prefer a policy-executor (strategy cache): reusable stage logic + bounded semantic decisions.
+   - Deterministic trajectory scripts are valid for simple stable pages, but not required.
+   - Any execution script can become stale and should be replaceable.
+
+## Script Classification
+
+- `Deterministic trajectory script`
+  - Fixed UI path replay with minimal runtime inference.
+  - Best for stable UI, fastest when valid, most brittle under UI drift.
+- `Policy executor (strategy cache)` (current skill)
+  - Fixed orchestration skeleton with semantic candidate selection and fallback.
+  - Reduces repeated reasoning while retaining bounded adaptation to UI changes.
+- `Fully deliberative run`
+  - Runtime-first semantic re-discovery with little pre-structured flow.
+  - Most adaptive but highest variance in speed/cost.
+
+This skill uses the second model by design.
 
 ## Required Constraints
 

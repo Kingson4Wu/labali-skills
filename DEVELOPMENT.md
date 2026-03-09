@@ -154,13 +154,13 @@ Use this pattern for complex or brittle skills. Simple skills may use a lighter 
 
 - Policy layer (`SKILL.md`): capture intent, constraints, success criteria, and boundaries.
 - Strategy layer (`references/`): capture workflow variants, decision points, and recovery rules.
-- Execution layer (`scripts/`): implement the current best-known deterministic path.
+- Execution layer (`scripts/`): implement the current best-known executable path (deterministic or strategy-based).
 
 Boundary guidelines:
 
 - Keep `SKILL.md` semantic and stable; avoid embedding fragile UI/runtime details.
 - Treat scripts as execution assets, not the skill definition itself.
-  Scripts can be either deterministic helpers (stable utility scripts) or inference-derived cache (best-known generated flow to reduce repeated reasoning).
+  Scripts can be deterministic trajectory scripts (fixed replay), policy executors / strategy cache (fixed skeleton + bounded semantic decisions), or helper utilities.
 - If scripts fail due to UI drift, prefer re-discovery/reasoning and repair rather than hard dependence on stale steps.
 - Define success by business-state verification (for example, final list/state checks), not by click completion alone.
 
@@ -172,8 +172,10 @@ Use these terms consistently across repository docs and skill references.
 - Policy layer: semantic intent and boundaries (`SKILL.md` body).
 - Strategy layer: workflow reasoning and fallback guidance (`references/`).
 - Execution layer: runnable implementation assets (`scripts/`).
+- Deterministic trajectory script: fixed replay-oriented flow with minimal runtime inference.
+- Policy executor / strategy cache script: structured flow with bounded semantic decision-making and fallback.
 - Deterministic helper script: stable utility script intentionally hand-authored for repeatable behavior.
-- Inference-derived cache script: best-known execution flow generated/refined from prior runs to reduce repeated reasoning.
+- Fully deliberative run: largely runtime inference-driven execution with minimal cached structure.
 - Semantic action: interaction anchored by visible text, labels, and roles rather than brittle DOM paths.
 - Business-state verification: success check based on final product state (for example `Published`/`Draft` list outcome), not just action completion.
 

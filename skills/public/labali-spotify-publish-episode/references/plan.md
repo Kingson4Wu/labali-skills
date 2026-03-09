@@ -19,7 +19,7 @@
 
 4. Media and metadata
 - Upload audio via semantic upload controls; fallback to generic file input only when wrappers block direct upload.
-- Fill title and description via label/placeholder and rich-text fallbacks.
+- Fill title and description via snapshot/ref fast path first, then label/placeholder and rich-text fallbacks.
 - Optionally upload cover image.
 
 5. Review and publish
@@ -44,3 +44,8 @@
 2. Retry with semantic candidate alternatives.
 3. Use bounded fallback paths for upload/editor quirks.
 4. Re-run publish and verification checks.
+
+## Execution Mode Note
+
+- This workflow is implemented as a policy executor (strategy cache), not a fixed trajectory replay.
+- Goal: reduce repeated reasoning while preserving bounded adaptation when UI labels/layout drift.
