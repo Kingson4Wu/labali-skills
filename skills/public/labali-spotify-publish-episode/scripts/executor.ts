@@ -153,6 +153,35 @@ async function fillSeasonEpisodeSpinbuttonFallback(
   }
 }
 
+async function ensureMetadataRequiredFields(
+  client: AgentBrowserClient,
+  inputs: PublishEpisodeInputs,
+  log: LogFn
+): Promise<void> {
+  const metadataVisible =
+    (await client.hasText("Title (required)")) ||
+    ((await client.hasText("Upload new file")) && (await client.hasText("Next")));
+  if (!metadataVisible) {
+    return;
+  }
+
+  log("Ensure required metadata fields before next step");
+  await fillEpisodeMetadata(client, inputs);
+  const seasonFilled = await fillOptionalNumericField(
+    client,
+    ACTION_CANDIDATES.seasonLabels,
+    inputs.season_number
+  );
+  const episodeFilled = await fillOptionalNumericField(
+    client,
+    ACTION_CANDIDATES.episodeLabels,
+    inputs.episode_number
+  );
+  if (!seasonFilled || !episodeFilled) {
+    await fillSeasonEpisodeSpinbuttonFallback(client, inputs.season_number, inputs.episode_number);
+  }
+}
+
 export async function execute(inputs: PublishEpisodeInputs, context: ExecutorContext = {}): Promise<{
   status: "published";
   show: string;
@@ -240,34 +269,34 @@ export async function execute(inputs: PublishEpisodeInputs, context: ExecutorCon
       await uploadEpisodeAudio(client, audioFile);
     }
 
-    await client.waitForTextAny(
-      ["Title (required)", "Episode title", "Episode description", "Description", "Next"],
-      45000
-    );
-    const atMetadataStage =
-      (await client.hasText("Title (required)")) ||
-      (await client.hasText("Episode title")) ||
-      (await client.hasText("Episode description")) ||
-      ((await client.hasText("Upload new file")) && (await client.hasText("Next")));
+    let atMetadataStage = false;
+    for (let i = 0; i < 15; i += 1) {
+      const hasMetadataMarker =
+        (await client.hasText("Title (required)")) ||
+        (await client.hasText("Episode title")) ||
+        (await client.hasText("Episode description")) ||
+        ((await client.hasText("Upload new file")) && (await client.hasText("Next")));
+      if (hasMetadataMarker) {
+        atMetadataStage = true;
+        break;
+      }
+
+      const hasPublishMarker = (await client.hasText("Publish")) || (await client.hasText("Schedule"));
+      if (hasPublishMarker) {
+        break;
+      }
+
+      await client.waitMs(2000);
+    }
     if (atMetadataStage) {
       log("Fill episode title and description");
-      await fillEpisodeMetadata(client, inputs);
-      const seasonFilled = await fillOptionalNumericField(
-        client,
-        ACTION_CANDIDATES.seasonLabels,
-        inputs.season_number
-      );
-      const episodeFilled = await fillOptionalNumericField(
-        client,
-        ACTION_CANDIDATES.episodeLabels,
-        inputs.episode_number
-      );
-      if (!seasonFilled || !episodeFilled) {
-        await fillSeasonEpisodeSpinbuttonFallback(client, inputs.season_number, inputs.episode_number);
-      }
+      await ensureMetadataRequiredFields(client, inputs, log);
     } else {
       log("Skip metadata fill: not on details step.");
     }
+
+    // Final guard: never enter publish flow while required metadata fields are visible.
+    await ensureMetadataRequiredFields(client, inputs, log);
 
     if (coverImage) {
       log("Upload episode cover image");
