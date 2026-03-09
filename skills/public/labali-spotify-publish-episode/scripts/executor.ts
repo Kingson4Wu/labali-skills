@@ -83,6 +83,76 @@ async function fillEpisodeMetadata(client: AgentBrowserClient, inputs: PublishEp
   });
 }
 
+async function fillOptionalNumericField(
+  client: AgentBrowserClient,
+  labels: string[],
+  value: string | undefined
+): Promise<boolean> {
+  if (!value?.trim()) {
+    return false;
+  }
+  const normalizedValue = value.trim();
+  try {
+    await retry(2, async () => {
+      try {
+        await client.fillByLabelCandidates(labels, normalizedValue);
+        return;
+      } catch {
+        // continue
+      }
+      try {
+        await client.fillByPlaceholderCandidates(labels, normalizedValue);
+        return;
+      } catch {
+        // continue
+      }
+
+      const snapshot = await client.snapshot();
+      const refs = snapshot.data?.refs ?? {};
+      for (const [refKey, refData] of Object.entries(refs)) {
+        const role = (refData.role ?? "").toLowerCase();
+        const name = (refData.name ?? "").toLowerCase();
+        if (role !== "spinbutton" && role !== "textbox") {
+          continue;
+        }
+        if (!labels.some((label) => name.includes(label.toLowerCase()))) {
+          continue;
+        }
+        if (await client.fillRef(refKey, normalizedValue)) {
+          return;
+        }
+      }
+
+      throw new Error(`Failed to fill optional numeric field: ${labels.join(", ")}`);
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function fillSeasonEpisodeSpinbuttonFallback(
+  client: AgentBrowserClient,
+  seasonNumber?: string,
+  episodeNumber?: string
+): Promise<void> {
+  if (!seasonNumber?.trim() && !episodeNumber?.trim()) {
+    return;
+  }
+
+  const snapshot = await client.snapshot();
+  const refs = Object.entries(snapshot.data?.refs ?? {})
+    .filter(([, refData]) => (refData.role ?? "").toLowerCase() === "spinbutton")
+    .map(([refKey]) => refKey);
+
+  if (seasonNumber?.trim() && refs[0]) {
+    await client.fillRef(refs[0], seasonNumber.trim());
+  }
+  if (episodeNumber?.trim() && refs[1]) {
+    await client.fillRef(refs[1], episodeNumber.trim());
+  }
+}
+
 export async function execute(inputs: PublishEpisodeInputs, context: ExecutorContext = {}): Promise<{
   status: "published";
   show: string;
@@ -170,10 +240,30 @@ export async function execute(inputs: PublishEpisodeInputs, context: ExecutorCon
       await uploadEpisodeAudio(client, audioFile);
     }
 
-    const atMetadataStage = await client.hasText("Title (required)");
+    await client.waitForTextAny(
+      ["Title (required)", "Episode title", "Episode description", "Description", "Next"],
+      45000
+    );
+    const atMetadataStage =
+      (await client.hasText("Title (required)")) ||
+      (await client.hasText("Episode title")) ||
+      (await client.hasText("Episode description"));
     if (atMetadataStage) {
       log("Fill episode title and description");
       await fillEpisodeMetadata(client, inputs);
+      const seasonFilled = await fillOptionalNumericField(
+        client,
+        ACTION_CANDIDATES.seasonLabels,
+        inputs.season_number
+      );
+      const episodeFilled = await fillOptionalNumericField(
+        client,
+        ACTION_CANDIDATES.episodeLabels,
+        inputs.episode_number
+      );
+      if (!seasonFilled || !episodeFilled) {
+        await fillSeasonEpisodeSpinbuttonFallback(client, inputs.season_number, inputs.episode_number);
+      }
     } else {
       log("Skip metadata fill: not on details step.");
     }

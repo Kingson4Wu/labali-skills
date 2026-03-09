@@ -86,6 +86,14 @@ export async function openEpisodeCreator(client: AgentBrowserClient): Promise<vo
   await retry(4, async () => {
     try {
       await client.clickRoleByNames("button", ACTION_CANDIDATES.createEpisode);
+      return;
+    } catch {
+      // fall through
+    }
+
+    try {
+      await client.clickRoleByNames("link", ACTION_CANDIDATES.createEpisode);
+      return;
     } catch {
       await client.clickTextByCandidates(ACTION_CANDIDATES.createEpisode);
     }
@@ -102,14 +110,23 @@ export async function isEpisodeCreatorVisible(client: AgentBrowserClient): Promi
 }
 
 export async function isUploadSurfaceVisible(client: AgentBrowserClient): Promise<boolean> {
+  const currentUrl = await client.getUrl();
+  if (isEpisodeWizardUrl(currentUrl)) {
+    return true;
+  }
+
   const uploadHints = [
-    ...ACTION_CANDIDATES.audioUpload,
+    "Upload audio",
+    "Episode file",
+    "Audio file",
+    "Select file",
+    "Choose file",
+    "Browse files",
+    "Add audio",
     "Drag and drop",
-    "Upload",
-    "Audio",
-    "Episode",
+    "Upload new file",
   ];
-  for (const hint of uploadHints) {
+  for (const hint of [...ACTION_CANDIDATES.audioUpload, ...uploadHints]) {
     if (await client.hasText(hint)) {
       return true;
     }

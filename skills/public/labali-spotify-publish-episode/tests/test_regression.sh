@@ -28,10 +28,10 @@ fi
 # Ensure publish safety guard is present.
 rg -n "confirm_publish" "$SCRIPTS_DIR" >/dev/null
 rg -n "Publish date\\*\\(required\\)|publish-date-now|verifyPublishedInList|Search episode titles" "$SCRIPTS_DIR" >/dev/null
-rg -n -- "--audio_file|--title|--description|--show_name|--confirm_publish|--cdp_port|--show_home_url" "$RUNNER" >/dev/null
+rg -n -- "--audio_file|--title|--description|--show_name|--season_number|--episode_number|--confirm_publish|--cdp_port|--show_home_url" "$RUNNER" >/dev/null
 
 # Ensure required inputs are documented.
-rg -n "audio_file|title|description|show_name|confirm_publish|cdp_port|show_home_url" "$SKILL_YAML" >/dev/null
+rg -n "audio_file|title|description|show_name|season_number|episode_number|confirm_publish|cdp_port|show_home_url" "$SKILL_YAML" >/dev/null
 
 # Enforce layer boundary docs.
 rg -n "Layer Contract|Success Criteria|Operational Mode" "$SKILL_MD" >/dev/null

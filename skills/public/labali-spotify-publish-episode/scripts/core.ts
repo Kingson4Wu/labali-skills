@@ -19,6 +19,8 @@ export interface PublishEpisodeInputs {
   title: string;
   description: string;
   show_name: string;
+  season_number?: string;
+  episode_number?: string;
   cover_image?: string;
   publish_at?: string;
   confirm_publish?: boolean;
@@ -47,7 +49,7 @@ export interface AgentBrowserSnapshotJson {
 }
 
 export const ACTION_CANDIDATES = {
-  createEpisode: ["New episode", "Create episode", "Add episode", "Create"],
+  createEpisode: ["New episode", "Create a new episode", "Create episode", "Add episode", "Create"],
   publish: ["Publish", "Publish episode", "Save and publish"],
   publishConfirm: ["Publish now", "Confirm publish", "Publish episode"],
   schedule: ["Schedule", "Set date and time", "Schedule publish", "Publish later"],
@@ -62,8 +64,10 @@ export const ACTION_CANDIDATES = {
     "Drag and drop",
   ],
   coverUpload: ["Episode cover", "Cover image", "Artwork", "Upload image"],
-  titleLabels: ["Episode title", "Title"],
+  titleLabels: ["Episode title", "Title (required)", "Title", "Give your episode a name"],
   descriptionLabels: ["Episode description", "Description", "Show notes"],
+  seasonLabels: ["Season number"],
+  episodeLabels: ["Episode number"],
   dashboardMarkers: ["Dashboard", "Shows", "Episodes", "Analytics"],
   loginMarkers: ["Log in", "Sign up", "Continue with Spotify"],
 };
@@ -359,6 +363,12 @@ export function validateInputs(raw: PublishEpisodeInputs): asserts raw is Publis
     if (Number.isNaN(parsed.getTime())) {
       throw new Error("Invalid publish_at value. Provide ISO-8601 datetime.");
     }
+  }
+  if (raw.season_number !== undefined && !/^\d+$/.test(raw.season_number.trim())) {
+    throw new Error("Invalid season_number value. Provide a positive integer.");
+  }
+  if (raw.episode_number !== undefined && !/^\d+$/.test(raw.episode_number.trim())) {
+    throw new Error("Invalid episode_number value. Provide a positive integer.");
   }
   if (raw.show_home_url) {
     try {

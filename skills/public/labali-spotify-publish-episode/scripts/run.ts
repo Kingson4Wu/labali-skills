@@ -62,6 +62,8 @@ function printUsage(): void {
     --title "Episode title" \\
     --description "Episode description" \\
     --show_name "Show Name" \\
+    [--season_number 5] \\
+    [--episode_number 21] \\
     [--cover_image /abs/path/cover.jpg] \\
     [--publish_at 2026-03-15T16:30:00Z] \\
     [--show_home_url https://creators.spotify.com/pod/show/<id>/home] \\
@@ -83,6 +85,8 @@ async function main(): Promise<void> {
     title: requiredString(args, "title"),
     description: requiredString(args, "description"),
     show_name: requiredString(args, "show_name"),
+    season_number: optionalString(args, "season_number"),
+    episode_number: optionalString(args, "episode_number"),
     confirm_publish: parseBoolean(args.confirm_publish, true),
     cover_image: optionalString(args, "cover_image"),
     publish_at: optionalString(args, "publish_at"),

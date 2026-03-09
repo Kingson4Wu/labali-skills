@@ -47,18 +47,21 @@ export async function publishEpisode(client: AgentBrowserClient, confirmPublish:
     return false;
   };
 
-  for (let i = 0; i < 4; i += 1) {
+  const stepForwardCandidates = ["Next", "Continue", "Review", "Save and continue"];
+
+  for (let i = 0; i < 6; i += 1) {
     if (await hasPublishAction()) {
       break;
     }
-    if (await client.hasText("Next")) {
+    const hasStepForward = await client.waitForTextAny(stepForwardCandidates, 4000);
+    if (hasStepForward) {
       try {
-        await client.clickRoleByNames("button", ["Next"]);
+        await client.clickRoleByNames("button", stepForwardCandidates);
       } catch {
-        await client.clickTextByCandidates(["Next"]);
+        await client.clickTextByCandidates(stepForwardCandidates);
       }
       await client.waitForLoad();
-      await client.waitForTextAny(ACTION_CANDIDATES.publish, 30000);
+      await client.waitForTextAny([...ACTION_CANDIDATES.publish, ...stepForwardCandidates], 20000);
       continue;
     }
     break;
@@ -66,17 +69,15 @@ export async function publishEpisode(client: AgentBrowserClient, confirmPublish:
 
   await client.waitForTextAny(ACTION_CANDIDATES.publish, 30000);
 
-  const requiresPublishDate = await client.hasText("Publish date*(required)");
-  if (requiresPublishDate) {
+  // Some Spotify layouts do not preselect "Now"; always set it when visible.
+  if (await client.hasText("Now")) {
     await client.evalJs(
       "(() => { const labels = Array.from(document.getElementsByTagName('label')); const label = labels.find((x) => x.htmlFor === 'publish-date-now'); if (label) { label.click(); return 'clicked-label'; } const input = document.getElementById('publish-date-now'); if (input) { input.checked = true; input.dispatchEvent(new Event('change', { bubbles: true })); return 'checked-input'; } return 'no-now-control'; })()"
     );
-    if (await client.hasText("Now")) {
-      try {
-        await client.clickRoleByNames("radio", ["Now"]);
-      } catch {
-        // Best effort only; evalJs attempt above may already satisfy this requirement.
-      }
+    try {
+      await client.clickRoleByNames("radio", ["Now"]);
+    } catch {
+      // Best effort only; evalJs attempt above may already satisfy this requirement.
     }
   }
 

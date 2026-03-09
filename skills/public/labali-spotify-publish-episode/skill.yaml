@@ -18,6 +18,14 @@ inputs:
     type: string
     required: true
     description: Podcast show name to select before creating the episode.
+  season_number:
+    type: string
+    required: false
+    description: Optional season number to fill in episode metadata (positive integer).
+  episode_number:
+    type: string
+    required: false
+    description: Optional episode number to fill in episode metadata (positive integer).
   cover_image:
     type: string
     required: false
