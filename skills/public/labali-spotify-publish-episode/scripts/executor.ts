@@ -30,29 +30,39 @@ import { applyScheduleIfRequested, publishEpisode } from "./publisher";
 import { verifyPublishedInList, verifyPublishedOnly } from "./verifier";
 
 async function fillEpisodeMetadata(client: AgentBrowserClient, inputs: PublishEpisodeInputs): Promise<void> {
-  await retry(3, async () => {
-    try {
-      await client.fillByLabelCandidates(ACTION_CANDIDATES.titleLabels, inputs.title);
-    } catch {
-      await client.fillByPlaceholderCandidates(ACTION_CANDIDATES.titleLabels, inputs.title);
+  // Fast path: fill title directly from current semantic snapshot refs first,
+  // which avoids long per-candidate lookup timeouts when labels are missing.
+  {
+    const snapshot = await client.snapshot();
+    const refs = snapshot.data?.refs ?? {};
+    let titleFilled = false;
+    for (const [refKey, refData] of Object.entries(refs)) {
+      const role = (refData.role ?? "").toLowerCase();
+      const name = (refData.name ?? "").toLowerCase();
+      if (role !== "textbox") {
+        continue;
+      }
+      if (!name.includes("title")) {
+        continue;
+      }
+      if (await client.fillRef(refKey, inputs.title)) {
+        titleFilled = true;
+        break;
+      }
     }
-  });
-
-  await retry(3, async () => {
-    try {
-      await client.fillByLabelCandidates(ACTION_CANDIDATES.descriptionLabels, inputs.description);
-      return;
-    } catch {
-      // continue
+    if (!titleFilled) {
+      await retry(2, async () => {
+        try {
+          await client.fillByLabelCandidates(ACTION_CANDIDATES.titleLabels, inputs.title);
+        } catch {
+          await client.fillByPlaceholderCandidates(ACTION_CANDIDATES.titleLabels, inputs.title);
+        }
+      });
     }
+  }
 
-    try {
-      await client.fillByPlaceholderCandidates(ACTION_CANDIDATES.descriptionLabels, inputs.description);
-      return;
-    } catch {
-      // continue
-    }
-
+  await retry(2, async () => {
+    // Fast path: the description editor is often an unnamed textbox.
     const snapshot = await client.snapshot();
     const refs = snapshot.data?.refs ?? {};
     for (const [refKey, refData] of Object.entries(refs)) {
@@ -72,6 +82,20 @@ async function fillEpisodeMetadata(client: AgentBrowserClient, inputs: PublishEp
           return;
         }
       }
+    }
+
+    try {
+      await client.fillByLabelCandidates(ACTION_CANDIDATES.descriptionLabels, inputs.description);
+      return;
+    } catch {
+      // continue
+    }
+
+    try {
+      await client.fillByPlaceholderCandidates(ACTION_CANDIDATES.descriptionLabels, inputs.description);
+      return;
+    } catch {
+      // continue
     }
 
     await client.press("Tab");
@@ -205,27 +229,44 @@ export async function execute(inputs: PublishEpisodeInputs, context: ExecutorCon
     inputs.cdp_port,
     log
   );
+  const runStartedAt = Date.now();
+  const stepDurations: Record<string, number> = {};
+
+  const timed = async <T>(step: string, fn: () => Promise<T>): Promise<T> => {
+    const startedAt = Date.now();
+    try {
+      return await fn();
+    } finally {
+      const elapsedMs = Date.now() - startedAt;
+      stepDurations[step] = (stepDurations[step] ?? 0) + elapsedMs;
+      log(`[timing] ${step}: ${(elapsedMs / 1000).toFixed(1)}s`);
+    }
+  };
 
   try {
-    const currentUrl = await client.getUrl();
+    let metadataEnsured = false;
     const targetUrl = inputs.show_home_url ?? SPOTIFY_CREATORS_URL;
+    await timed("entry", async () => {
+      const currentUrl = await client.getUrl();
+      if (isCreatorsUrl(currentUrl)) {
+        log(`Reuse already opened page: ${currentUrl}`);
+      } else {
+        log(`Open ${targetUrl}`);
+        await client.open(targetUrl);
+      }
+      await ensureLoginRoute(client);
+    });
 
-    if (isCreatorsUrl(currentUrl)) {
-      log(`Reuse already opened page: ${currentUrl}`);
-    } else {
-      log(`Open ${targetUrl}`);
-      await client.open(targetUrl);
-    }
-    await ensureLoginRoute(client);
-
-    const loginState = await ensureDashboardOrShows(client);
+    const loginState = await timed("login-state-check", async () => ensureDashboardOrShows(client));
     if (loginState !== "logged-in") {
-      log("Manual login required. Complete login in the opened browser window.");
-      await promptManualLogin(
-        "Sign in to Spotify for Creators manually.",
-        context.prompt
-      );
-      await client.waitForTextAny(ACTION_CANDIDATES.dashboardMarkers, 120000);
+      await timed("manual-login", async () => {
+        log("Manual login required. Complete login in the opened browser window.");
+        await promptManualLogin(
+          "Sign in to Spotify for Creators manually.",
+          context.prompt
+        );
+        await client.waitForTextAny(ACTION_CANDIDATES.dashboardMarkers, 120000);
+      });
     }
 
     const postLoginUrl = await client.getUrl();
@@ -236,17 +277,19 @@ export async function execute(inputs: PublishEpisodeInputs, context: ExecutorCon
     if (alreadyInTargetShow) {
       log(`Target show already open: ${postLoginUrl}`);
     } else {
-      log(`Select show '${inputs.show_name}'`);
-      try {
-        await selectShow(client, inputs.show_name);
-        await client.waitForLoad();
-      } catch (error) {
-        const creatorVisible = await isEpisodeCreatorVisible(client);
-        if (!creatorVisible) {
-          throw error;
+      await timed("show-selection", async () => {
+        log(`Select show '${inputs.show_name}'`);
+        try {
+          await selectShow(client, inputs.show_name);
+          await client.waitForLoad();
+        } catch (error) {
+          const creatorVisible = await isEpisodeCreatorVisible(client);
+          if (!creatorVisible) {
+            throw error;
+          }
+          log("Show selector not found, but episode creation entry is visible. Continue.");
         }
-        log("Show selector not found, but episode creation entry is visible. Continue.");
-      }
+      });
     }
 
     const beforeCreateUrl = await client.getUrl();
@@ -255,9 +298,11 @@ export async function execute(inputs: PublishEpisodeInputs, context: ExecutorCon
     if (alreadyInWizard || uploadReady) {
       log(`Skip create episode flow: already in upload wizard (${beforeCreateUrl})`);
     } else {
-      log("Open create episode flow");
-      await openEpisodeCreator(client);
-      await client.waitForLoad();
+      await timed("open-create-episode", async () => {
+        log("Open create episode flow");
+        await openEpisodeCreator(client);
+        await client.waitForLoad();
+      });
     }
 
     const atPublishStage = (await client.hasText("Publish")) && (await client.hasText("Now"));
@@ -265,64 +310,84 @@ export async function execute(inputs: PublishEpisodeInputs, context: ExecutorCon
     if (hasAudioAlready) {
       log("Skip audio upload: existing uploaded media detected.");
     } else {
-      log("Upload episode audio");
-      await uploadEpisodeAudio(client, audioFile);
+      await timed("audio-upload", async () => {
+        log("Upload episode audio");
+        await uploadEpisodeAudio(client, audioFile);
+      });
     }
 
-    let atMetadataStage = false;
-    for (let i = 0; i < 15; i += 1) {
-      const hasMetadataMarker =
-        (await client.hasText("Title (required)")) ||
-        (await client.hasText("Episode title")) ||
-        (await client.hasText("Episode description")) ||
-        ((await client.hasText("Upload new file")) && (await client.hasText("Next")));
-      if (hasMetadataMarker) {
-        atMetadataStage = true;
-        break;
-      }
+    const atMetadataStage = await timed("metadata-stage-detect", async () => {
+      for (let i = 0; i < 15; i += 1) {
+        const hasMetadataMarker =
+          (await client.hasText("Title (required)")) ||
+          (await client.hasText("Episode title")) ||
+          (await client.hasText("Episode description")) ||
+          ((await client.hasText("Upload new file")) && (await client.hasText("Next")));
+        if (hasMetadataMarker) {
+          return true;
+        }
 
-      const hasPublishMarker = (await client.hasText("Publish")) || (await client.hasText("Schedule"));
-      if (hasPublishMarker) {
-        break;
-      }
+        const hasPublishMarker = (await client.hasText("Publish")) || (await client.hasText("Schedule"));
+        if (hasPublishMarker) {
+          return false;
+        }
 
-      await client.waitMs(2000);
-    }
+        await client.waitMs(2000);
+      }
+      return false;
+    });
+
     if (atMetadataStage) {
-      log("Fill episode title and description");
-      await ensureMetadataRequiredFields(client, inputs, log);
+      await timed("metadata-fill", async () => {
+        log("Fill episode title and description");
+        await ensureMetadataRequiredFields(client, inputs, log);
+        metadataEnsured = true;
+      });
     } else {
       log("Skip metadata fill: not on details step.");
     }
 
     // Final guard: never enter publish flow while required metadata fields are visible.
-    await ensureMetadataRequiredFields(client, inputs, log);
+    if (!metadataEnsured) {
+      await timed("metadata-guard", async () => ensureMetadataRequiredFields(client, inputs, log));
+      metadataEnsured = true;
+    } else {
+      log("[timing] metadata-guard: 0.0s (skipped; already ensured in metadata-fill)");
+    }
 
     if (coverImage) {
-      log("Upload episode cover image");
-      await retry(3, async () => {
-        await client.uploadBySemanticCandidates(ACTION_CANDIDATES.coverUpload, coverImage);
+      await timed("cover-upload", async () => {
+        log("Upload episode cover image");
+        await retry(3, async () => {
+          await client.uploadBySemanticCandidates(ACTION_CANDIDATES.coverUpload, coverImage);
+        });
       });
     }
 
     if (inputs.publish_at) {
       log(`Configure schedule for ${inputs.publish_at}`);
     }
-    await applyScheduleIfRequested(client, inputs.publish_at);
+    await timed("schedule-config", async () => applyScheduleIfRequested(client, inputs.publish_at));
 
-    log("Publish episode");
-    await publishEpisode(client, confirmPublish);
+    await timed("publish-action", async () => {
+      log("Publish episode");
+      await publishEpisode(client, confirmPublish);
+    });
 
-    const publishedConfirmed = await verifyPublishedInList(
-      client,
-      inputs.title,
-      inputs.show_home_url
-    );
-    if (!publishedConfirmed) {
-      const foundInPublishedOnly = await verifyPublishedOnly(
+    const publishedConfirmed = await timed("verify-published", async () =>
+      verifyPublishedInList(
         client,
         inputs.title,
         inputs.show_home_url
+      )
+    );
+    if (!publishedConfirmed) {
+      const foundInPublishedOnly = await timed("verify-published-only", async () =>
+        verifyPublishedOnly(
+          client,
+          inputs.title,
+          inputs.show_home_url
+        )
       );
       if (!foundInPublishedOnly) {
         throw new Error("Publish action completed but episode not found in Published list.");
@@ -333,6 +398,11 @@ export async function execute(inputs: PublishEpisodeInputs, context: ExecutorCon
     }
 
     const url = await client.getUrl();
+    const totalMs = Date.now() - runStartedAt;
+    const sorted = Object.entries(stepDurations).sort((a, b) => b[1] - a[1]);
+    const topSteps = sorted.slice(0, 6).map(([name, ms]) => `${name}=${(ms / 1000).toFixed(1)}s`);
+    log(`[timing] total: ${(totalMs / 1000).toFixed(1)}s`);
+    log(`[timing] top-steps: ${topSteps.join(", ")}`);
     return {
       status: "published",
       show: inputs.show_name,
@@ -344,6 +414,8 @@ export async function execute(inputs: PublishEpisodeInputs, context: ExecutorCon
     log(`Failure screenshot: ${failureShot}`);
     throw error;
   } finally {
+    const totalMs = Date.now() - runStartedAt;
+    log(`[timing] total-final: ${(totalMs / 1000).toFixed(1)}s`);
     await client.close();
   }
 }
