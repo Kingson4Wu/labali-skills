@@ -247,7 +247,8 @@ export async function execute(inputs: PublishEpisodeInputs, context: ExecutorCon
     const atMetadataStage =
       (await client.hasText("Title (required)")) ||
       (await client.hasText("Episode title")) ||
-      (await client.hasText("Episode description"));
+      (await client.hasText("Episode description")) ||
+      ((await client.hasText("Upload new file")) && (await client.hasText("Next")));
     if (atMetadataStage) {
       log("Fill episode title and description");
       await fillEpisodeMetadata(client, inputs);
