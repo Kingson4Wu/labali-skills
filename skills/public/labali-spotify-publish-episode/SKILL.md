@@ -25,14 +25,15 @@ Treat this skill as a layered system, not a single script.
 - `Deterministic trajectory script`
   - Fixed UI path replay with minimal runtime inference.
   - Best for stable UI, fastest when valid, most brittle under UI drift.
-- `Policy executor (strategy cache)` (current skill)
+- `Policy executor (strategy cache)` (current reliability baseline)
   - Fixed orchestration skeleton with semantic candidate selection and fallback.
   - Reduces repeated reasoning while retaining bounded adaptation to UI changes.
 - `Fully deliberative run`
   - Runtime-first semantic re-discovery with little pre-structured flow.
   - Most adaptive but highest variance in speed/cost.
 
-This skill uses the second model by design.
+This skill uses unified runtime by design: D1 deterministic acceleration first, then D2 policy executor fallback for reliability.
+The deterministic first-level cache script is available at `scripts/deterministic.ts` with CLI wrapper `scripts/run_deterministic.ts`.
 
 ## Required Constraints
 
@@ -56,21 +57,27 @@ Use `skill.yaml` as the source of truth for input schema.
 
 ## Operational Mode
 
-- Prefer fast-path execution through `scripts/executor.ts`.
-- If fast-path fails or post-publish validation fails:
-  - re-enter semantic exploration,
-  - infer updated controls from current UI,
-  - retry with bounded self-healing,
-  - and only then return success/failure.
+- Default unified mode: run D1 first, then auto-downgrade to D2.
+  - D1 (`scripts/deterministic.ts`) is optional acceleration only.
+  - D2 (`scripts/executor.ts`) is mandatory reliability baseline and must succeed independently.
+- If D1 fails:
+  - continue with D2 in the same run,
+  - record D1 failure context for later D1 optimization.
+- If D2 fails:
+  - prioritize D2 repair and retry until business-success criteria pass,
+  - optimize D1 only after D2 success.
 
 ## Resources
 
 - Architecture and standards: `references/architecture.md`
 - Workflow map and semantic action plan: `references/plan.md`
+- Unified D1->D2 entry: `scripts/auto-executor.ts`
 - Executor orchestration entry: `scripts/executor.ts`
+- Deterministic first-level cache entry: `scripts/deterministic.ts`
 - Stage detection module: `scripts/stage-detector.ts`
 - Publish module: `scripts/publisher.ts`
 - Verification module: `scripts/verifier.ts`
 - Shared core runtime module: `scripts/core.ts`
 - CLI wrapper: `scripts/run.ts`
+- Deterministic CLI wrapper: `scripts/run_deterministic.ts`
 - Regression checks: `tests/test_regression.sh`

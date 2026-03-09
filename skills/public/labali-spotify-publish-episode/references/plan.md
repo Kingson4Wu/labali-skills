@@ -47,5 +47,8 @@
 
 ## Execution Mode Note
 
-- This workflow is implemented as a policy executor (strategy cache), not a fixed trajectory replay.
-- Goal: reduce repeated reasoning while preserving bounded adaptation when UI labels/layout drift.
+- Unified runtime order:
+  1. D1 deterministic trajectory cache (`deterministic.ts`)
+  2. Auto-downgrade to D2 policy executor (`executor.ts`) if D1 fails
+- D2 remains the required baseline capability; D1 is optional acceleration.
+- Log D1 failure context and use D2 success evidence to iteratively improve D1.

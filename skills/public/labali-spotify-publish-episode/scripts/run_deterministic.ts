@@ -1,5 +1,5 @@
 import { type PublishEpisodeInputs } from "./core";
-import { execute } from "./auto-executor";
+import { executeDeterministic } from "./deterministic";
 
 type ArgMap = Record<string, string | boolean>;
 
@@ -56,23 +56,16 @@ function optionalString(args: ArgMap, key: string): string | undefined {
 }
 
 function printUsage(): void {
-  // Keep usage terse so it is easy to copy into terminal.
   console.log(`Usage:
-  npx tsx skills/public/labali-spotify-publish-episode/scripts/run.ts \\
+  npx tsx skills/public/labali-spotify-publish-episode/scripts/run_deterministic.ts \\
     --audio_file /abs/path/episode.mp3 \\
     --title "Episode title" \\
     --description "Episode description" \\
     --show_name "Show Name" \\
-    [--season_number 5] \\
-    [--episode_number 21] \\
-    [--cover_image /abs/path/cover.jpg] \\
-    [--publish_at 2026-03-15T16:30:00Z] \\
+    [--season_number 1] \\
+    [--episode_number 1] \\
     [--show_home_url https://creators.spotify.com/pod/show/<id>/home] \\
-    [--confirm_publish true|false] \\
-    [--disable_d1 true|false] \\
-    [--profile_dir .cache/agent-browser/spotify-creators] \\
-    [--cdp_port 9222] \\
-    [--headed true]`);
+    [--cdp_port 9222]`);
 }
 
 async function main(): Promise<void> {
@@ -89,23 +82,20 @@ async function main(): Promise<void> {
     show_name: requiredString(args, "show_name"),
     season_number: optionalString(args, "season_number"),
     episode_number: optionalString(args, "episode_number"),
-    confirm_publish: parseBoolean(args.confirm_publish, true),
-    cover_image: optionalString(args, "cover_image"),
-    publish_at: optionalString(args, "publish_at"),
     show_home_url: optionalString(args, "show_home_url"),
-    profile_dir: optionalString(args, "profile_dir"),
     cdp_port: optionalString(args, "cdp_port"),
+    profile_dir: optionalString(args, "profile_dir"),
     headed: parseBoolean(args.headed, true),
+    confirm_publish: true,
   };
 
-  const result = await execute(inputs, {
-    preferDeterministic: !parseBoolean(args.disable_d1, false),
-  });
+  const result = await executeDeterministic(inputs);
   console.log(JSON.stringify(result, null, 2));
 }
 
 main().catch((error) => {
   const message = error instanceof Error ? error.message : String(error);
-  console.error(`spotify publish failed: ${message}`);
+  console.error(`spotify deterministic publish failed: ${message}`);
   process.exitCode = 1;
 });
+

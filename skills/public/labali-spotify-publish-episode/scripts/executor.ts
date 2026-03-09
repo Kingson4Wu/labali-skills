@@ -29,27 +29,47 @@ import {
 import { applyScheduleIfRequested, publishEpisode } from "./publisher";
 import { verifyPublishedInList, verifyPublishedOnly } from "./verifier";
 
-async function fillEpisodeMetadata(client: AgentBrowserClient, inputs: PublishEpisodeInputs): Promise<void> {
-  // Fast path: fill title directly from current semantic snapshot refs first,
-  // which avoids long per-candidate lookup timeouts when labels are missing.
-  {
-    const snapshot = await client.snapshot();
-    const refs = snapshot.data?.refs ?? {};
-    let titleFilled = false;
-    for (const [refKey, refData] of Object.entries(refs)) {
-      const role = (refData.role ?? "").toLowerCase();
-      const name = (refData.name ?? "").toLowerCase();
-      if (role !== "textbox") {
-        continue;
-      }
-      if (!name.includes("title")) {
-        continue;
-      }
-      if (await client.fillRef(refKey, inputs.title)) {
-        titleFilled = true;
-        break;
-      }
+async function nativeTypeRef(client: AgentBrowserClient, refKey: string, value: string): Promise<boolean> {
+  if (!(await client.clickRef(refKey))) {
+    return false;
+  }
+  await client.press("ControlOrMeta+A");
+  await client.press("Backspace");
+  if (!(await client.keyboardInsertText(value))) {
+    return false;
+  }
+  await client.press("Tab");
+  return true;
+}
+
+async function nativeTypeByPredicate(
+  client: AgentBrowserClient,
+  predicate: (name: string, role: string) => boolean,
+  value: string
+): Promise<boolean> {
+  const snapshot = await client.snapshot();
+  const refs = snapshot.data?.refs ?? {};
+  for (const [refKey, refData] of Object.entries(refs)) {
+    const role = (refData.role ?? "").toLowerCase();
+    const name = (refData.name ?? "").toLowerCase();
+    if (!predicate(name, role)) {
+      continue;
     }
+    if (await nativeTypeRef(client, refKey, value)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+async function fillEpisodeMetadata(client: AgentBrowserClient, inputs: PublishEpisodeInputs): Promise<void> {
+  // Native path first: prefer keyboard-based input to trigger frontend model events.
+  {
+    const titleFilled = await nativeTypeByPredicate(
+      client,
+      (name, role) => role === "textbox" && name.includes("title"),
+      inputs.title
+    );
     if (!titleFilled) {
       await retry(2, async () => {
         try {
@@ -62,26 +82,17 @@ async function fillEpisodeMetadata(client: AgentBrowserClient, inputs: PublishEp
   }
 
   await retry(2, async () => {
-    // Fast path: the description editor is often an unnamed textbox.
-    const snapshot = await client.snapshot();
-    const refs = snapshot.data?.refs ?? {};
-    for (const [refKey, refData] of Object.entries(refs)) {
-      const role = (refData.role ?? "").toLowerCase();
-      const name = (refData.name ?? "").toLowerCase();
-      if (role !== "textbox") {
-        continue;
-      }
-      if (name.includes("title")) {
-        continue;
-      }
-      if (await client.fillRef(refKey, inputs.description)) {
-        return;
-      }
-      if (await client.clickRef(refKey)) {
-        if (await client.keyboardInsertText(inputs.description)) {
-          return;
-        }
-      }
+    const nativeDescriptionFilled = await nativeTypeByPredicate(
+      client,
+      (name, role) =>
+        role === "textbox" &&
+        !name.includes("title") &&
+        !name.includes("shortcut") &&
+        !name.includes("search"),
+      inputs.description
+    );
+    if (nativeDescriptionFilled) {
+      return;
     }
 
     try {
@@ -98,13 +109,73 @@ async function fillEpisodeMetadata(client: AgentBrowserClient, inputs: PublishEp
       // continue
     }
 
-    await client.press("Tab");
-    if (await client.keyboardInsertText(inputs.description)) {
-      return;
-    }
-
     throw new Error("Failed to fill episode description with semantic and editor fallbacks.");
   });
+
+  // Some editor variants still require a focused native paste to update required-state counters.
+  await client.evalJs(`(() => {
+    const targets = Array.from(document.getElementsByTagName("*")).filter((node) => {
+      const role = (node.getAttribute("role") || "").toLowerCase();
+      const name = (node.getAttribute("name") || "").toLowerCase();
+      const editable = node.getAttribute("contenteditable") === "true";
+      return editable && role === "textbox" && name.includes("description");
+    });
+    for (const node of targets) {
+      node.textContent = ${JSON.stringify(inputs.description)};
+      node.dispatchEvent(new Event("input", { bubbles: true }));
+      node.dispatchEvent(new Event("change", { bubbles: true }));
+      node.dispatchEvent(new Event("blur", { bubbles: true }));
+    }
+    return String(targets.length);
+  })()`);
+
+  const descriptionVerified = await client.evalJs(`(() => {
+    const nodes = Array.from(document.getElementsByTagName("*")).filter((node) => {
+      const role = (node.getAttribute("role") || "").toLowerCase();
+      const name = (node.getAttribute("name") || "").toLowerCase();
+      const editable = node.getAttribute("contenteditable") === "true";
+      return editable && role === "textbox" && name.includes("description");
+    });
+    return nodes.some((node) => (node.textContent || "").trim().length > 0) ? "ok" : "empty";
+  })()`);
+  let normalizedVerify = descriptionVerified.trim();
+  if (normalizedVerify.startsWith("\"") && normalizedVerify.endsWith("\"")) {
+    try {
+      normalizedVerify = JSON.parse(normalizedVerify) as string;
+    } catch {
+      // keep original
+    }
+  }
+  if (normalizedVerify !== "ok") {
+    throw new Error("Description remains empty after DOM fallback sync.");
+  }
+
+  const hasRequiredCounter = await client.evalJs(`(() => {
+    const text = (document.body && document.body.innerText) ? document.body.innerText : "";
+    return /Required\\s*0\\s*\\/\\s*4000/i.test(text) ? "yes" : "no";
+  })()`);
+
+  if (hasRequiredCounter.trim().includes("yes")) {
+    const focused = await client.evalJs(`(() => {
+      const nodes = Array.from(document.getElementsByTagName("*")).filter((node) => {
+        const role = (node.getAttribute("role") || "").toLowerCase();
+        const name = (node.getAttribute("name") || "").toLowerCase();
+        const editable = node.getAttribute("contenteditable") === "true";
+        return editable && role === "textbox" && name.includes("description");
+      });
+      if (nodes[0]) {
+        nodes[0].focus();
+        return "focused";
+      }
+      return "no-target";
+    })()`);
+    if (focused.includes("focused")) {
+      await client.press("ControlOrMeta+A");
+      await client.press("Backspace");
+      await client.keyboardInsertText(inputs.description);
+      await client.press("Tab");
+    }
+  }
 }
 
 async function fillOptionalNumericField(
@@ -248,10 +319,15 @@ export async function execute(inputs: PublishEpisodeInputs, context: ExecutorCon
     const targetUrl = inputs.show_home_url ?? SPOTIFY_CREATORS_URL;
     await timed("entry", async () => {
       const currentUrl = await client.getUrl();
-      if (isCreatorsUrl(currentUrl)) {
+      const inEpisodeWizardContext = /\/episode\/[^/]+\/wizard/i.test(currentUrl);
+      if (isCreatorsUrl(currentUrl) && !(inEpisodeWizardContext && inputs.show_home_url)) {
         log(`Reuse already opened page: ${currentUrl}`);
       } else {
-        log(`Open ${targetUrl}`);
+        if (inEpisodeWizardContext && inputs.show_home_url) {
+          log(`Reset from episode wizard context to show home: ${inputs.show_home_url}`);
+        } else {
+          log(`Open ${targetUrl}`);
+        }
         await client.open(targetUrl);
       }
       await ensureLoginRoute(client);

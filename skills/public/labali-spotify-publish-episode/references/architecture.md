@@ -23,11 +23,13 @@ Use this layered model for complex UI automation. For simple one-step skills, a 
   - avoid full per-run re-planning unless recovery is needed.
 - Any script is replaceable when UI drifts; the policy layer remains the stable source of intent.
 - Current decomposition:
+  - `auto-executor.ts`: unified D1->D2 orchestration and fallback recording
+  - `deterministic.ts`: deterministic trajectory cache (D1)
   - `core.ts`: shared browser/runtime primitives
   - `stage-detector.ts`: page/stage inference and navigation recovery
   - `publisher.ts`: review/publish actions and required-field handling
   - `verifier.ts`: post-publish business-state validation
-  - `executor.ts`: orchestration only
+  - `executor.ts`: policy executor (D2) orchestration
 
 ### Execution Asset Taxonomy
 
@@ -42,11 +44,11 @@ For this skill, treat `executor.ts` as a policy executor rather than a pure traj
 
 ## 2) Execution Model
 
-1. Run fast path from executor.
-2. On structural failure, switch to semantic re-discovery in the same run.
-3. Retry with bounded alternatives.
-4. Validate business outcome in list state (`Published`/`Draft`).
-5. Return success only after outcome validation.
+1. Run deterministic trajectory cache (D1) as optional fast path.
+2. On D1 failure, auto-downgrade to policy executor (D2) in the same run.
+3. If D2 fails, repair D2 first and retry until business success criteria pass.
+4. Record D1 failure context and D2 recovery outcome for later D1 optimization.
+5. Validate business outcome in list state (`Published`/`Draft`) before success.
 
 ## 3) Semantic Interaction Standards
 
