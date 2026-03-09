@@ -1,0 +1,51 @@
+name: labali-spotify-publish-episode
+description: Browser-only semantic automation skill for publishing podcast episodes on Spotify for Creators.
+executor: scripts/executor.ts
+inputs:
+  audio_file:
+    type: string
+    required: true
+    description: Absolute or workspace-relative path to the episode audio file.
+  title:
+    type: string
+    required: true
+    description: Episode title shown in Spotify.
+  description:
+    type: string
+    required: true
+    description: Episode description shown in Spotify.
+  show_name:
+    type: string
+    required: true
+    description: Podcast show name to select before creating the episode.
+  cover_image:
+    type: string
+    required: false
+    description: Optional cover image path for this episode.
+  publish_at:
+    type: string
+    required: false
+    description: Optional ISO-8601 datetime to schedule publication. If omitted, publish immediately.
+  show_home_url:
+    type: string
+    required: false
+    description: Optional direct show home page URL. If current tab is already on creators.spotify.com, executor reuses it instead of forcing navigation.
+  confirm_publish:
+    type: boolean
+    required: false
+    default: true
+    description: Optional publish guard. Defaults to true for direct publish; set false to stop before final publish action.
+  profile_dir:
+    type: string
+    required: false
+    default: .cache/agent-browser/spotify-creators
+    description: Persistent browser profile directory used to reuse manual login sessions.
+  cdp_port:
+    type: string
+    required: false
+    description: Optional Chrome DevTools Protocol port (for example 9222) to attach to an existing real Chrome session.
+  headed:
+    type: boolean
+    required: false
+    default: true
+    description: Run browser in headed mode for manual login and visual debugging.

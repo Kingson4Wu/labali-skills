@@ -48,6 +48,8 @@ When a rule already exists in `DEVELOPMENT.md`, reference it instead of restatin
 - Repository structure and `public/private` policy: `DEVELOPMENT.md` section 3.
 - Installation and local linking: `DEVELOPMENT.md` sections 4 and 6.
 - Skill naming/frontmatter standards: `DEVELOPMENT.md` section 8.
+- Layered skill architecture guidance: `DEVELOPMENT.md` section 8.1.
+- Terminology/style glossary: `DEVELOPMENT.md` section 8.2.
 - Commit message standards: `DEVELOPMENT.md` section 9.
 - Testing/regression expectations: `DEVELOPMENT.md` section 10.
 - CI and branch/commit workflow: `DEVELOPMENT.md` sections 11 and 12.

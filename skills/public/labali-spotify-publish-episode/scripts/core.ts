@@ -1,0 +1,384 @@
+import { execFile } from "node:child_process";
+import { constants } from "node:fs";
+import { access } from "node:fs/promises";
+import { resolve } from "node:path";
+import { stdin as input, stdout as output } from "node:process";
+import { createInterface } from "node:readline/promises";
+import { promisify } from "node:util";
+
+const execFileAsync = promisify(execFile);
+
+export const SPOTIFY_CREATORS_URL = "https://creators.spotify.com";
+export const DEFAULT_PROFILE_DIR = ".cache/agent-browser/spotify-creators";
+export const SEARCH_EPISODES_PLACEHOLDER = "Search episode titles";
+
+export type LogFn = (message: string) => void;
+
+export interface PublishEpisodeInputs {
+  audio_file: string;
+  title: string;
+  description: string;
+  show_name: string;
+  cover_image?: string;
+  publish_at?: string;
+  confirm_publish?: boolean;
+  profile_dir?: string;
+  headed?: boolean;
+  cdp_port?: string;
+  show_home_url?: string;
+}
+
+export interface ExecutorContext {
+  logger?: LogFn;
+  prompt?: (message: string) => Promise<void>;
+}
+
+export interface AgentBrowserRef {
+  role?: string;
+  name?: string;
+}
+
+export interface AgentBrowserSnapshotJson {
+  success?: boolean;
+  data?: {
+    snapshot?: string;
+    refs?: Record<string, AgentBrowserRef>;
+  };
+}
+
+export const ACTION_CANDIDATES = {
+  createEpisode: ["New episode", "Create episode", "Add episode", "Create"],
+  publish: ["Publish", "Publish episode", "Save and publish"],
+  publishConfirm: ["Publish now", "Confirm publish", "Publish episode"],
+  schedule: ["Schedule", "Set date and time", "Schedule publish", "Publish later"],
+  audioUpload: [
+    "Upload audio",
+    "Episode file",
+    "Audio file",
+    "Select file",
+    "Choose file",
+    "Browse files",
+    "Add audio",
+    "Drag and drop",
+  ],
+  coverUpload: ["Episode cover", "Cover image", "Artwork", "Upload image"],
+  titleLabels: ["Episode title", "Title"],
+  descriptionLabels: ["Episode description", "Description", "Show notes"],
+  dashboardMarkers: ["Dashboard", "Shows", "Episodes", "Analytics"],
+  loginMarkers: ["Log in", "Sign up", "Continue with Spotify"],
+};
+
+export class AgentBrowserClient {
+  private readonly baseArgs: string[];
+  private readonly log: LogFn;
+  private readonly timeoutMs: string;
+
+  constructor(profileDir: string, headed: boolean, cdpPort: string | undefined, log: LogFn) {
+    if (cdpPort) {
+      this.baseArgs = ["--cdp", cdpPort];
+    } else {
+      this.baseArgs = ["--profile", profileDir];
+      if (headed) {
+        this.baseArgs.push("--headed");
+      }
+    }
+    this.log = log;
+    this.timeoutMs = "90000";
+  }
+
+  private async run(
+    commandArgs: string[],
+    options?: { allowFailure?: boolean; asJson?: boolean }
+  ): Promise<string> {
+    const args = [...this.baseArgs];
+    if (options?.asJson) {
+      args.push("--json");
+    }
+    args.push(...commandArgs);
+
+    try {
+      const { stdout, stderr } = await execFileAsync("agent-browser", args, {
+        maxBuffer: 4 * 1024 * 1024,
+        env: {
+          ...process.env,
+          AGENT_BROWSER_DEFAULT_TIMEOUT: this.timeoutMs,
+        },
+      });
+      if (stderr.trim()) {
+        this.log(`agent-browser stderr: ${stderr.trim()}`);
+      }
+      return stdout.trim();
+    } catch (error) {
+      if (options?.allowFailure) {
+        return "";
+      }
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`agent-browser failed: ${message}`);
+    }
+  }
+
+  private async try(commandArgs: string[], options?: { asJson?: boolean }): Promise<boolean> {
+    try {
+      await this.run(commandArgs, options);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async open(url: string): Promise<void> {
+    const opened = await this.try(["open", url]);
+    if (!opened) {
+      const tabOpened = await this.try(["tab", "new", url]);
+      if (!tabOpened) {
+        throw new Error(`Failed to open URL: ${url}`);
+      }
+    }
+    await this.run(["wait", "--load", "domcontentloaded"], { allowFailure: true });
+    await this.waitForLoad();
+  }
+
+  async waitForLoad(): Promise<void> {
+    await this.run(["wait", "--load", "networkidle"], { allowFailure: true });
+  }
+
+  async waitMs(ms: number): Promise<void> {
+    await this.run(["wait", String(ms)], { allowFailure: true });
+  }
+
+  async waitForTextAny(candidates: string[], timeoutMs = 30000): Promise<boolean> {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      for (const candidate of candidates) {
+        if (await this.hasText(candidate)) {
+          return true;
+        }
+      }
+      await this.run(["wait", "500"], { allowFailure: true });
+    }
+    return false;
+  }
+
+  async hasText(text: string): Promise<boolean> {
+    const snapshot = await this.snapshot();
+    const lowerNeedle = text.toLowerCase();
+    const snapshotText = (snapshot.data?.snapshot ?? "").toLowerCase();
+    if (snapshotText.includes(lowerNeedle)) {
+      return true;
+    }
+    const refs = snapshot.data?.refs ?? {};
+    return Object.values(refs).some((ref) => (ref.name ?? "").toLowerCase().includes(lowerNeedle));
+  }
+
+  async clickRoleByNames(role: string, names: string[]): Promise<void> {
+    for (const name of names) {
+      if (await this.try(["find", "role", role, "click", "--name", name])) {
+        return;
+      }
+    }
+    throw new Error(`No clickable role=${role} match found for candidates: ${names.join(", ")}`);
+  }
+
+  async clickTextByCandidates(candidates: string[]): Promise<void> {
+    for (const candidate of candidates) {
+      if (await this.try(["find", "text", candidate, "click"])) {
+        return;
+      }
+    }
+    throw new Error(`No text click target found for candidates: ${candidates.join(", ")}`);
+  }
+
+  async fillByLabelCandidates(candidates: string[], value: string): Promise<void> {
+    for (const candidate of candidates) {
+      if (await this.try(["find", "label", candidate, "fill", value])) {
+        return;
+      }
+    }
+    throw new Error(`No fill label found for candidates: ${candidates.join(", ")}`);
+  }
+
+  async fillByPlaceholderCandidates(candidates: string[], value: string): Promise<void> {
+    for (const candidate of candidates) {
+      if (await this.try(["find", "placeholder", candidate, "fill", value])) {
+        return;
+      }
+    }
+    throw new Error(`No fill placeholder found for candidates: ${candidates.join(", ")}`);
+  }
+
+  async snapshot(): Promise<AgentBrowserSnapshotJson> {
+    const out = await this.run(["snapshot", "-i"], { asJson: true, allowFailure: true });
+    if (!out) {
+      return {};
+    }
+    try {
+      return JSON.parse(out) as AgentBrowserSnapshotJson;
+    } catch {
+      return {};
+    }
+  }
+
+  async getUrl(): Promise<string> {
+    return this.run(["get", "url"], { allowFailure: true });
+  }
+
+  async fillRef(refKey: string, value: string): Promise<boolean> {
+    return this.try(["fill", `@${refKey}`, value]);
+  }
+
+  async clickRef(refKey: string): Promise<boolean> {
+    return this.try(["click", `@${refKey}`]);
+  }
+
+  async press(key: string): Promise<boolean> {
+    return this.try(["press", key]);
+  }
+
+  async keyboardInsertText(text: string): Promise<boolean> {
+    return this.try(["keyboard", "inserttext", text]);
+  }
+
+  async evalJs(js: string): Promise<string> {
+    return this.run(["eval", js], { allowFailure: true });
+  }
+
+  async uploadBySemanticCandidates(candidates: string[], filePath: string): Promise<void> {
+    const snapshot = await this.snapshot();
+    const refs = snapshot.data?.refs ?? {};
+    const orderedRefs = Object.entries(refs);
+
+    const tryUploadRefs = async (
+      filter: (refData: AgentBrowserRef, normalizedName: string) => boolean
+    ): Promise<boolean> => {
+      for (const [refKey, refData] of orderedRefs) {
+        const normalizedName = (refData.name ?? "").toLowerCase();
+        if (!filter(refData, normalizedName)) {
+          continue;
+        }
+        if (await this.try(["upload", `@${refKey}`, filePath])) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    const exactMatched = await tryUploadRefs((_refData, normalizedName) =>
+      candidates.some((candidate) => normalizedName.includes(candidate.toLowerCase()))
+    );
+    if (exactMatched) {
+      return;
+    }
+
+    const fallbackTokens = [
+      "upload",
+      "audio",
+      "file",
+      "episode",
+      "browse",
+      "choose",
+      "select",
+      "drag",
+      "drop",
+      "add",
+      "media",
+    ];
+    const tokenMatched = await tryUploadRefs((_refData, normalizedName) =>
+      fallbackTokens.some((token) => normalizedName.includes(token))
+    );
+    if (tokenMatched) {
+      return;
+    }
+
+    const broadMatched = await tryUploadRefs((refData, normalizedName) => {
+      const role = (refData.role ?? "").toLowerCase();
+      const roleAllowed = role === "button" || role === "textbox" || role === "generic";
+      return roleAllowed && normalizedName.length > 0;
+    });
+    if (broadMatched) {
+      return;
+    }
+
+    if (await this.try(["upload", "input[type='file']", filePath])) {
+      return;
+    }
+    if (await this.try(["upload", "input[type=file]", filePath])) {
+      return;
+    }
+
+    const previewNames = orderedRefs
+      .map(([, refData]) => refData.name ?? "")
+      .filter((name) => name.trim().length > 0)
+      .slice(0, 12);
+
+    throw new Error(
+      `No semantic upload target found for candidates: ${candidates.join(
+        ", "
+      )}. Visible refs: ${previewNames.join(" | ")}`
+    );
+  }
+
+  async screenshot(path: string): Promise<void> {
+    await this.run(["screenshot", path], { allowFailure: true });
+  }
+
+  async close(): Promise<void> {
+    await this.run(["close"], { allowFailure: true });
+  }
+}
+
+export async function retry<T>(times: number, fn: () => Promise<T>): Promise<T> {
+  let lastError: unknown;
+  for (let i = 0; i < times; i += 1) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
+}
+
+export async function ensureReadableFile(pathValue: string, inputName: string): Promise<string> {
+  const fullPath = resolve(pathValue);
+  await access(fullPath, constants.R_OK).catch(() => {
+    throw new Error(`Input '${inputName}' is not readable: ${fullPath}`);
+  });
+  return fullPath;
+}
+
+export function validateInputs(raw: PublishEpisodeInputs): asserts raw is PublishEpisodeInputs {
+  if (!raw.audio_file?.trim()) throw new Error("Missing required input: audio_file");
+  if (!raw.title?.trim()) throw new Error("Missing required input: title");
+  if (!raw.description?.trim()) throw new Error("Missing required input: description");
+  if (!raw.show_name?.trim()) throw new Error("Missing required input: show_name");
+  if (raw.confirm_publish !== undefined && raw.confirm_publish !== true && raw.confirm_publish !== false) {
+    throw new Error("Invalid boolean input: confirm_publish");
+  }
+  if (raw.publish_at) {
+    const parsed = new Date(raw.publish_at);
+    if (Number.isNaN(parsed.getTime())) {
+      throw new Error("Invalid publish_at value. Provide ISO-8601 datetime.");
+    }
+  }
+  if (raw.show_home_url) {
+    try {
+      // eslint-disable-next-line no-new
+      new URL(raw.show_home_url);
+    } catch {
+      throw new Error("Invalid show_home_url value. Provide a full URL.");
+    }
+  }
+}
+
+export async function promptManualLogin(
+  message: string,
+  externalPrompt?: (message: string) => Promise<void>
+): Promise<void> {
+  if (externalPrompt) {
+    await externalPrompt(message);
+    return;
+  }
+  const rl = createInterface({ input, output });
+  await rl.question(`${message}\nPress Enter after login is complete...`);
+  rl.close();
+}

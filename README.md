@@ -4,10 +4,16 @@
 
 A skills monorepo for managing reusable skills.
 
+## Public Skills
+
+- `labali-git-auto-commit-rewrite`: stage all changes, generate normalized conventional commit messages, and commit locally.
+- `labali-spotify-publish-episode`: browser-only semantic automation for creating/publishing Spotify podcast episodes.
+
 ## Install
 
 ```bash
 npx skills add github.com/Kingson4Wu/labali-skills --skill labali-git-auto-commit-rewrite
+npx skills add github.com/Kingson4Wu/labali-skills --skill labali-spotify-publish-episode
 ```
 
 Note: `--skill` must match the published skill name.
@@ -29,4 +35,11 @@ ln -s ~/programming/kingson4wu/labali-skills/skills/public/* ~/.agents/skills/
 
 # Install only one skill
 ln -s ~/programming/kingson4wu/labali-skills/skills/public/labali-git-auto-commit-rewrite ~/.agents/skills/
+ln -s ~/programming/kingson4wu/labali-skills/skills/public/labali-spotify-publish-episode ~/.agents/skills/
+```
+
+Validate before commit:
+
+```bash
+npm run skills:validate
 ```

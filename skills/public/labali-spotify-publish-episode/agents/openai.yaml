@@ -1,0 +1,5 @@
+version: 1
+interface:
+  display_name: Labali Spotify Publish Episode
+  description: Publish or schedule Spotify podcast episodes from creators.spotify.com using semantic browser automation and reusable login session profiles.
+  default_prompt: Publish a new Spotify podcast episode using this skill with audio file, title, description, and target show.

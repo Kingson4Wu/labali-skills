@@ -148,6 +148,41 @@ skills/<name>/prompts/
 - `name` must match skill folder name.
 - Minimize resource loading: read `references/` and `scripts/` only when needed.
 
+### 8.1 Layered Skill Design (Recommended, Not Mandatory)
+
+Use this pattern for complex or brittle skills. Simple skills may use a lighter structure.
+
+- Policy layer (`SKILL.md`): capture intent, constraints, success criteria, and boundaries.
+- Strategy layer (`references/`): capture workflow variants, decision points, and recovery rules.
+- Execution layer (`scripts/`): implement the current best-known deterministic path.
+
+Boundary guidelines:
+
+- Keep `SKILL.md` semantic and stable; avoid embedding fragile UI/runtime details.
+- Treat scripts as execution assets, not the skill definition itself.
+  Scripts can be either deterministic helpers (stable utility scripts) or inference-derived cache (best-known generated flow to reduce repeated reasoning).
+- If scripts fail due to UI drift, prefer re-discovery/reasoning and repair rather than hard dependence on stale steps.
+- Define success by business-state verification (for example, final list/state checks), not by click completion alone.
+
+### 8.2 Terminology and Style Glossary (Recommended)
+
+Use these terms consistently across repository docs and skill references.
+
+- Skill: the capability package folder (`SKILL.md`, resources, tests).
+- Policy layer: semantic intent and boundaries (`SKILL.md` body).
+- Strategy layer: workflow reasoning and fallback guidance (`references/`).
+- Execution layer: runnable implementation assets (`scripts/`).
+- Deterministic helper script: stable utility script intentionally hand-authored for repeatable behavior.
+- Inference-derived cache script: best-known execution flow generated/refined from prior runs to reduce repeated reasoning.
+- Semantic action: interaction anchored by visible text, labels, and roles rather than brittle DOM paths.
+- Business-state verification: success check based on final product state (for example `Published`/`Draft` list outcome), not just action completion.
+
+Writing guidance:
+
+- Prefer concise, decision-oriented language.
+- Prefer behavior-level descriptions over tool-call transcripts.
+- Avoid overloaded synonyms for the same concept in one document.
+
 ## 9. Commit Message Standards (Semantic First)
 
 - Preferred format: `<type>(<scope>): <subject>` or `<type>: <subject>`.
