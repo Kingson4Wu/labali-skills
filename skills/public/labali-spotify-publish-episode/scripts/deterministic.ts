@@ -40,7 +40,7 @@ async function fillDeterministicMetadata(
   const episodeJs = JSON.stringify(episode);
 
   // Deterministic native-first path:
-  // use stable semantic refs learned from successful D2 runs.
+  // use stable semantic refs learned from successful policy runs.
   const snapshot = await client.snapshot();
   const refs = Object.entries(snapshot.data?.refs ?? {});
   let titleNative = false;
@@ -66,12 +66,23 @@ async function fillDeterministicMetadata(
   }
 
   // Fallback: direct DOM sync only if native typing did not hit.
+  // Use native value setter to ensure framework state updates.
   await client.evalJs(`(() => {
+    const setInputValue = (input, value) => {
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+      if (setter) {
+        setter.call(input, value);
+      } else {
+        input.value = value;
+      }
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      input.dispatchEvent(new Event('blur', { bubbles: true }));
+    };
+
     const titleInput = document.querySelector('input[name="title"]');
     if (titleInput && !${titleNative ? "true" : "false"}) {
-      titleInput.value = ${title};
-      titleInput.dispatchEvent(new Event('input', { bubbles: true }));
-      titleInput.dispatchEvent(new Event('change', { bubbles: true }));
+      setInputValue(titleInput, ${title});
     }
 
     const editor = Array.from(document.querySelectorAll('[contenteditable="true"]'))
@@ -85,16 +96,12 @@ async function fillDeterministicMetadata(
 
     const seasonInput = document.querySelector('input[name="podcastSeasonNumber"]');
     if (seasonInput && ${seasonJs}) {
-      seasonInput.value = ${seasonJs};
-      seasonInput.dispatchEvent(new Event('input', { bubbles: true }));
-      seasonInput.dispatchEvent(new Event('change', { bubbles: true }));
+      setInputValue(seasonInput, ${seasonJs});
     }
 
     const episodeInput = document.querySelector('input[name="podcastEpisodeNumber"]');
     if (episodeInput && ${episodeJs}) {
-      episodeInput.value = ${episodeJs};
-      episodeInput.dispatchEvent(new Event('input', { bubbles: true }));
-      episodeInput.dispatchEvent(new Event('change', { bubbles: true }));
+      setInputValue(episodeInput, ${episodeJs});
     }
     return "ok";
   })()`);
@@ -125,8 +132,8 @@ async function fillDeterministicMetadata(
     );
   }
 
-  // Learned guard from D2 recovery: if required counter still shows 0/4000,
-  // deterministic path should fail fast so D2 can take over.
+  // Learned guard from policy recovery: if required counter still shows 0/4000,
+  // deterministic path should fail fast so policy executor can take over.
   const requiredCounter = await client.evalJs(`(() => {
     const text = (document.body && document.body.innerText) ? document.body.innerText : "";
     return /Required\\s*0\\s*\\/\\s*4000/i.test(text) ? "required-0" : "required-ok";
@@ -179,7 +186,7 @@ export async function executeDeterministic(
   inputs: PublishEpisodeInputs,
   context: ExecutorContext = {}
 ): Promise<{ status: "published"; show: string; url: string }> {
-  const log: LogFn = context.logger ?? ((msg) => console.log(`[spotify-publish-d1] ${msg}`));
+  const log: LogFn = context.logger ?? ((msg) => console.log(`[spotify-publish-deterministic] ${msg}`));
 
   const audioFile = await ensureReadableFile(inputs.audio_file, "audio_file");
   const profileDir = resolve(inputs.profile_dir ?? DEFAULT_PROFILE_DIR);

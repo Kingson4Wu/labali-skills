@@ -21,6 +21,7 @@ export interface PublishEpisodeInputs {
   show_name: string;
   season_number?: string;
   episode_number?: string;
+  disable_deterministic_cache?: boolean;
   cover_image?: string;
   publish_at?: string;
   confirm_publish?: boolean;
@@ -357,6 +358,13 @@ export function validateInputs(raw: PublishEpisodeInputs): asserts raw is Publis
   if (!raw.show_name?.trim()) throw new Error("Missing required input: show_name");
   if (raw.confirm_publish !== undefined && raw.confirm_publish !== true && raw.confirm_publish !== false) {
     throw new Error("Invalid boolean input: confirm_publish");
+  }
+  if (
+    raw.disable_deterministic_cache !== undefined &&
+    raw.disable_deterministic_cache !== true &&
+    raw.disable_deterministic_cache !== false
+  ) {
+    throw new Error("Invalid boolean input: disable_deterministic_cache");
   }
   if (raw.publish_at) {
     const parsed = new Date(raw.publish_at);

@@ -26,6 +26,11 @@ inputs:
     type: string
     required: false
     description: Optional episode number to fill in episode metadata (positive integer).
+  disable_deterministic_cache:
+    type: boolean
+    required: false
+    default: false
+    description: Set true to skip deterministic trajectory cache and run policy executor directly.
   cover_image:
     type: string
     required: false

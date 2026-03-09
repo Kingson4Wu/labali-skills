@@ -19,7 +19,7 @@
 
 4. Media and metadata
 - Upload audio via semantic upload controls; fallback to generic file input only when wrappers block direct upload.
-- Fill title and description via snapshot/ref fast path first, then label/placeholder and rich-text fallbacks.
+- Fill title and description with native input first (focus/select-all/insert text), then semantic and DOM fallbacks.
 - Optionally upload cover image.
 
 5. Review and publish
@@ -48,7 +48,9 @@
 ## Execution Mode Note
 
 - Unified runtime order:
-  1. D1 deterministic trajectory cache (`deterministic.ts`)
-  2. Auto-downgrade to D2 policy executor (`executor.ts`) if D1 fails
-- D2 remains the required baseline capability; D1 is optional acceleration.
-- Log D1 failure context and use D2 success evidence to iteratively improve D1.
+  1. Deterministic trajectory cache (`deterministic.ts`)
+  2. Auto-downgrade to policy executor (`executor.ts`) if deterministic path fails
+- Optional direct policy mode: set `disable_deterministic_cache=true` when validating baseline behavior or when deterministic path is environment-limited.
+- Policy executor remains the required baseline capability; deterministic mode is optional acceleration.
+- If policy executor fails, repair and retry until publish verification passes.
+- Log deterministic failure context and use policy-success evidence to iteratively improve deterministic mode after task success.

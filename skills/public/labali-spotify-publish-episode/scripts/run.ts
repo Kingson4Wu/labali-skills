@@ -69,7 +69,7 @@ function printUsage(): void {
     [--publish_at 2026-03-15T16:30:00Z] \\
     [--show_home_url https://creators.spotify.com/pod/show/<id>/home] \\
     [--confirm_publish true|false] \\
-    [--disable_d1 true|false] \\
+    [--disable_deterministic_cache true|false] \\
     [--profile_dir .cache/agent-browser/spotify-creators] \\
     [--cdp_port 9222] \\
     [--headed true]`);
@@ -82,11 +82,14 @@ async function main(): Promise<void> {
     return;
   }
 
+  const disableDeterministic = parseBoolean(args.disable_deterministic_cache, false);
+
   const inputs: PublishEpisodeInputs = {
     audio_file: requiredString(args, "audio_file"),
     title: requiredString(args, "title"),
     description: requiredString(args, "description"),
     show_name: requiredString(args, "show_name"),
+    disable_deterministic_cache: disableDeterministic,
     season_number: optionalString(args, "season_number"),
     episode_number: optionalString(args, "episode_number"),
     confirm_publish: parseBoolean(args.confirm_publish, true),
@@ -98,9 +101,7 @@ async function main(): Promise<void> {
     headed: parseBoolean(args.headed, true),
   };
 
-  const result = await execute(inputs, {
-    preferDeterministic: !parseBoolean(args.disable_d1, false),
-  });
+  const result = await execute(inputs);
   console.log(JSON.stringify(result, null, 2));
 }
 

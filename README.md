@@ -6,8 +6,10 @@ A skills monorepo for managing reusable skills.
 
 ## Public Skills
 
-- `labali-git-auto-commit-rewrite`: stage all changes, generate normalized conventional commit messages, and commit locally.
-- `labali-spotify-publish-episode`: browser-only semantic automation for creating/publishing Spotify podcast episodes.
+| Skill | Function |
+| --- | --- |
+| `labali-git-auto-commit-rewrite` | Stage all changes, generate a normalized conventional commit message, and commit locally. |
+| `labali-spotify-publish-episode` | Browser-only semantic automation for creating and publishing Spotify podcast episodes. |
 
 ## Install
 

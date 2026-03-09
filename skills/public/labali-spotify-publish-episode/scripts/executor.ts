@@ -248,6 +248,73 @@ async function fillSeasonEpisodeSpinbuttonFallback(
   }
 }
 
+async function ensureProvidedSeasonEpisodeApplied(
+  client: AgentBrowserClient,
+  seasonNumber?: string,
+  episodeNumber?: string
+): Promise<void> {
+  const season = seasonNumber?.trim();
+  const episode = episodeNumber?.trim();
+  if (!season && !episode) {
+    return;
+  }
+
+  const readValues = async (): Promise<{ season?: string; episode?: string }> => {
+    const raw = await client.evalJs(`(() => {
+      const inputs = Array.from(document.getElementsByTagName('input'));
+      const seasonInput = inputs.find((i) => (i.name || '') === 'podcastSeasonNumber');
+      const episodeInput = inputs.find((i) => (i.name || '') === 'podcastEpisodeNumber');
+      return JSON.stringify({
+        season: seasonInput ? (seasonInput.value || '').trim() : undefined,
+        episode: episodeInput ? (episodeInput.value || '').trim() : undefined,
+      });
+    })()`);
+    const parsed = JSON.parse(raw || "{}") as unknown;
+    return (typeof parsed === "string" ? JSON.parse(parsed) : parsed) as {
+      season?: string;
+      episode?: string;
+    };
+  };
+
+  const matches = (vals: { season?: string; episode?: string }): boolean => {
+    const seasonOk = !season || vals.season === season;
+    const episodeOk = !episode || vals.episode === episode;
+    return seasonOk && episodeOk;
+  };
+
+  let values = await readValues();
+  if (matches(values)) {
+    return;
+  }
+
+  await client.evalJs(`(() => {
+    const setInputValue = (input, value) => {
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+      if (setter) {
+        setter.call(input, value);
+      } else {
+        input.value = value;
+      }
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      input.dispatchEvent(new Event('blur', { bubbles: true }));
+    };
+    const inputs = Array.from(document.getElementsByTagName('input'));
+    const seasonInput = inputs.find((i) => (i.name || '') === 'podcastSeasonNumber');
+    const episodeInput = inputs.find((i) => (i.name || '') === 'podcastEpisodeNumber');
+    if (seasonInput && ${JSON.stringify(season ?? "")}) setInputValue(seasonInput, ${JSON.stringify(season ?? "")});
+    if (episodeInput && ${JSON.stringify(episode ?? "")}) setInputValue(episodeInput, ${JSON.stringify(episode ?? "")});
+    return "ok";
+  })()`);
+
+  values = await readValues();
+  if (!matches(values)) {
+    throw new Error(
+      `Provided season/episode not applied. expected season='${season ?? ""}', episode='${episode ?? ""}', got season='${values.season ?? ""}', episode='${values.episode ?? ""}'`
+    );
+  }
+}
+
 async function ensureMetadataRequiredFields(
   client: AgentBrowserClient,
   inputs: PublishEpisodeInputs,
@@ -275,6 +342,7 @@ async function ensureMetadataRequiredFields(
   if (!seasonFilled || !episodeFilled) {
     await fillSeasonEpisodeSpinbuttonFallback(client, inputs.season_number, inputs.episode_number);
   }
+  await ensureProvidedSeasonEpisodeApplied(client, inputs.season_number, inputs.episode_number);
 }
 
 export async function execute(inputs: PublishEpisodeInputs, context: ExecutorContext = {}): Promise<{

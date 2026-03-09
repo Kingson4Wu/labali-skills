@@ -32,7 +32,7 @@ Treat this skill as a layered system, not a single script.
   - Runtime-first semantic re-discovery with little pre-structured flow.
   - Most adaptive but highest variance in speed/cost.
 
-This skill uses unified runtime by design: D1 deterministic acceleration first, then D2 policy executor fallback for reliability.
+This skill uses unified runtime by design: deterministic trajectory cache first, then policy executor fallback for reliability.
 The deterministic first-level cache script is available at `scripts/deterministic.ts` with CLI wrapper `scripts/run_deterministic.ts`.
 
 ## Required Constraints
@@ -57,21 +57,25 @@ Use `skill.yaml` as the source of truth for input schema.
 
 ## Operational Mode
 
-- Default unified mode: run D1 first, then auto-downgrade to D2.
-  - D1 (`scripts/deterministic.ts`) is optional acceleration only.
-  - D2 (`scripts/executor.ts`) is mandatory reliability baseline and must succeed independently.
-- If D1 fails:
-  - continue with D2 in the same run,
-  - record D1 failure context for later D1 optimization.
-- If D2 fails:
-  - prioritize D2 repair and retry until business-success criteria pass,
-  - optimize D1 only after D2 success.
+- Default unified mode: run deterministic trajectory cache first, then auto-downgrade to policy executor.
+  - Deterministic trajectory cache (`scripts/deterministic.ts`) is optional acceleration only.
+  - Policy executor (`scripts/executor.ts`) is mandatory reliability baseline and must succeed independently.
+  - Set `disable_deterministic_cache=true` (or CLI `--disable_deterministic_cache true`) to skip deterministic mode and run policy executor directly.
+- If deterministic trajectory cache fails:
+  - continue with policy executor in the same run,
+  - record deterministic failure context for later optimization.
+- If policy executor fails:
+  - prioritize policy repair and retry in a loop until business-success criteria pass,
+  - do not return success before verification passes.
+- After task completion:
+  - use deterministic failure records plus policy-success evidence to optimize deterministic mode incrementally,
+  - keep deterministic mode optional; never weaken policy baseline for speed-only changes.
 
 ## Resources
 
 - Architecture and standards: `references/architecture.md`
 - Workflow map and semantic action plan: `references/plan.md`
-- Unified D1->D2 entry: `scripts/auto-executor.ts`
+- Unified deterministic->policy entry: `scripts/auto-executor.ts`
 - Executor orchestration entry: `scripts/executor.ts`
 - Deterministic first-level cache entry: `scripts/deterministic.ts`
 - Stage detection module: `scripts/stage-detector.ts`
