@@ -362,7 +362,7 @@ export async function execute(inputs: PublishEpisodeInputs, context: ExecutorCon
   const profileDir = resolve(inputs.profile_dir ?? DEFAULT_PROFILE_DIR);
   await mkdir(profileDir, { recursive: true });
 
-  const client = new AgentBrowserClient(
+  const client = await AgentBrowserClient.create(
     profileDir,
     inputs.headed ?? true,
     inputs.cdp_port,
@@ -384,15 +384,16 @@ export async function execute(inputs: PublishEpisodeInputs, context: ExecutorCon
 
   try {
     let metadataEnsured = false;
-    const targetUrl = inputs.show_home_url ?? SPOTIFY_CREATORS_URL;
+    const targetShowUrl = inputs.show_home_url;
+    const targetUrl = targetShowUrl ?? SPOTIFY_CREATORS_URL;
     await timed("entry", async () => {
       const currentUrl = await client.getUrl();
       const inEpisodeWizardContext = /\/episode\/[^/]+\/wizard/i.test(currentUrl);
-      if (isCreatorsUrl(currentUrl) && !(inEpisodeWizardContext && inputs.show_home_url)) {
+      if (isCreatorsUrl(currentUrl) && !(inEpisodeWizardContext && targetShowUrl)) {
         log(`Reuse already opened page: ${currentUrl}`);
       } else {
-        if (inEpisodeWizardContext && inputs.show_home_url) {
-          log(`Reset from episode wizard context to show home: ${inputs.show_home_url}`);
+        if (inEpisodeWizardContext && targetShowUrl) {
+          log(`Reset from episode wizard context to show home: ${targetShowUrl}`);
         } else {
           log(`Open ${targetUrl}`);
         }
@@ -414,26 +415,38 @@ export async function execute(inputs: PublishEpisodeInputs, context: ExecutorCon
     }
 
     const postLoginUrl = await client.getUrl();
+    const showNameVisibleMatch = inputs.show_name
+      ? (await client.hasText(inputs.show_name)) && (await isEpisodeCreatorVisible(client))
+      : false;
     const alreadyInTargetShow =
-      isSameShowByUrl(postLoginUrl, inputs.show_home_url) ||
-      ((await client.hasText(inputs.show_name)) && (await isEpisodeCreatorVisible(client)));
+      isSameShowByUrl(postLoginUrl, targetShowUrl) || showNameVisibleMatch;
 
     if (alreadyInTargetShow) {
       log(`Target show already open: ${postLoginUrl}`);
     } else {
-      await timed("show-selection", async () => {
-        log(`Select show '${inputs.show_name}'`);
-        try {
-          await selectShow(client, inputs.show_name);
+      if (targetShowUrl) {
+        await timed("show-selection", async () => {
+          log(`Open target show URL: ${targetShowUrl}`);
+          await client.open(targetShowUrl);
           await client.waitForLoad();
-        } catch (error) {
-          const creatorVisible = await isEpisodeCreatorVisible(client);
-          if (!creatorVisible) {
-            throw error;
+        });
+      } else if (inputs.show_name) {
+        await timed("show-selection", async () => {
+          log(`Select show '${inputs.show_name}'`);
+          try {
+            await selectShow(client, inputs.show_name);
+            await client.waitForLoad();
+          } catch (error) {
+            const creatorVisible = await isEpisodeCreatorVisible(client);
+            if (!creatorVisible) {
+              throw error;
+            }
+            log("Show selector not found, but episode creation entry is visible. Continue.");
           }
-          log("Show selector not found, but episode creation entry is visible. Continue.");
-        }
-      });
+        });
+      } else {
+        throw new Error("Cannot resolve target show. Provide show_id, show_home_url, or show_name.");
+      }
     }
 
     const beforeCreateUrl = await client.getUrl();
@@ -522,7 +535,7 @@ export async function execute(inputs: PublishEpisodeInputs, context: ExecutorCon
       verifyPublishedInList(
         client,
         inputs.title,
-        inputs.show_home_url
+        targetShowUrl
       )
     );
     if (!publishedConfirmed) {
@@ -530,7 +543,7 @@ export async function execute(inputs: PublishEpisodeInputs, context: ExecutorCon
         verifyPublishedOnly(
           client,
           inputs.title,
-          inputs.show_home_url
+          targetShowUrl
         )
       );
       if (!foundInPublishedOnly) {
@@ -549,7 +562,7 @@ export async function execute(inputs: PublishEpisodeInputs, context: ExecutorCon
     log(`[timing] top-steps: ${topSteps.join(", ")}`);
     return {
       status: "published",
-      show: inputs.show_name,
+      show: inputs.show_name ?? inputs.show_id ?? "unknown-show",
       url,
     };
   } catch (error) {

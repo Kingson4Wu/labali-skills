@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { constants } from "node:fs";
 import { access } from "node:fs/promises";
+import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { stdin as input, stdout as output } from "node:process";
 import { createInterface } from "node:readline/promises";
@@ -10,6 +11,8 @@ const execFileAsync = promisify(execFile);
 
 export const SPOTIFY_CREATORS_URL = "https://creators.spotify.com";
 export const DEFAULT_PROFILE_DIR = ".cache/agent-browser/spotify-creators";
+export const DEFAULT_CHROME_CDP_PORT = "9222";
+export const DEFAULT_CHROME_USER_DATA_DIR = resolve(homedir(), ".chrome-spotify");
 export const SEARCH_EPISODES_PLACEHOLDER = "Search episode titles";
 
 export type LogFn = (message: string) => void;
@@ -18,7 +21,8 @@ export interface PublishEpisodeInputs {
   audio_file: string;
   title: string;
   description: string;
-  show_name: string;
+  show_id?: string;
+  show_name?: string;
   season_number?: string;
   episode_number?: string;
   disable_deterministic_cache?: boolean;
@@ -77,6 +81,20 @@ export class AgentBrowserClient {
   private readonly baseArgs: string[];
   private readonly log: LogFn;
   private readonly timeoutMs: string;
+
+  static async create(
+    profileDir: string,
+    headed: boolean,
+    cdpPort: string | undefined,
+    log: LogFn
+  ): Promise<AgentBrowserClient> {
+    if (cdpPort) {
+      return new AgentBrowserClient(profileDir, headed, cdpPort, log);
+    }
+    const resolvedCdpPort = DEFAULT_CHROME_CDP_PORT;
+    await ensureChromeWithRemoteDebugging(resolvedCdpPort, log);
+    return new AgentBrowserClient(profileDir, headed, resolvedCdpPort, log);
+  }
 
   constructor(profileDir: string, headed: boolean, cdpPort: string | undefined, log: LogFn) {
     if (cdpPort) {
@@ -331,6 +349,68 @@ export class AgentBrowserClient {
   }
 }
 
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolveSleep) => setTimeout(resolveSleep, ms));
+}
+
+async function isCdpEndpointReady(port: string): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 1500);
+    const response = await fetch(`http://127.0.0.1:${port}/json/version`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (!response.ok) {
+      return false;
+    }
+    const json = (await response.json()) as { Browser?: string };
+    return typeof json.Browser === "string" && json.Browser.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+async function waitForCdpEndpoint(port: string, timeoutMs: number): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (await isCdpEndpointReady(port)) {
+      return true;
+    }
+    await sleep(500);
+  }
+  return false;
+}
+
+async function ensureChromeWithRemoteDebugging(port: string, log: LogFn): Promise<void> {
+  if (await isCdpEndpointReady(port)) {
+    log(`Reuse Chrome remote debugging session on :${port}`);
+    return;
+  }
+
+  const chromeArgs = [
+    "-na",
+    "Google Chrome",
+    "--args",
+    `--remote-debugging-port=${port}`,
+    `--user-data-dir=${DEFAULT_CHROME_USER_DATA_DIR}`,
+  ];
+  log(
+    `Launch Chrome remote debugging session: open ${chromeArgs.join(" ")}`
+  );
+  await execFileAsync("open", chromeArgs, {
+    maxBuffer: 4 * 1024 * 1024,
+    env: process.env,
+  });
+
+  const ready = await waitForCdpEndpoint(port, 20000);
+  if (!ready) {
+    throw new Error(
+      `Chrome CDP endpoint not ready on :${port} after launch. Start Chrome manually with --remote-debugging-port=${port}.`
+    );
+  }
+}
+
 export async function retry<T>(times: number, fn: () => Promise<T>): Promise<T> {
   let lastError: unknown;
   for (let i = 0; i < times; i += 1) {
@@ -351,11 +431,23 @@ export async function ensureReadableFile(pathValue: string, inputName: string): 
   return fullPath;
 }
 
+export function buildShowHomeUrl(showId: string): string {
+  return `https://creators.spotify.com/pod/show/${showId}/home`;
+}
+
 export function validateInputs(raw: PublishEpisodeInputs): asserts raw is PublishEpisodeInputs {
   if (!raw.audio_file?.trim()) throw new Error("Missing required input: audio_file");
   if (!raw.title?.trim()) throw new Error("Missing required input: title");
   if (!raw.description?.trim()) throw new Error("Missing required input: description");
-  if (!raw.show_name?.trim()) throw new Error("Missing required input: show_name");
+  const showId = raw.show_id?.trim();
+  const showName = raw.show_name?.trim();
+  const showHomeUrl = raw.show_home_url?.trim();
+  if (!showId && !showName && !showHomeUrl) {
+    throw new Error("Missing show target. Provide one of: show_id, show_home_url, show_name.");
+  }
+  if (showId && !/^[A-Za-z0-9]+$/.test(showId)) {
+    throw new Error("Invalid show_id value. Use Spotify show id characters only (A-Z, a-z, 0-9).");
+  }
   if (raw.confirm_publish !== undefined && raw.confirm_publish !== true && raw.confirm_publish !== false) {
     throw new Error("Invalid boolean input: confirm_publish");
   }
@@ -385,6 +477,10 @@ export function validateInputs(raw: PublishEpisodeInputs): asserts raw is Publis
     } catch {
       throw new Error("Invalid show_home_url value. Provide a full URL.");
     }
+  }
+
+  if (!raw.show_home_url && showId) {
+    raw.show_home_url = buildShowHomeUrl(showId);
   }
 }
 

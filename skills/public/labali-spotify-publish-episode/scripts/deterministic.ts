@@ -10,6 +10,7 @@ import {
   ensureReadableFile,
   promptManualLogin,
   SPOTIFY_CREATORS_URL,
+  validateInputs,
   type LogFn,
 } from "./core";
 import { ensureDashboardOrShows, ensureLoginRoute } from "./stage-detector";
@@ -186,13 +187,19 @@ export async function executeDeterministic(
   inputs: PublishEpisodeInputs,
   context: ExecutorContext = {}
 ): Promise<{ status: "published"; show: string; url: string }> {
+  validateInputs(inputs);
   const log: LogFn = context.logger ?? ((msg) => console.log(`[spotify-publish-deterministic] ${msg}`));
 
   const audioFile = await ensureReadableFile(inputs.audio_file, "audio_file");
   const profileDir = resolve(inputs.profile_dir ?? DEFAULT_PROFILE_DIR);
   await mkdir(profileDir, { recursive: true });
 
-  const client = new AgentBrowserClient(profileDir, inputs.headed ?? true, inputs.cdp_port, log);
+  const client = await AgentBrowserClient.create(
+    profileDir,
+    inputs.headed ?? true,
+    inputs.cdp_port,
+    log
+  );
 
   try {
     const showHome = inputs.show_home_url ?? SPOTIFY_CREATORS_URL;
@@ -250,7 +257,7 @@ export async function executeDeterministic(
 
     return {
       status: "published",
-      show: inputs.show_name,
+      show: inputs.show_name ?? inputs.show_id ?? "unknown-show",
       url: await client.getUrl(),
     };
   } finally {

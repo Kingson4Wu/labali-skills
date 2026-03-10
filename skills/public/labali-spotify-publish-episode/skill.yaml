@@ -14,10 +14,14 @@ inputs:
     type: string
     required: true
     description: Episode description shown in Spotify.
-  show_name:
+  show_id:
     type: string
     required: true
-    description: Podcast show name to select before creating the episode.
+    description: Spotify show id used to build direct creators URL and open the target show without name search.
+  show_name:
+    type: string
+    required: false
+    description: Optional show name fallback for selector-based navigation when direct URL is unavailable.
   season_number:
     type: string
     required: false
@@ -42,7 +46,7 @@ inputs:
   show_home_url:
     type: string
     required: false
-    description: Optional direct show home page URL. If current tab is already on creators.spotify.com, executor reuses it instead of forcing navigation.
+    description: Optional direct show home page URL. If omitted, executor derives it from show_id.
   confirm_publish:
     type: boolean
     required: false
@@ -51,12 +55,13 @@ inputs:
   profile_dir:
     type: string
     required: false
-    default: .cache/agent-browser/spotify-creators
-    description: Persistent browser profile directory used to reuse manual login sessions.
+    default: ~/.chrome-spotify
+    description: Chrome user data dir for login-session reuse when auto-launching local Chrome with remote debugging.
   cdp_port:
     type: string
     required: false
-    description: Optional Chrome DevTools Protocol port (for example 9222) to attach to an existing real Chrome session.
+    default: "9222"
+    description: Chrome DevTools Protocol port. Default 9222; executor first reuses it and auto-launches Chrome if absent.
   headed:
     type: boolean
     required: false

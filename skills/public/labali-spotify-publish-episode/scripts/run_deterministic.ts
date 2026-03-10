@@ -61,7 +61,8 @@ function printUsage(): void {
     --audio_file /abs/path/episode.mp3 \\
     --title "Episode title" \\
     --description "Episode description" \\
-    --show_name "Show Name" \\
+    --show_id "<spotify_show_id>" \\
+    [--show_name "Show Name"] \\
     [--season_number 1] \\
     [--episode_number 1] \\
     [--show_home_url https://creators.spotify.com/pod/show/<id>/home] \\
@@ -79,7 +80,8 @@ async function main(): Promise<void> {
     audio_file: requiredString(args, "audio_file"),
     title: requiredString(args, "title"),
     description: requiredString(args, "description"),
-    show_name: requiredString(args, "show_name"),
+    show_id: requiredString(args, "show_id"),
+    show_name: optionalString(args, "show_name"),
     season_number: optionalString(args, "season_number"),
     episode_number: optionalString(args, "episode_number"),
     show_home_url: optionalString(args, "show_home_url"),
@@ -98,4 +100,3 @@ main().catch((error) => {
   console.error(`spotify deterministic publish failed: ${message}`);
   process.exitCode = 1;
 });
-

@@ -62,7 +62,8 @@ function printUsage(): void {
     --audio_file /abs/path/episode.mp3 \\
     --title "Episode title" \\
     --description "Episode description" \\
-    --show_name "Show Name" \\
+    --show_id "<spotify_show_id>" \\
+    [--show_name "Show Name"] \\
     [--season_number 5] \\
     [--episode_number 21] \\
     [--cover_image /abs/path/cover.jpg] \\
@@ -70,7 +71,7 @@ function printUsage(): void {
     [--show_home_url https://creators.spotify.com/pod/show/<id>/home] \\
     [--confirm_publish true|false] \\
     [--disable_deterministic_cache true|false] \\
-    [--profile_dir .cache/agent-browser/spotify-creators] \\
+    [--profile_dir ~/.chrome-spotify] \\
     [--cdp_port 9222] \\
     [--headed true]`);
 }
@@ -88,7 +89,8 @@ async function main(): Promise<void> {
     audio_file: requiredString(args, "audio_file"),
     title: requiredString(args, "title"),
     description: requiredString(args, "description"),
-    show_name: requiredString(args, "show_name"),
+    show_id: requiredString(args, "show_id"),
+    show_name: optionalString(args, "show_name"),
     disable_deterministic_cache: disableDeterministic,
     season_number: optionalString(args, "season_number"),
     episode_number: optionalString(args, "episode_number"),
