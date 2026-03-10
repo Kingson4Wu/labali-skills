@@ -1,5 +1,5 @@
 version: 1
 interface:
   display_name: Labali Git Auto Commit Rewrite
-  description: Generate a clear conventional commit message from current project changes, commit all changes locally, then run clean_commit.sh to normalize final commit text.
-  default_prompt: Commit all current repository changes with a clear and elegant conventional commit message (subject plus meaningful bullet body), then run scripts/clean_commit.sh and report the final hash and subject.
+  description: Generate a clear conventional commit message from current project changes, commit all changes locally, and automatically normalize final commit text via clean_commit.sh.
+  default_prompt: Commit all current repository changes with a clear and elegant conventional commit message (subject plus meaningful bullet body). clean_commit.sh must run automatically after commit; report final hash and subject.

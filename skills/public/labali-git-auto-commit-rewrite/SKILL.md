@@ -19,7 +19,7 @@ Use this skill for one-shot local commit workflows with strong commit-message qu
 4. Stage all changes with `git add -A`.
 5. If there are no staged changes, stop and report `No changes to commit.`.
 6. Commit once with the generated subject and body.
-7. Always run `scripts/clean_commit.sh` after commit.
+7. MUST run `scripts/clean_commit.sh` immediately after commit (non-optional).
 8. Return final commit hash and final subject line.
 
 ## Message Quality Rules
