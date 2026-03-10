@@ -1,0 +1,5 @@
+version: 1
+interface:
+  display_name: Labali Xiaohongshu Download Post Assets
+  description: Guided browser workflow for Xiaohongshu post export: open browser, handle manual login if needed, canonicalize post URL, save post.md, download post images, and download post video when available.
+  default_prompt: Open Xiaohongshu in browser, guide login if needed, then prompt me for post URL and save post.md plus post images/video to a local directory.
