@@ -1,0 +1,5 @@
+version: 1
+interface:
+  display_name: Labali Image Desensitize
+  description: Sanitize local images by physical regeneration (ImageMagick re-encode + metadata strip), print before/after verification stats, run hidden metadata sensitive-info scan, produce payload for in-agent model judgment, and optionally enforce strict non-zero gate.
+  default_prompt: Desensitize this image by regenerating it with the sanitize script. I will provide input image path and output path.

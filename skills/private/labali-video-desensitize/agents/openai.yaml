@@ -1,0 +1,5 @@
+version: 1
+interface:
+  display_name: Labali Video Desensitize
+  description: Sanitize local videos with deterministic FFmpeg re-encode, optional two-pass local transcode, metadata/chapter stripping, metadata diffing, and hidden-metadata sensitive-info scan.
+  default_prompt: Desensitize this local video file. I will provide input video path and output video path.

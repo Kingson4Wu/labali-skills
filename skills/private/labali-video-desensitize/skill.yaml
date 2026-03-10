@@ -1,0 +1,12 @@
+name: labali-video-desensitize
+description: Desensitize local videos with mandatory two-pass local FFmpeg re-encode, metadata/chapter stripping, post-sanitize metadata scan, and optional strict non-zero gate.
+executor: scripts/run.ts
+inputs:
+  input_video:
+    type: string
+    required: true
+    description: Source video file path.
+  output_video:
+    type: string
+    required: true
+    description: Output sanitized video file path.
