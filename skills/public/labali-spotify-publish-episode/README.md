@@ -96,3 +96,43 @@ Description (description):
 Publish immediately? (confirm_publish=true/false):
 (Optional) Scheduled publish time (publish_at):
 ```
+
+## 5) Batch Upload Prompt Template (Copy/Paste)
+
+Use this when you need to publish multiple episodes in sequence, usually under the same `show_id`.
+
+Recommended wording: require strict list order, publish one item at a time, and verify each item before continuing.
+
+```text
+Please use $labali-spotify-publish-episode to batch publish the following podcast episodes.
+Requirements:
+1. Execute strictly in list order.
+2. Publish one item, then continue to the next.
+3. For each item, verify the title appears in Published and not in Draft.
+4. If any item fails, stop immediately and report the failure reason and current page state.
+
+Global parameters:
+show_id=5WGV9fU6CKA7QLpfF7DQ0h
+
+Episode list:
+- [1]
+  audio_file=/absolute/path/episode-01.mp3
+  title=Episode 1 title
+  description=Episode 1 description
+  season_number=6
+  episode_number=1
+- [2]
+  audio_file=/absolute/path/episode-02.mp3
+  title=Episode 2 title
+  description=Episode 2 description
+  season_number=6
+  episode_number=2
+- [3]
+  audio_file=/absolute/path/episode-03.mp3
+  title=Episode 3 title
+  description=Episode 3 description
+  season_number=6
+  episode_number=3
+```
+
+For immediate publish, omit `publish_at`. For scheduled publish, set `publish_at` per episode item.

@@ -13,6 +13,7 @@ import {
   validateInputs,
   type LogFn,
 } from "./core";
+import { waitForPreviewReady } from "./publisher";
 import { ensureDashboardOrShows, ensureLoginRoute } from "./stage-detector";
 import { verifyPublishedInList, verifyPublishedOnly } from "./verifier";
 
@@ -243,6 +244,8 @@ export async function executeDeterministic(
         "(() => { const label = document.querySelector('label[for=\"publish-date-now\"]'); if (label) label.click(); const input = document.getElementById('publish-date-now'); if (input) { input.checked = true; input.dispatchEvent(new Event('change', { bubbles: true })); } return 'ok'; })()"
       );
     }
+    log("Wait for upload preview to be ready before publish");
+    await waitForPreviewReady(client);
     await client.clickRoleByNames("button", ["Publish", "Publish episode", "Save and publish"]);
     await client.waitMs(3000);
 

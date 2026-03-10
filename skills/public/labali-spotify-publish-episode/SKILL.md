@@ -42,6 +42,7 @@ The deterministic first-level cache script is available at `scripts/deterministi
 - Use semantic interactions first (visible text, label, role).
 - Login is manual; session reuse is required.
 - Publish success is validated by business state, not by click success.
+- Do not click `Publish` while upload is still processing. Wait until upload is complete, with `Preview ready!` as the preferred readiness marker.
 
 ## Success Criteria
 

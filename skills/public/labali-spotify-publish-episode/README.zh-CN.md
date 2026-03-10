@@ -96,3 +96,43 @@ headed=true
 是否立即发布（confirm_publish=true/false）：
 （可选）定时发布时间（publish_at）：
 ```
+
+## 5) 批量上传 Prompt 模板（可复制）
+
+适用场景：你要连续发布多集，且参数结构一致（通常是同一个 `show_id`）。
+
+建议写法：明确要求“按列表顺序逐条执行”，并要求“每条发布后再继续下一条”。
+
+```text
+请使用 $labali-spotify-publish-episode 批量发布以下播客单集。
+要求：
+1. 按列表顺序逐条执行；
+2. 每发布完成 1 条后再继续下一条；
+3. 每条都验证标题出现在 Published 且不在 Draft；
+4. 若任一条失败，先停止并返回失败条目的原因与当前页面状态。
+
+全局参数：
+show_id=5WGV9fU6CKA7QLpfF7DQ0h
+
+任务列表：
+- [1]
+  audio_file=/absolute/path/episode-01.mp3
+  title=第1集标题
+  description=第1集描述
+  season_number=6
+  episode_number=1
+- [2]
+  audio_file=/absolute/path/episode-02.mp3
+  title=第2集标题
+  description=第2集描述
+  season_number=6
+  episode_number=2
+- [3]
+  audio_file=/absolute/path/episode-03.mp3
+  title=第3集标题
+  description=第3集描述
+  season_number=6
+  episode_number=3
+```
+
+如果你希望“立即发布”，不要填写 `publish_at`；如果要定时发布，请在每条任务中单独提供该字段。

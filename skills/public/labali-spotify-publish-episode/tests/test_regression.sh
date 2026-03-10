@@ -36,6 +36,7 @@ fi
 # Ensure publish safety guard is present.
 rg -n "confirm_publish" "$SCRIPTS_DIR" >/dev/null
 rg -n "Publish date\\*\\(required\\)|publish-date-now|verifyPublishedInList|Search episode titles" "$SCRIPTS_DIR" >/dev/null
+rg -n "Preview ready!|waitForPreviewReady" "$SCRIPTS_DIR" >/dev/null
 rg -n -- "--audio_file|--title|--description|--show_name|--season_number|--episode_number|--confirm_publish|--disable_deterministic_cache|--cdp_port|--show_home_url" "$RUNNER" >/dev/null
 rg -n -- "--audio_file|--title|--description|--show_name|--season_number|--episode_number|--cdp_port|--show_home_url" "$DET_RUNNER" >/dev/null
 

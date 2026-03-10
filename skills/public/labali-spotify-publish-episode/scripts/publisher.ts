@@ -4,6 +4,67 @@ import {
   retry,
 } from "./core";
 
+const PREVIEW_READY_MARKERS = ["Preview ready!", "Preview ready"];
+const UPLOAD_PENDING_MARKERS = [
+  "Uploading",
+  "Upload in progress",
+  "Processing",
+  "Transcoding",
+  "Generating preview",
+  "Preparing preview",
+];
+
+async function isPublishButtonEnabled(client: AgentBrowserClient): Promise<boolean> {
+  const out = await client.evalJs(`(() => {
+    const normalize = (s) => (s || '').trim().toLowerCase();
+    const candidates = ${JSON.stringify(ACTION_CANDIDATES.publish.map((x) => x.toLowerCase()))};
+    const buttons = Array.from(document.querySelectorAll('button'));
+    const target = buttons.find((button) => {
+      const text = normalize(button.textContent);
+      return candidates.some((candidate) => text === candidate || text.includes(candidate));
+    });
+    if (!target) return "missing";
+    const disabled = !!target.disabled || target.getAttribute('aria-disabled') === 'true';
+    return disabled ? "disabled" : "enabled";
+  })()`);
+  return out.includes("enabled");
+}
+
+async function hasVisibleUploadPercentage(client: AgentBrowserClient): Promise<boolean> {
+  const out = await client.evalJs(`(() => {
+    const text = (document.body && document.body.innerText) ? document.body.innerText : "";
+    const hasPercent = /\\b(?:100|[1-9]?\\d)%\\b/.test(text);
+    return hasPercent ? "yes" : "no";
+  })()`);
+  return out.includes("yes");
+}
+
+export async function waitForPreviewReady(
+  client: AgentBrowserClient,
+  timeoutMs = 10 * 60 * 1000
+): Promise<void> {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    if (await client.waitForTextAny(PREVIEW_READY_MARKERS, 1500)) {
+      return;
+    }
+
+    const hasPendingUploadMarker = await client.waitForTextAny(UPLOAD_PENDING_MARKERS, 1000);
+    const hasPercent = await hasVisibleUploadPercentage(client);
+    const publishEnabled = await isPublishButtonEnabled(client);
+
+    // Fallback: allow publish when no upload-progress marker exists and publish is enabled.
+    if (!hasPendingUploadMarker && !hasPercent && publishEnabled) {
+      return;
+    }
+
+    await client.waitMs(1500);
+  }
+  throw new Error(
+    "Upload not ready for publish. Wait for 'Preview ready!' (or enabled publish with no progress markers) before publishing."
+  );
+}
+
 export async function applyScheduleIfRequested(
   client: AgentBrowserClient,
   publishAt?: string
@@ -80,6 +141,8 @@ export async function publishEpisode(client: AgentBrowserClient, confirmPublish:
       // Best effort only; evalJs attempt above may already satisfy this requirement.
     }
   }
+
+  await waitForPreviewReady(client);
 
   await retry(3, async () => {
     try {
