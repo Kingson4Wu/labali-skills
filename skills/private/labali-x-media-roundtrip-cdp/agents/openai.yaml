@@ -1,0 +1,5 @@
+version: 1
+interface:
+  display_name: Labali X Media Roundtrip CDP
+  description: Process media through browser-only X workflow with agent browser + CDP: upload, temporary post, capture media URL, download output, then delete the post.
+  default_prompt: Process this media using browser+CDP roundtrip on X. I will provide input file and output file paths.

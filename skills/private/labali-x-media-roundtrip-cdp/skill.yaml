@@ -1,0 +1,27 @@
+name: labali-x-media-roundtrip-cdp
+description: Browser-only X media roundtrip via agent browser + CDP (upload, temporary post, media URL capture, download, delete post) with automatic CDP/X/login precheck.
+executor: scripts/run.ts
+inputs:
+  input_file:
+    type: string
+    required: true
+    description: Source media file path.
+  output_file:
+    type: string
+    required: true
+    description: Output path for downloaded processed media.
+  post_text:
+    type: string
+    required: false
+    default: ""
+    description: Optional temporary post text. Leave empty for media-only post.
+  cdp_port:
+    type: string
+    required: false
+    default: "9222"
+    description: Chrome remote debugging port.
+  profile_dir:
+    type: string
+    required: false
+    default: ~/.chrome-private
+    description: Chrome user data dir for session reuse.
