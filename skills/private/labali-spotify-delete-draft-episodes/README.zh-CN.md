@@ -32,7 +32,7 @@
 
 ```text
 请帮我删除这个 Spotify 节目的一条 Draft。
-show_id=5WGV9fU6CKA7QLpfF7DQ0h
+show_id=<show_id>
 使用默认模式，只删第一条后停止。
 ```
 
@@ -46,7 +46,7 @@ show_id=5WGV9fU6CKA7QLpfF7DQ0h
 
 ```text
 请使用 $labali-spotify-delete-draft-episodes 执行：
-show_id=5WGV9fU6CKA7QLpfF7DQ0h
+show_id=<show_id>
 delete_all_drafts=false
 cdp_port=9222
 headed=true
@@ -58,7 +58,7 @@ headed=true
 
 ```text
 请使用 $labali-spotify-delete-draft-episodes 执行：
-show_id=5WGV9fU6CKA7QLpfF7DQ0h
+show_id=<show_id>
 delete_all_drafts=true
 max_delete=200
 cdp_port=9222

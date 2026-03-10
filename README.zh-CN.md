@@ -33,11 +33,11 @@ git clone git@github.com:Kingson4Wu/labali-skills.git
 mkdir -p ~/.agents/skills
 
 # 安装全部 public skills
-ln -s ~/programming/kingson4wu/labali-skills/skills/public/* ~/.agents/skills/
+ln -s $(pwd)/labali-skills/skills/* ~/.agents/skills/
 
 # 仅安装单个 skill
-ln -s ~/programming/kingson4wu/labali-skills/skills/public/labali-git-auto-commit-rewrite ~/.agents/skills/
-ln -s ~/programming/kingson4wu/labali-skills/skills/public/labali-spotify-publish-episode ~/.agents/skills/
+ln -s $(pwd)/labali-skills/skills/public/labali-git-auto-commit-rewrite ~/.agents/skills/
+ln -s $(pwd)/labali-skills/skills/public/labali-spotify-publish-episode ~/.agents/skills/
 ```
 
 提交前校验：

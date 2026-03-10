@@ -1,4 +1,4 @@
-import { chromium, type Page } from "playwright";
+import { chromium } from "playwright";
 import { createInterface } from "node:readline/promises";
 import {
   DEFAULT_CDP_PORT,
@@ -25,8 +25,6 @@ export interface ExecutorContext {
   prompt?: (message: string) => Promise<void>;
 }
 
-const XHS_HOME_URL = "https://www.xiaohongshu.com";
-
 function toTimeout(value: number | undefined): number {
   if (!value || Number.isNaN(value)) {
     return 90000;
@@ -39,22 +37,6 @@ function assertRequiredString(value: string | undefined, key: string): string {
     throw new Error(`Missing required input: ${key}`);
   }
   return value.trim();
-}
-
-async function isHomeLoginRequired(page: Page): Promise<boolean> {
-  const url = page.url().toLowerCase();
-  if (url.includes("login") || url.includes("passport")) {
-    return true;
-  }
-  const hintText = await page.evaluate(() => document.body?.innerText?.slice(0, 3000) ?? "");
-  const lower = hintText.toLowerCase();
-  return (
-    lower.includes("登录") ||
-    lower.includes("扫码登录") ||
-    lower.includes("手机号登录") ||
-    lower.includes("login") ||
-    lower.includes("sign in")
-  );
 }
 
 async function promptRequired(question: string): Promise<string> {
@@ -108,25 +90,6 @@ export async function execute(inputs: DownloadPostInputs, context?: ExecutorCont
   try {
     const browserContext = browser.contexts()[0] ?? (await browser.newContext());
     const page = browserContext.pages()[0] ?? (await browserContext.newPage());
-
-    log(`opening Xiaohongshu home for login warmup: ${XHS_HOME_URL}`);
-    await page.goto(XHS_HOME_URL, { waitUntil: "domcontentloaded", timeout: timeoutMs });
-    await page.waitForLoadState("networkidle", { timeout: timeoutMs }).catch(() => undefined);
-    await page.waitForTimeout(1000);
-
-    if (await isHomeLoginRequired(page)) {
-      log("home page suggests login is required, waiting for manual login");
-      if (context?.prompt) {
-        await context.prompt("请在打开的浏览器中完成小红书登录，然后继续。");
-      } else {
-        await waitForManualLogin("检测到可能未登录。请先在当前浏览器窗口登录小红书。");
-      }
-      await page.goto(XHS_HOME_URL, { waitUntil: "domcontentloaded", timeout: timeoutMs });
-      await page.waitForLoadState("networkidle", { timeout: timeoutMs }).catch(() => undefined);
-      await page.waitForTimeout(800);
-    } else {
-      log("home page login check passed, continue to target post");
-    }
 
     let postUrlInput = inputs.post_url?.trim();
     if (!postUrlInput) {

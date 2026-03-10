@@ -1,5 +1,5 @@
 import { execute } from "./executor";
-import type { DownloadPostInputs } from "./core";
+import type { ExportUserPostLinksInputs } from "./core";
 
 type ArgMap = Record<string, string | boolean>;
 
@@ -61,13 +61,14 @@ function optionalNumber(args: ArgMap, key: string): number | undefined {
 
 function printUsage(): void {
   console.log(`Usage:
-  npx tsx skills/public/labali-xiaohongshu-download-post-assets/scripts/run.ts \\
-    --post_url "https://www.xiaohongshu.com/explore/<note_id>" \\
-    --output_dir "/absolute/or/relative/output/path" \\
+  npx tsx skills/private/labali-xiaohongshu-export-user-post-links/scripts/run.ts \\
+    --profile_url "https://www.xiaohongshu.com/user/profile/<user_id>?xsec_token=..." \\
+    --output_path "/absolute/or/relative/output/file-or-dir" \\
+    [--include_token true|false] \\
     [--profile_dir ~/.chrome-labali] \\
     [--cdp_port 9222] \\
     [--timeout_ms 90000] \\
-    [--overwrite true|false]`);
+    [--max_scroll_rounds 80]`);
 }
 
 async function main(): Promise<void> {
@@ -77,13 +78,14 @@ async function main(): Promise<void> {
     return;
   }
 
-  const inputs: DownloadPostInputs = {
-    post_url: optionalString(args, "post_url"),
-    output_dir: optionalString(args, "output_dir"),
+  const inputs: ExportUserPostLinksInputs = {
+    profile_url: optionalString(args, "profile_url"),
+    output_path: optionalString(args, "output_path"),
+    include_token: parseBoolean(args.include_token, true),
     profile_dir: optionalString(args, "profile_dir"),
     cdp_port: optionalString(args, "cdp_port"),
     timeout_ms: optionalNumber(args, "timeout_ms"),
-    overwrite: parseBoolean(args.overwrite, false),
+    max_scroll_rounds: optionalNumber(args, "max_scroll_rounds"),
   };
 
   const result = await execute(inputs);
@@ -92,6 +94,6 @@ async function main(): Promise<void> {
 
 main().catch((error) => {
   const message = error instanceof Error ? error.message : String(error);
-  console.error(`xhs download failed: ${message}`);
+  console.error(`xhs user post links export failed: ${message}`);
   process.exitCode = 1;
 });

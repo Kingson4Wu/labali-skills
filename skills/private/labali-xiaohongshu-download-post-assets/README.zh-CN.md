@@ -22,7 +22,7 @@ npx skills add github.com/Kingson4Wu/labali-skills --skill labali-xiaohongshu-do
 ## 2) 快速使用
 
 ```bash
-npx tsx skills/public/labali-xiaohongshu-download-post-assets/scripts/run.ts \
+npx tsx skills/private/labali-xiaohongshu-download-post-assets/scripts/run.ts \
   --post_url "https://www.xiaohongshu.com/explore/<note_id>?xsec_token=...&xsec_source=pc_user" \
   --output_dir "/absolute/output/dir"
 ```
@@ -66,7 +66,7 @@ npx tsx skills/public/labali-xiaohongshu-download-post-assets/scripts/run.ts \
 
 ```text
 <output_dir>/
-  20260301-194022-69a425a6000000001a01d6b0/
+  <publish_time>-<note_id>/
     001.webp
     002.webp
     video-merged.mp4   (有视频时)

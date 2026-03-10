@@ -32,7 +32,7 @@ Behavior by mode:
 
 ```text
 Please remove one Draft episode for this Spotify show.
-show_id=5WGV9fU6CKA7QLpfF7DQ0h
+show_id=<show_id>
 Use default mode and stop after deleting the first Draft item.
 ```
 
@@ -46,7 +46,7 @@ Recommended style: include the skill name explicitly in the prompt (for example 
 
 ```text
 Please use $labali-spotify-delete-draft-episodes for this task.
-show_id=5WGV9fU6CKA7QLpfF7DQ0h
+show_id=<show_id>
 delete_all_drafts=false
 cdp_port=9222
 headed=true
@@ -58,7 +58,7 @@ Delete only the first Draft episode and then stop.
 
 ```text
 Please use $labali-spotify-delete-draft-episodes for this task.
-show_id=5WGV9fU6CKA7QLpfF7DQ0h
+show_id=<show_id>
 delete_all_drafts=true
 max_delete=200
 cdp_port=9222

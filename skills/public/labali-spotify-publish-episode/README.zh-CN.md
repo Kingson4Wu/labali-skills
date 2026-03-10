@@ -41,13 +41,13 @@ npx skills add github.com/Kingson4Wu/labali-skills --skill labali-spotify-publis
 
 ```text
 请帮我在 Spotify for Creators 发布一集播客。
-节目ID：1234567890abcdef123456
-音频文件：/Users/kingsonwu/audio/2026-03-10-episode-18.mp3
+节目ID：<show_id>
+音频文件：/absolute/path/to/audio/2026-03-10-episode-18.mp3
 标题：Episode 18 - Agent Reliability in Production
 描述：这一集我们讨论多层执行架构、策略缓存和回归验证实践。
 季号：2
 集号：18
-封面图：/Users/kingsonwu/audio/cover-ep18.jpg
+封面图：/absolute/path/to/audio/cover-ep18.jpg
 定时发布时间：2026-03-12T09:00:00+08:00
 请直接发布，不要停在确认页。
 ```
@@ -67,10 +67,10 @@ npx skills add github.com/Kingson4Wu/labali-skills --skill labali-spotify-publis
 
 ```text
 请使用 $labali-spotify-publish-episode 执行这次发布任务，并严格按下面参数运行：
-audio_file=/Users/kingsonwu/audio/2026-03-10-episode-19.mp3
+audio_file=/absolute/path/to/audio/2026-03-10-episode-19.mp3
 title=Episode 19 - Deterministic Cache vs Policy Executor
 description=对比 deterministic 轨迹缓存和 policy executor 的稳定性、速度与维护成本。
-show_id=1234567890abcdef123456
+show_id=<show_id>
 show_name=Labali AI Weekly
 season_number=2
 episode_number=19
@@ -112,7 +112,7 @@ headed=true
 4. 若任一条失败，先停止并返回失败条目的原因与当前页面状态。
 
 全局参数：
-show_id=5WGV9fU6CKA7QLpfF7DQ0h
+show_id=<show_id>
 
 任务列表：
 - [1]

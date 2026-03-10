@@ -41,13 +41,13 @@ Optional information:
 
 ```text
 Please publish a podcast episode for me on Spotify for Creators.
-Show id: 1234567890abcdef123456
-Audio file: /Users/kingsonwu/audio/2026-03-10-episode-18.mp3
+Show id: <show_id>
+Audio file: /absolute/path/to/audio/2026-03-10-episode-18.mp3
 Title: Episode 18 - Agent Reliability in Production
 Description: In this episode we discuss layered execution architecture, strategy cache, and regression verification practices.
 Season number: 2
 Episode number: 18
-Cover image: /Users/kingsonwu/audio/cover-ep18.jpg
+Cover image: /absolute/path/to/audio/cover-ep18.jpg
 Scheduled publish time: 2026-03-12T09:00:00+08:00
 Please publish directly and do not stop at the confirmation screen.
 ```
@@ -67,10 +67,10 @@ Information guidance:
 
 ```text
 Please use $labali-spotify-publish-episode for this publishing task and run strictly with the following parameters:
-audio_file=/Users/kingsonwu/audio/2026-03-10-episode-19.mp3
+audio_file=/absolute/path/to/audio/2026-03-10-episode-19.mp3
 title=Episode 19 - Deterministic Cache vs Policy Executor
 description=Compare deterministic trajectory cache and policy executor in terms of reliability, speed, and maintenance cost.
-show_id=1234567890abcdef123456
+show_id=<show_id>
 show_name=Labali AI Weekly
 season_number=2
 episode_number=19
@@ -112,7 +112,7 @@ Requirements:
 4. If any item fails, stop immediately and report the failure reason and current page state.
 
 Global parameters:
-show_id=5WGV9fU6CKA7QLpfF7DQ0h
+show_id=<show_id>
 
 Episode list:
 - [1]

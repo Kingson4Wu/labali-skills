@@ -33,11 +33,11 @@ Create symlinks:
 mkdir -p ~/.agents/skills
 
 # Install all public skills
-ln -s ~/programming/kingson4wu/labali-skills/skills/public/* ~/.agents/skills/
+ln -s $(pwd)/labali-skills/skills/* ~/.agents/skills/
 
 # Install only one skill
-ln -s ~/programming/kingson4wu/labali-skills/skills/public/labali-git-auto-commit-rewrite ~/.agents/skills/
-ln -s ~/programming/kingson4wu/labali-skills/skills/public/labali-spotify-publish-episode ~/.agents/skills/
+ln -s $(pwd)/labali-skills/skills/public/labali-git-auto-commit-rewrite ~/.agents/skills/
+ln -s $(pwd)/labali-skills/skills/public/labali-spotify-publish-episode ~/.agents/skills/
 ```
 
 Validate before commit:

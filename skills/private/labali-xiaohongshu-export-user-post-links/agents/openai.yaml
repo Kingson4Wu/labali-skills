@@ -1,0 +1,5 @@
+version: 1
+interface:
+  display_name: Labali Xiaohongshu Export User Post Links
+  description: Extract all post links from a Xiaohongshu profile page and export them to a local file with browser CDP automation and manual-login reuse.
+  default_prompt: Open a Xiaohongshu user profile, collect all post links through scrolling, and write them into a local output file.

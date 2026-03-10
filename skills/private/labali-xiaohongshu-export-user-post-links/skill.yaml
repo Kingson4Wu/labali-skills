@@ -1,0 +1,38 @@
+name: labali-xiaohongshu-export-user-post-links
+description: Browser-only automation skill to extract all post links from a Xiaohongshu user profile and export to a local file.
+executor: scripts/executor.ts
+inputs:
+  profile_url:
+    type: string
+    required: false
+    description: Xiaohongshu profile URL (for example /user/profile/<user_id>?xsec_token=...)
+  output_path:
+    type: string
+    required: false
+    default: ./downloads/xhs-post-links.txt
+    description: Output file path or output directory. If a directory is provided, script generates a file name.
+  include_token:
+    type: boolean
+    required: false
+    default: true
+    description: Include xsec_token and xsec_source in exported explore URLs.
+  profile_dir:
+    type: string
+    required: false
+    default: ~/.chrome-labali
+    description: Chrome user-data-dir used by unified CDP startup.
+  cdp_port:
+    type: string
+    required: false
+    default: "9222"
+    description: Chrome DevTools remote-debugging port.
+  timeout_ms:
+    type: string
+    required: false
+    default: "90000"
+    description: Navigation and extraction timeout in milliseconds.
+  max_scroll_rounds:
+    type: string
+    required: false
+    default: "80"
+    description: Maximum scroll rounds for pagination.

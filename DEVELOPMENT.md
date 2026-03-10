@@ -113,10 +113,10 @@ Keep development and runtime directories separated. Use symlinks for local debug
 
 ```bash
 # Install all public skills
-ln -s ~/programming/kingson4wu/labali-skills/skills/public/* ~/.agents/skills/
+ln -s $(pwd)/labali-skills/skills/* ~/.agents/skills/
 
 # Install a single skill
-ln -s ~/programming/kingson4wu/labali-skills/skills/public/labali-git-auto-commit-rewrite ~/.agents/skills/
+ln -s $(pwd)/labali-skills/skills/public/labali-git-auto-commit-rewrite ~/.agents/skills/
 ```
 
 Advantages:
