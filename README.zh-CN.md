@@ -8,8 +8,8 @@
 
 | Skill | 功能描述 |
 | --- | --- |
-| `labali-git-auto-commit-rewrite` | 一键暂存全部改动，生成并规范化 conventional commit 信息并本地提交。 |
-| `labali-spotify-publish-episode` | 基于浏览器语义交互的 Spotify 播客创建与发布自动化 skill。 |
+| [`labali-git-auto-commit-rewrite`](skills/public/labali-git-auto-commit-rewrite/SKILL.md) | 一键暂存全部改动，生成并规范化 conventional commit 信息并本地提交。 |
+| [`labali-spotify-publish-episode`](skills/public/labali-spotify-publish-episode/README.zh-CN.md) | 基于浏览器语义交互的 Spotify 播客创建与发布自动化 skill。 |
 
 ## 安装
 

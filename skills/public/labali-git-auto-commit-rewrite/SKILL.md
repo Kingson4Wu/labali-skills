@@ -1,51 +1,39 @@
 ---
 name: labali-git-auto-commit-rewrite
-description: Automatically stage all git changes, generate and normalize a conventional commit message from current staged diff context, then commit locally without confirmation. Use when user asks to batch commit repository changes quickly with standardized commit wording.
+description: Generate a clear, structured conventional commit message from current repository changes, commit all changes locally, and then run scripts/clean_commit.sh to normalize the final commit text. Use when users ask to commit the whole project with high-quality change descriptions.
 ---
 
 # labali-git-auto-commit-rewrite
 
-Use this skill for one-shot local commit workflows.
+Use this skill for one-shot local commit workflows with strong commit-message quality.
 
-## Quick Use
-
-```bash
-skills/public/labali-git-auto-commit-rewrite/scripts/auto_commit_rewrite.sh
-```
-
-Optional override:
-
-```bash
-COMMIT_MSG="feat(api): add user profile endpoint" \
-skills/public/labali-git-auto-commit-rewrite/scripts/auto_commit_rewrite.sh
-```
-
-Regression tests:
-
-```bash
-skills/public/labali-git-auto-commit-rewrite/tests/test_regression.sh
-```
-
-## Workflow
+## Execution Contract
 
 1. Verify current directory is a Git repository.
-2. Stage all changes with `git add -A`.
-3. If no staged changes exist, print `No changes to commit.` and stop.
-4. Inspect staged diff and summarize intent as a conventional commit message.
-5. Normalize commit subject format before commit.
-6. Commit locally without extra confirmation using generated message.
-7. Always run bundled `scripts/clean_commit.sh` to rewrite and clean the latest commit message.
-8. Return final commit hash and subject line.
+2. Inspect working tree changes (`git status --short`, `git diff --name-status`) before writing message.
+3. Generate a commit message that is both clear and elegant:
+   - Subject format: `<type>(<scope>): <subject>` or `<type>: <subject>`
+   - Subject is concise, action-oriented, and specific to the dominant change set.
+   - Body contains 2-6 bullet points, each tied to real grouped changes from diff.
+   - Avoid vague wording like only `update`/`align` when multiple meaningful changes exist.
+4. Stage all changes with `git add -A`.
+5. If there are no staged changes, stop and report `No changes to commit.`.
+6. Commit once with the generated subject and body.
+7. Always run `scripts/clean_commit.sh` after commit.
+8. Return final commit hash and final subject line.
 
-## Commit Message Rules
+## Message Quality Rules
 
-- Follow `references/git_standards.md` as the primary commit spec.
-- Prefer conventional format: `<type>(<scope>): <subject>`.
-- Keep subject concise (under 72 chars) and action-oriented.
+- Use English commit messages.
+- Keep subject under 72 characters when possible.
+- Use a real blank line between subject and body.
+- Body bullets must reflect actual file-level intent, not generic placeholders.
+- Prefer aggregate summaries when many files changed, then include concrete sub-actions in body.
 
-## Bundled Resources
+## Commit Helper
 
-- Deterministic helper script: `scripts/auto_commit_rewrite.sh`
-- Post-commit rewrite script: `scripts/clean_commit.sh`
-- Commit specification: `references/git_standards.md`
-- Design notes: `references/source-command.md`
+Post-commit cleanup script:
+
+```bash
+skills/public/labali-git-auto-commit-rewrite/scripts/clean_commit.sh
+```
