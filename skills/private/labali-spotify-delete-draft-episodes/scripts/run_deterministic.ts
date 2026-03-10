@@ -1,0 +1,93 @@
+import { type DeleteDraftEpisodesInputs } from "./core";
+import { executeDeterministic } from "./deterministic";
+
+type ArgMap = Record<string, string | boolean>;
+
+function parseArgs(argv: string[]): ArgMap {
+  const args: ArgMap = {};
+  for (let i = 0; i < argv.length; i += 1) {
+    const token = argv[i];
+    if (!token.startsWith("--")) {
+      continue;
+    }
+    const key = token.slice(2);
+    const next = argv[i + 1];
+    if (!next || next.startsWith("--")) {
+      args[key] = true;
+      continue;
+    }
+    args[key] = next;
+    i += 1;
+  }
+  return args;
+}
+
+function parseBoolean(value: string | boolean | undefined, fallback: boolean): boolean {
+  if (typeof value === "boolean") {
+    return value;
+  }
+  if (typeof value !== "string") {
+    return fallback;
+  }
+  const normalized = value.trim().toLowerCase();
+  if (["1", "true", "yes", "y"].includes(normalized)) {
+    return true;
+  }
+  if (["0", "false", "no", "n"].includes(normalized)) {
+    return false;
+  }
+  return fallback;
+}
+
+function requiredString(args: ArgMap, key: string): string {
+  const value = args[key];
+  if (typeof value !== "string" || !value.trim()) {
+    throw new Error(`Missing required flag: --${key}`);
+  }
+  return value;
+}
+
+function optionalString(args: ArgMap, key: string): string | undefined {
+  const value = args[key];
+  if (typeof value !== "string" || !value.trim()) {
+    return undefined;
+  }
+  return value;
+}
+
+function printUsage(): void {
+  console.log(`Usage:
+  npx tsx skills/public/labali-spotify-delete-draft-episodes/scripts/run_deterministic.ts \\
+    --show_id "<spotify_show_id>" \\
+    [--delete_all_drafts true|false] \\
+    [--max_delete 200] \\
+    [--profile_dir ~/.chrome-spotify] \\
+    [--cdp_port 9222] \\
+    [--headed true]`);
+}
+
+async function main(): Promise<void> {
+  const args = parseArgs(process.argv.slice(2));
+  if (args.help || args.h) {
+    printUsage();
+    return;
+  }
+
+  const inputs: DeleteDraftEpisodesInputs = {
+    show_id: requiredString(args, "show_id"),
+    delete_all_drafts: parseBoolean(args.delete_all_drafts, false),
+    max_delete: optionalString(args, "max_delete"),
+    profile_dir: optionalString(args, "profile_dir"),
+    cdp_port: optionalString(args, "cdp_port"),
+    headed: parseBoolean(args.headed, true),
+  };
+
+  const result = await executeDeterministic(inputs);
+  console.log(JSON.stringify(result, null, 2));
+}
+
+main().catch((error) => {
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(`spotify deterministic draft delete failed: ${message}`);
+  process.exitCode = 1;
+});

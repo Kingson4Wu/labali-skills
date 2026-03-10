@@ -1,0 +1,5 @@
+version: 1
+interface:
+  display_name: Labali Spotify Delete Draft Episodes
+  description: Delete Draft-status Spotify podcast episodes for a target show on creators.spotify.com using semantic browser automation and reusable login session profiles. Default deletes first Draft; optional full cleanup deletes all.
+  default_prompt: Delete the first Draft episode for this Spotify show_id. Set delete_all_drafts=true when I ask to clear all Draft episodes.

@@ -1,0 +1,46 @@
+name: labali-spotify-delete-draft-episodes
+description: Browser-only semantic automation skill for deleting Draft episodes in a Spotify show (default deletes the first Draft item; optional full cleanup mode).
+executor: scripts/auto-executor.ts
+inputs:
+  show_id:
+    type: string
+    required: true
+    description: Spotify show id used to build direct creators URL and open the target show episodes list.
+  show_home_url:
+    type: string
+    required: false
+    description: Optional direct show home URL. If omitted, executor derives it from show_id.
+  show_name:
+    type: string
+    required: false
+    description: Optional show name fallback for selector-based navigation when direct URL is unavailable.
+  delete_all_drafts:
+    type: boolean
+    required: false
+    default: false
+    description: Set true to delete all Draft episodes (loop mode). Default false deletes only the first Draft episode.
+  disable_deterministic_cache:
+    type: boolean
+    required: false
+    default: false
+    description: Set true to skip deterministic trajectory cache and run policy executor directly.
+  max_delete:
+    type: string
+    required: false
+    default: "200"
+    description: Safety cap for max number of Draft episodes to delete in one run.
+  profile_dir:
+    type: string
+    required: false
+    default: ~/.chrome-spotify
+    description: Chrome user data dir for login-session reuse when auto-launching local Chrome with remote debugging.
+  cdp_port:
+    type: string
+    required: false
+    default: "9222"
+    description: Chrome DevTools Protocol port. Default 9222; executor first reuses it and auto-launches Chrome if absent.
+  headed:
+    type: boolean
+    required: false
+    default: true
+    description: Run browser in headed mode for manual login and visual debugging.
