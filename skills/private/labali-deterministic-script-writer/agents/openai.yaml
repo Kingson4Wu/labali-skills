@@ -1,0 +1,5 @@
+version: 1
+interface:
+  display_name: Labali Deterministic Script Writer
+  description: Turn a user task into a deterministic no-reasoning script specification for direct execution.
+  default_prompt: Freeze my task into an executable deterministic script spec so next time it can run directly without repeated reasoning.
