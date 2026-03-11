@@ -1,0 +1,5 @@
+version: 1
+interface:
+  display_name: Labali Whisper Transcribe Media
+  description: Transcribe audio with Whisper, or extract audio from video with ffmpeg then transcribe, with optional language passthrough and deterministic script execution.
+  default_prompt: Transcribe this media file to text with Whisper. If it is video, extract audio first, then run transcription and wait for completion.

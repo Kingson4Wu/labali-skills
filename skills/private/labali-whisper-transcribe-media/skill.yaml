@@ -1,0 +1,44 @@
+name: labali-whisper-transcribe-media
+description: Transcribe local audio/video to text using Whisper, with automatic audio extraction for video and optional language argument passthrough.
+executor: scripts/run.ts
+inputs:
+  input_path:
+    type: string
+    required: true
+    description: Source media path (single audio/video file or directory for recursive batch).
+  output_text:
+    type: string
+    required: false
+    description: Optional output file path used as basename stem. Defaults to <input_stem>_subtitles/<input_stem>.* in the same directory.
+  language:
+    type: string
+    required: false
+    description: Optional Whisper language value, for example Chinese, en, zh.
+  model:
+    type: string
+    required: false
+    description: Whisper model name, default medium.
+  task:
+    type: string
+    required: false
+    description: Whisper task, transcribe or translate. Default transcribe.
+  output_format:
+    type: string
+    required: false
+    description: Whisper output format, default all (produces txt/srt/vtt/tsv/json).
+  parallel:
+    type: number
+    required: false
+    description: Batch concurrency for directory input. Default 1.
+  retry:
+    type: number
+    required: false
+    description: Retry count per failed media item. Default 1.
+  dry_run:
+    type: boolean
+    required: false
+    description: List pending media files without running Whisper.
+  force:
+    type: boolean
+    required: false
+    description: Do not skip existing subtitle outputs in batch mode.
