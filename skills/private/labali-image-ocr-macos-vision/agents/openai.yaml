@@ -1,0 +1,5 @@
+version: 1
+interface:
+  display_name: Labali macOS Image OCR (Vision)
+  description: OCR local images with macOS native Vision.framework through pyobjc, using Chinese+English defaults and deterministic CLI execution.
+  default_prompt: Extract OCR text from this local image using macOS Vision OCR. I will provide image path and optional output text path.
