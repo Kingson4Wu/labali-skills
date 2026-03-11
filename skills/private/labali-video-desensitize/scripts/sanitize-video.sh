@@ -5,6 +5,8 @@ INPUT_VIDEO="${1:-}"
 OUTPUT_VIDEO="${2:-}"
 CHECK_SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/check-sensitive-video-info.sh"
 STRICT_MODE="false"
+VIDEO_CRF="28"
+ANTI_WATERMARK_VF='scale=trunc(iw*0.98/2)*2:trunc(ih*0.98/2)*2,scale=trunc(iw/0.98/2)*2:trunc(ih/0.98/2)*2'
 
 for arg in "${@:3}"; do
   if [[ "$arg" == "--strict" ]]; then
@@ -82,12 +84,16 @@ print_snapshot() {
 }
 
 print_snapshot "Before Processing" "$INPUT_VIDEO"
+echo "Sanitize mode: watermark-resistance default enabled"
+echo "Video CRF: $VIDEO_CRF"
+echo "Video filter: $ANTI_WATERMARK_VF"
 
 intermediate_file="${OUTPUT_VIDEO}.intermediate-pass.mp4"
 trap 'rm -f "$intermediate_file"' EXIT
 
 ffmpeg -y -i "$INPUT_VIDEO" \
-  -c:v libx264 -crf 18 \
+  -vf "$ANTI_WATERMARK_VF" \
+  -c:v libx264 -crf "$VIDEO_CRF" \
   -c:a aac -b:a 128k \
   "$intermediate_file"
 
@@ -97,7 +103,8 @@ ffmpeg -y -i "$intermediate_file" \
   -fflags +bitexact \
   -flags:v +bitexact \
   -flags:a +bitexact \
-  -c:v libx264 -crf 18 \
+  -vf "$ANTI_WATERMARK_VF" \
+  -c:v libx264 -crf "$VIDEO_CRF" \
   -c:a aac -b:a 128k \
   -movflags +faststart \
   -write_tmcd 0 \

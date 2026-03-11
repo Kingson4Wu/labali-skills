@@ -25,7 +25,7 @@ printf "Running regression checks for %s\n" "$ROOT_DIR"
 rg -n "Layer Contract|Required Constraints|Success Criteria|Operational Mode" "$SKILL_MD" >/dev/null
 rg -n "Layered Boundaries|Execution Model|Safety Notes" "$ARCH" >/dev/null
 rg -n "Known Gaps|High-Assurance Alternative|practical desensitization" "$RISK_NOTES" >/dev/null
-rg -n "map_metadata -1|map_chapters -1|fflags \+bitexact|flags:v \+bitexact|flags:a \+bitexact|c:v libx264|crf 18|c:a aac|movflags \+faststart|write_tmcd 0|ffprobe Format Tag Diff|intermediate|mandatory two-pass|Pass 1" "$SCRIPT" "$PLAN" >/dev/null
+rg -n "map_metadata -1|map_chapters -1|fflags \+bitexact|flags:v \+bitexact|flags:a \+bitexact|c:v libx264|crf 28|c:a aac|movflags \+faststart|write_tmcd 0|scale=trunc\\(iw\\*0.98/2\\)\\*2|ffprobe Format Tag Diff|intermediate|mandatory two-pass|Pass 1" "$SCRIPT" "$PLAN" >/dev/null
 rg -n "Sensitive info review|MODEL_REVIEW_SUMMARY|MODEL_REVIEW_JSON_BEGIN|MODEL_REVIEW_JSON_END|Strict mode gate" "$CHECK_SCRIPT" >/dev/null
 rg -n -- "--input_video|--output_video|--strict" "$RUNNER" >/dev/null
 

@@ -17,11 +17,14 @@
 ## Stage 3: Sanitize
 
 - Run mandatory two-pass local FFmpeg flow:
-  - pass 1: local transcode to intermediate mp4 (`libx264 + aac`),
+  - pass 1: local transcode to intermediate mp4 (`libx264 + aac`) with default watermark-resistance transforms:
+    - `-crf 28`,
+    - mild scale perturbation (`scale 98% then near-original upscale`),
   - pass 2: apply full sanitize flow from intermediate to output:
     - remove metadata/chapters,
     - enable bitexact flags,
-    - re-encode video (`libx264 -crf 18`),
+    - re-encode video (`libx264 -crf 28`),
+    - re-apply mild scale perturbation,
     - re-encode audio (`aac -b:a 128k`),
     - apply MP4 options (`-movflags +faststart -write_tmcd 0`).
   - remove intermediate file.

@@ -1,6 +1,6 @@
 ---
 name: labali-video-desensitize
-description: Sanitize local video files by mandatory two-pass local FFmpeg re-encode with metadata/chapter removal, bitexact flags, audio re-encode, and MP4 container hardening options, then print before/after diagnostics, metadata diffs, and post-sanitize hidden-metadata sensitive-info scan. Use when users need practical video metadata desensitization for local files with input video path + output video path.
+description: Sanitize local video files by mandatory two-pass local FFmpeg re-encode with metadata/chapter removal, bitexact flags, audio re-encode, MP4 container hardening, and default watermark-resistance transforms (higher CRF + mild scale perturbation), then print before/after diagnostics, metadata diffs, and post-sanitize hidden-metadata sensitive-info scan. Use when users need practical video metadata desensitization with stronger default disruption against platform-level embedded tracking watermarks for local files with input video path + output video path.
 ---
 
 # labali-video-desensitize
@@ -17,11 +17,14 @@ Treat this skill as a layered system.
 
 - Require only two runtime inputs: input video path and output video path.
 - Use deterministic sanitize command with FFmpeg:
-  - pass 1 local transcode to intermediate mp4 (`-c:v libx264 -crf 18 -c:a aac -b:a 128k`),
+  - pass 1 local transcode to intermediate mp4 with default watermark-resistance transforms:
+  - `-vf "scale=trunc(iw*0.98/2)*2:trunc(ih*0.98/2)*2,scale=trunc(iw/0.98/2)*2:trunc(ih/0.98/2)*2"`
+  - `-c:v libx264 -crf 28 -c:a aac -b:a 128k`
   - pass 2 sanitize from intermediate to output with:
   - `-map_metadata -1 -map_chapters -1`
   - `-fflags +bitexact -flags:v +bitexact -flags:a +bitexact`
-  - `-c:v libx264 -crf 18`
+  - `-vf "scale=trunc(iw*0.98/2)*2:trunc(ih*0.98/2)*2,scale=trunc(iw/0.98/2)*2:trunc(ih/0.98/2)*2"`
+  - `-c:v libx264 -crf 28`
   - `-c:a aac -b:a 128k`
   - `-movflags +faststart -write_tmcd 0`
 - Print before/after diagnostics:
@@ -61,6 +64,7 @@ Use `skill.yaml` as input schema source of truth.
 - No browser, no network, no API.
 - Keep output reproducible and script-driven.
 - State clearly that this method is practical-risk reduction, not 100% forensic erasure.
+- State clearly that default stronger transforms improve disruption odds for platform watermarking, but cannot guarantee full removal.
 
 ## Resources
 
