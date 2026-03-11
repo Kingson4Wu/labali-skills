@@ -6,6 +6,8 @@
 - 生成 `post.md`
 - 下载帖子图片
 - 帖子有视频时下载视频
+- 传入 `--include_comments true` 时导出评论（`comments.json` + `comments.md`，**实验性，结果不保证完整/准确**）
+- 评论导出会写入独立的 `comments/` 子目录
 - 若视频有多个分段，自动合并为 `video-merged.mp4` 并删除分段文件
 - **不**生成 `manifest.json`
 
@@ -32,6 +34,7 @@ npx tsx skills/private/labali-xiaohongshu-download-post-assets/scripts/run.ts \
 - `--cdp_port 9222`
 - `--timeout_ms 90000`
 - `--overwrite true|false`
+- `--include_comments true|false`
 
 如果不传 `post_url` 或 `output_dir`，脚本会交互式询问。
 
@@ -48,6 +51,8 @@ npx tsx skills/private/labali-xiaohongshu-download-post-assets/scripts/run.ts \
 9. 下载图片和视频。
 10. 若视频分段 > 1，合并为 `video-merged.mp4` 并清理临时文件。
 11. 写入 `post.md`。
+12. 若 `include_comments=true`，提取评论并写入 `comments/comments.json` 与 `comments/comments.md`。
+13. 若评论含图片，下载到 `comments/images/`。
 
 ## 4) 技术实现方法
 
@@ -57,6 +62,12 @@ npx tsx skills/private/labali-xiaohongshu-download-post-assets/scripts/run.ts \
 - 数据提取：
   - 主路径：`window.__INITIAL_STATE__.note.noteDetailMap`
   - 兜底路径：固定 DOM selector + 媒体 URL 过滤规则
+- 评论提取：
+  - 主路径：从 `window.__INITIAL_STATE__` 做结构化扫描
+  - 兜底路径：评论 DOM selector（含用户名/用户ID、回复关系字段）
+  - 分页策略：滚动 + 点击“展开/更多/回复/下一页”等元素，尽量抓取更多评论与回复
+- 评论资源：
+  - 评论图片下载到 `comments/images/`
 - 资源下载：复用浏览器登录态的请求上下文
 - 视频合并：`ffmpeg concat`（优先无损 `copy`，失败再转码）
 
@@ -71,6 +82,12 @@ npx tsx skills/private/labali-xiaohongshu-download-post-assets/scripts/run.ts \
     002.webp
     video-merged.mp4   (有视频时)
     post.md
+    comments/          (传入 --include_comments true 时)
+      comments.json
+      comments.md
+      images/
+        001.webp
+        002.webp
 ```
 
 ## 6) 局限与脆弱点
@@ -96,6 +113,10 @@ npx tsx skills/private/labali-xiaohongshu-download-post-assets/scripts/run.ts \
 5. 视频分段与编码限制
 - 多段视频合并依赖本机 `ffmpeg`。
 - 未安装 `ffmpeg` 时无法自动合并。
+
+6. 评论下载功能不完善（重要）
+- 评论提取是“尽力而为”能力，不保证总能完整覆盖全部一级/二级评论、回复关系、图片与表情资源。
+- 页面结构、风控、懒加载策略变化时，可能出现漏抓、层级错位或关联不完整。
 
 ## 7) 常见问题排查
 

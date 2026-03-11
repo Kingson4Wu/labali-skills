@@ -11,7 +11,7 @@
 - Document why decisions are made, not low-level selectors only.
 
 ### Execution Layer (`scripts/*.ts`)
-- Scope: Chrome CDP startup/reuse, browser connection, post extraction, and authenticated asset downloads.
+- Scope: Chrome CDP startup/reuse, browser connection, post extraction, optional comment export, and authenticated asset downloads.
 - Current decomposition:
   - `core.ts`: URL parsing, content extraction, media detection, file writing.
   - `executor.ts`: full workflow orchestration and retry path after manual login.
@@ -27,11 +27,12 @@
 5. Resolve `post_url`/`output_dir` from CLI or interactive prompts.
 6. Open canonical target post URL (`/explore/<note_id>` without token query).
 7. Extract post publish time, text, image URLs, and optional video URLs from post state/DOM.
-8. If post page is still login-gated, pause and request manual login, then retry extraction.
-9. Download images and optional video via browser-authenticated request context.
-10. If multiple video files are downloaded, merge into one output video and delete segment files.
-11. Write `post.md` in output folder.
-12. Name output folder as `<publish_time>-<note_id>`.
+8. If `include_comments=true`, extract comments (state-first, DOM fallback), write `comments/comments.json` + `comments/comments.md`, and download comment images into `comments/images/`.
+9. If post page is still login-gated, pause and request manual login, then retry extraction.
+10. Download images and optional video via browser-authenticated request context.
+11. If multiple video files are downloaded, merge into one output video and delete segment files.
+12. Write `post.md` in output folder.
+13. Name output folder as `<publish_time>-<note_id>`.
 
 ## 3) Extraction Standards
 

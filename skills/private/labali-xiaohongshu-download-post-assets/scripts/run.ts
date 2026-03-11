@@ -67,7 +67,8 @@ function printUsage(): void {
     [--profile_dir ~/.chrome-labali] \\
     [--cdp_port 9222] \\
     [--timeout_ms 90000] \\
-    [--overwrite true|false]`);
+    [--overwrite true|false] \\
+    [--include_comments true|false]`);
 }
 
 async function main(): Promise<void> {
@@ -84,6 +85,7 @@ async function main(): Promise<void> {
     cdp_port: optionalString(args, "cdp_port"),
     timeout_ms: optionalNumber(args, "timeout_ms"),
     overwrite: parseBoolean(args.overwrite, false),
+    include_comments: parseBoolean(args.include_comments, false),
   };
 
   const result = await execute(inputs);

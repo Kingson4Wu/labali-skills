@@ -25,8 +25,8 @@ rg -n "Layer Contract|Success Criteria|Operational Mode" "$SKILL_MD" >/dev/null
 rg -n "Layered Boundaries|Execution Model|Download Correctness Standards" "$ARCH" >/dev/null
 rg -n "manual login|post.md|interactively|home page|remote-debugging-port=9222|chrome-labali|explore/<note_id>|video|merge" "$PLAN" "$SKILL_MD" "$EXECUTOR" "$CORE" >/dev/null
 
-rg -n -- "--post_url|--output_dir|--profile_dir|--cdp_port|--timeout_ms|--overwrite" "$RUNNER" >/dev/null
+rg -n -- "--post_url|--output_dir|--profile_dir|--cdp_port|--timeout_ms|--overwrite|--include_comments" "$RUNNER" >/dev/null
 rg -n "请输入小红书帖子链接|请输入本地保存目录" "$EXECUTOR" >/dev/null
-rg -n "connectOverCDP|ensureChromeWithRemoteDebugging|waitForManualLogin|downloadImages|downloadVideos|mergeVideosAndCleanup|writePostMarkdown|canonicalizePostUrl|normalizePublishTime|xiaohongshu.com" "$EXECUTOR" "$CORE" >/dev/null
+rg -n "connectOverCDP|ensureChromeWithRemoteDebugging|waitForManualLogin|downloadImages|downloadVideos|collectCommentImageUrls|mergeVideosAndCleanup|writePostMarkdown|extractPostComments|writeCommentsJson|writeCommentsMarkdown|canonicalizePostUrl|normalizePublishTime|xiaohongshu.com" "$EXECUTOR" "$CORE" >/dev/null
 
 echo "Regression checks passed"

@@ -1,5 +1,5 @@
 name: labali-xiaohongshu-download-post-assets
-description: Browser-only automation skill to export Xiaohongshu post assets into a local folder, including post.md, images, and optional video.
+description: Browser-only automation skill to export Xiaohongshu post assets into a local folder, including post.md, images, optional video, and optional comments export.
 executor: scripts/executor.ts
 inputs:
   post_url:
@@ -31,3 +31,8 @@ inputs:
     required: false
     default: false
     description: Overwrite existing files with the same generated names if true.
+  include_comments:
+    type: boolean
+    required: false
+    default: false
+    description: Export post comments into comments.json and comments.md when true.

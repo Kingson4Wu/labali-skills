@@ -6,6 +6,8 @@ Current output policy:
 - Save `post.md`
 - Save post images
 - Save post video when available
+- Optionally export comments (`comments.json` + `comments.md`) with `--include_comments true` (**experimental, completeness/accuracy not guaranteed**)
+- Comment export is written under a dedicated `comments/` subdirectory
 - If video is split into multiple segments, merge to one `video-merged.mp4` and remove segment files
 - Do **not** save `manifest.json`
 
@@ -32,6 +34,7 @@ Optional flags:
 - `--cdp_port 9222`
 - `--timeout_ms 90000`
 - `--overwrite true|false`
+- `--include_comments true|false`
 
 If `post_url` or `output_dir` is omitted, the script prompts interactively.
 
@@ -48,6 +51,8 @@ If `post_url` or `output_dir` is omitted, the script prompts interactively.
 9. Download images and videos.
 10. If multiple videos exist, merge to `video-merged.mp4` and clean temporary files.
 11. Write `post.md`.
+12. If `include_comments=true`, extract comments and write `comments/comments.json` + `comments/comments.md`.
+13. If comment images exist, download them into `comments/images/`.
 
 ## 4) Technical Method
 
@@ -57,6 +62,12 @@ Execution stack:
 - Data extraction:
   - Primary: `window.__INITIAL_STATE__.note.noteDetailMap`
   - Fallback: fixed DOM selectors and filtered media URL heuristics
+- Comment extraction:
+  - Primary: best-effort structured scan from `window.__INITIAL_STATE__`
+  - Fallback: comment DOM selectors with user/userId and reply relation fields
+  - Pagination strategy: scroll + click visible "more/expand/reply/next" elements to load additional comments/replies
+- Comment assets:
+  - Download comment images into `comments/images/`
 - Media download: authenticated request context from browser session
 - Video merge: `ffmpeg` concat (`copy` first, then re-encode fallback)
 
@@ -71,6 +82,12 @@ Example:
     002.webp
     video-merged.mp4   (if video exists)
     post.md
+    comments/          (if --include_comments true)
+      comments.json
+      comments.md
+      images/
+        001.webp
+        002.webp
 ```
 
 ## 6) Limitations and Fragility
@@ -96,6 +113,10 @@ This skill is robust for current pages, but not fully inference-driven. Main ris
 5. Video segmentation/codec constraints
 - Multi-part videos require local `ffmpeg`.
 - Without `ffmpeg`, segmented videos cannot be auto-merged.
+
+6. Comment export is not fully reliable (important)
+- Comment extraction is best-effort and may miss some top-level/reply comments, reply relations, images, or emoji assets.
+- UI/risk-control/lazy-load changes can still cause partial or mis-grouped comment output.
 
 ## 7) Troubleshooting
 

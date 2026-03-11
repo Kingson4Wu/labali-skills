@@ -23,6 +23,7 @@ export interface DownloadPostInputs {
   cdp_port?: string;
   timeout_ms?: number;
   overwrite?: boolean;
+  include_comments?: boolean;
 }
 
 export interface DownloadFailure {
@@ -37,8 +38,14 @@ export interface DownloadPostResult {
   post_url: string;
   publish_time: string;
   post_md_file: string;
+  comments_json_file?: string;
+  comments_md_file?: string;
+  comments_dir?: string;
+  comment_images_dir?: string;
   image_count: number;
   video_count: number;
+  comments_count: number;
+  comment_image_count: number;
   failed_count: number;
   failed: DownloadFailure[];
   files: string[];
@@ -52,8 +59,45 @@ export interface PostSnapshot {
   videoUrls: string[];
 }
 
+export interface PostComment {
+  commentId?: string;
+  parentCommentId?: string;
+  rootCommentId?: string;
+  level?: number;
+  userId?: string;
+  user: string;
+  replyToUserId?: string;
+  replyToUser?: string;
+  content: string;
+  publishedAt?: string;
+  likeCount?: string;
+  imageUrls?: string[];
+}
+
 function normalizeWhitespace(input: string): string {
   return input.replace(/\r/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function normalizeCommentId(raw: string): string {
+  const input = normalizeWhitespace(raw || "");
+  if (!input) {
+    return "";
+  }
+  const stripped = input.replace(/^comment-/i, "");
+  const lower = stripped.toLowerCase();
+  if (
+    lower === "notecontainer" ||
+    lower === "commentcontainer" ||
+    lower === "comments" ||
+    lower === "root" ||
+    lower === "container"
+  ) {
+    return "";
+  }
+  if (!/^[a-zA-Z0-9]+$/.test(stripped)) {
+    return "";
+  }
+  return stripped;
 }
 
 function isHttpUrl(url: string): boolean {
@@ -65,6 +109,20 @@ function cleanUrl(raw: string): string {
     return "";
   }
   return raw.trim().replace(/&amp;/g, "&");
+}
+
+function toUrlIdentity(raw: string): string {
+  const cleaned = cleanUrl(raw);
+  try {
+    const u = new URL(cleaned);
+    return `${u.origin}${u.pathname}`;
+  } catch {
+    return cleaned.split("?")[0].split("#")[0];
+  }
+}
+
+export function mediaUrlIdentity(raw: string): string {
+  return toUrlIdentity(raw);
 }
 
 function includesAny(value: string, needles: string[]): boolean {
@@ -341,6 +399,698 @@ export async function extractPostSnapshot(page: Page, noteId: string): Promise<P
   };
 }
 
+function normalizeCommentFields(comment: PostComment): PostComment {
+  return {
+    commentId: normalizeCommentId(comment.commentId || ""),
+    parentCommentId: normalizeCommentId(comment.parentCommentId || ""),
+    rootCommentId: normalizeCommentId(comment.rootCommentId || ""),
+    level: typeof comment.level === "number" ? comment.level : 0,
+    userId: normalizeWhitespace(comment.userId || ""),
+    user: normalizeWhitespace(comment.user || ""),
+    replyToUserId: normalizeWhitespace(comment.replyToUserId || ""),
+    replyToUser: normalizeWhitespace(comment.replyToUser || ""),
+    content: normalizeWhitespace(comment.content || ""),
+    publishedAt: normalizeWhitespace(comment.publishedAt || ""),
+    likeCount: normalizeWhitespace(comment.likeCount || ""),
+    imageUrls: dedupeUrls(comment.imageUrls || []),
+  };
+}
+
+function dedupeComments(comments: PostComment[]): PostComment[] {
+  const byKey = new Map<string, PostComment>();
+
+  function mergePreferRich(oldItem: PostComment, newItem: PostComment): PostComment {
+    const merged: PostComment = { ...oldItem };
+    const maybeAssign = (key: keyof PostComment) => {
+      const oldValue = merged[key];
+      const newValue = newItem[key];
+      const oldText = typeof oldValue === "string" ? oldValue.trim() : "";
+      const newText = typeof newValue === "string" ? newValue.trim() : "";
+      if (!oldText && newText) {
+        merged[key] = newValue as never;
+      }
+    };
+    maybeAssign("commentId");
+    maybeAssign("parentCommentId");
+    maybeAssign("rootCommentId");
+    maybeAssign("userId");
+    maybeAssign("user");
+    maybeAssign("replyToUserId");
+    maybeAssign("replyToUser");
+    maybeAssign("publishedAt");
+    maybeAssign("likeCount");
+
+    const mergedImages = dedupeUrls([...(merged.imageUrls || []), ...(newItem.imageUrls || [])]);
+    if (mergedImages.length > 0) {
+      merged.imageUrls = mergedImages;
+    }
+
+    const oldContent = (merged.content || "").trim();
+    const newContent = (newItem.content || "").trim();
+    if ((!oldContent && newContent) || newContent.length > oldContent.length + 8) {
+      merged.content = newItem.content;
+    }
+
+    const oldLevel = typeof merged.level === "number" ? merged.level : 0;
+    const newLevel = typeof newItem.level === "number" ? newItem.level : 0;
+    if (newLevel > oldLevel) {
+      merged.level = newLevel;
+    }
+    return merged;
+  }
+
+  for (const raw of comments) {
+    const item = normalizeCommentFields(raw);
+    if (!item.content) {
+      continue;
+    }
+    const key = item.commentId
+      ? `id::${item.commentId}`
+      : `${item.userId || item.user}::${item.content}::${item.publishedAt || ""}::${item.likeCount || ""}::${item.parentCommentId || ""}::${item.rootCommentId || ""}::${item.replyToUserId || item.replyToUser || ""}::${item.level || 0}`;
+    const existing = byKey.get(key);
+    if (!existing) {
+      byKey.set(key, item);
+      continue;
+    }
+    byKey.set(key, mergePreferRich(existing, item));
+  }
+  return Array.from(byKey.values()).map((item) => {
+    const normalized = { ...item };
+    const replyPrefix = (normalized.content || "").match(/^\s*(?:回复|reply)\s*([^\s:：]{1,40})\s*[:：]/i);
+    if ((!normalized.replyToUser || !normalized.replyToUser.trim()) && replyPrefix?.[1]) {
+      normalized.replyToUser = normalizeWhitespace(replyPrefix[1]);
+    }
+    if (
+      normalized.replyToUserId &&
+      normalized.userId &&
+      normalized.replyToUserId === normalized.userId
+    ) {
+      normalized.replyToUserId = "";
+    }
+    if (
+      normalized.replyToUser &&
+      normalized.user &&
+      normalizeWhitespace(normalized.replyToUser) === normalizeWhitespace(normalized.user)
+    ) {
+      normalized.replyToUser = "";
+    }
+
+    const hasReplyTo = !!normalized.replyToUser || !!normalized.replyToUserId;
+    const hasParent =
+      !!normalized.parentCommentId &&
+      normalized.parentCommentId !== normalized.commentId;
+    const inferredLevel2 = (normalized.level || 0) === 2 && hasReplyTo;
+    normalized.level = hasParent || hasReplyTo || inferredLevel2 ? 2 : 1;
+    if (normalized.level === 1) {
+      normalized.replyToUser = "";
+      normalized.replyToUserId = "";
+    }
+    return normalized;
+  });
+}
+
+async function expandCommentsAndPaginate(page: Page): Promise<void> {
+  let unchangedRounds = 0;
+  let previousMetric = -1;
+  let seenEndMarker = false;
+
+  async function clickPaginationHints(): Promise<number> {
+    const directShowMore = page.locator(".show-more");
+    const directCount = await directShowMore.count().catch(() => 0);
+    let directClicked = 0;
+    for (let i = 0; i < directCount; i += 1) {
+      const target = directShowMore.nth(i);
+      const text = ((await target.textContent().catch(() => "")) || "").trim();
+      if (!/展开\s*\d+\s*条回复|查看更多回复|展开回复|查看全部回复|加载更多|下一页|more|next/i.test(text)) {
+        continue;
+      }
+      const visible = await target.isVisible().catch(() => false);
+      if (!visible) {
+        continue;
+      }
+      await target.click({ timeout: 1200 }).catch(() => undefined);
+      directClicked += 1;
+    }
+
+    const texts = [
+      /展开\s*\d+\s*条回复/i,
+      /查看\s*\d+\s*条回复/i,
+      /展开.*回复/i,
+      /展开全部回复/i,
+      /展开更多回复/i,
+      /查看更多回复/i,
+      /查看全部回复/i,
+      /查看全部评论/i,
+      /展开全部评论/i,
+      /更多评论/i,
+      /加载更多/i,
+      /下一页/i,
+      /下页/i,
+      /more/i,
+      /next/i,
+    ];
+    let clicked = directClicked;
+    for (const pattern of texts) {
+      const locator = page.getByText(pattern);
+      const count = await locator.count().catch(() => 0);
+      for (let i = 0; i < count; i += 1) {
+        const target = locator.nth(i);
+        const visible = await target.isVisible().catch(() => false);
+        if (!visible) {
+          continue;
+        }
+        const text = (await target.textContent().catch(() => "")) || "";
+        const normalized = text.trim();
+        if (!normalized) {
+          continue;
+        }
+        const isPaginationAction =
+          /(展开|查看|加载|更多|下一页|下页|more|next)/i.test(normalized) &&
+          !/^(回复|reply)\b/i.test(normalized) &&
+          !/收起|less/i.test(normalized);
+        if (!isPaginationAction) {
+          continue;
+        }
+        await target.click({ timeout: 1500 }).catch(() => undefined);
+        clicked += 1;
+      }
+    }
+    return clicked;
+  }
+
+  for (let i = 0; i < 140; i += 1) {
+    const hintClicks = await clickPaginationHints();
+    const metric = await page.evaluate(() => {
+      const candidates = Array.from(
+        document.querySelectorAll(
+          "button, a, span, div, p, [role='button'], [class*='more'], [class*='expand'], [class*='reply'], [class*='load']"
+        )
+      );
+      let clicked = 0;
+      for (let i = 0; i < candidates.length; i += 1) {
+        const element = candidates[i] as HTMLElement;
+        const text = (element.textContent || "").trim();
+        if (!text) {
+          continue;
+        }
+        if (text.length > 40) {
+          continue;
+        }
+        const matched =
+          /展开|更多|查看|全部|下一页|下页|next|more|load/i.test(text) &&
+          !/^(回复|reply)\b/i.test(text) &&
+          !/收起|less/i.test(text);
+        if (!matched) {
+          continue;
+        }
+        const rect = element.getBoundingClientRect();
+        const visible = rect.width > 0 && rect.height > 0;
+        if (!visible) {
+          continue;
+        }
+        if (rect.top > window.innerHeight + 180 || rect.bottom < -180) {
+          continue;
+        }
+        element.click();
+        clicked += 1;
+      }
+      const scroller = document.scrollingElement || document.documentElement || document.body;
+      const noteScroller = (document.querySelector(".note-scroller") as HTMLElement | null) || null;
+      const delta = Math.max(window.innerHeight * 0.9, 520);
+      scroller.scrollBy(0, delta);
+      if (noteScroller) {
+        noteScroller.scrollTop += Math.max(noteScroller.clientHeight * 0.9, 520);
+      }
+      const innerScrollers = Array.from(document.querySelectorAll("div, section, ul"))
+        .filter((el) => {
+          const node = el as HTMLElement;
+          if (node.scrollHeight <= node.clientHeight + 120) {
+            return false;
+          }
+          const marker = `${node.className || ""} ${node.id || ""} ${node.getAttribute("aria-label") || ""}`;
+          return /comment|reply|评论|回复/i.test(marker);
+        })
+        .slice(0, 8) as HTMLElement[];
+      for (let i = 0; i < innerScrollers.length; i += 1) {
+        const node = innerScrollers[i];
+        node.scrollTop += Math.max(node.clientHeight * 0.9, 480);
+      }
+      const commentNodes = document.querySelectorAll(
+        ".comment-item, [class*='comment-item'], [class*='commentItem'], [data-testid*='comment'], [class*='comment']"
+      ).length;
+      const docHeight = scroller.scrollHeight;
+      const body = document.body?.innerText || "";
+      const hasEnd = body.includes("- THE END -");
+      return {
+        score: commentNodes * 1000 + clicked * 100 + Math.floor(docHeight / 100),
+        hasEnd,
+      };
+    });
+    const combinedMetric = metric.score + hintClicks * 100;
+    if (metric.hasEnd) {
+      seenEndMarker = true;
+    }
+
+    if (combinedMetric === previousMetric) {
+      unchangedRounds += 1;
+    } else {
+      unchangedRounds = 0;
+      previousMetric = combinedMetric;
+    }
+    await page.waitForTimeout(700);
+    if (seenEndMarker && unchangedRounds >= 3) {
+      break;
+    }
+    if (!seenEndMarker && unchangedRounds >= 15 && i > 80) {
+      break;
+    }
+  }
+
+  await page.evaluate(() => {
+    const scroller = document.scrollingElement || document.documentElement || document.body;
+    scroller.scrollTo(0, 0);
+  });
+}
+
+export async function extractPostComments(page: Page): Promise<PostComment[]> {
+  await expandCommentsAndPaginate(page);
+  const stateComments = await page.evaluate(() => {
+    const out: Array<{
+      commentId?: string;
+      parentCommentId?: string;
+      rootCommentId?: string;
+      level?: number;
+      userId?: string;
+      user: string;
+      replyToUserId?: string;
+      replyToUser?: string;
+      content: string;
+      publishedAt?: string;
+      likeCount?: string;
+    }> = [];
+    const queue: Array<{ node: unknown; depth: number; parentCommentId?: string; rootCommentId?: string; level: number }> = [
+      { node: (window as { __INITIAL_STATE__?: unknown }).__INITIAL_STATE__, depth: 0, level: 0 },
+    ];
+    const visited = new WeakSet<object>();
+
+    while (queue.length > 0) {
+      const current = queue.shift();
+      if (!current || !current.node || current.depth > 8) {
+        continue;
+      }
+      if (Array.isArray(current.node)) {
+        for (let i = 0; i < current.node.length; i += 1) {
+          queue.push({
+            node: current.node[i],
+            depth: current.depth + 1,
+            parentCommentId: current.parentCommentId,
+            rootCommentId: current.rootCommentId,
+            level: current.level,
+          });
+        }
+        continue;
+      }
+      if (typeof current.node !== "object") {
+        continue;
+      }
+      const objectNode = current.node as object;
+      if (visited.has(objectNode)) {
+        continue;
+      }
+      visited.add(objectNode);
+
+      const record = current.node as Record<string, unknown>;
+      const commentIdRaw = record.comment_id ?? record.id ?? record.commentId;
+      const commentId =
+        typeof commentIdRaw === "string" ? commentIdRaw : typeof commentIdRaw === "number" ? String(commentIdRaw) : "";
+      const hasCommentLikeKeys =
+        !!commentId ||
+        "content" in record ||
+        "comment" in record ||
+        "sub_comments" in record ||
+        "subCommentList" in record ||
+        "target_comment" in record;
+      if (hasCommentLikeKeys) {
+        const userInfo = (
+          record.user_info ||
+          record.userInfo ||
+          record.user ||
+          record.author ||
+          record.user_info_v2 ||
+          {}
+        ) as Record<string, unknown>;
+        const targetUserInfo = (
+          record.target_user_info ||
+          record.targetUserInfo ||
+          record.targetUser ||
+          record.replyUser ||
+          {}
+        ) as Record<string, unknown>;
+        const contentRaw = record.content ?? record.text ?? record.comment ?? record.note;
+        const content =
+          (typeof contentRaw === "string" ? contentRaw : typeof contentRaw === "number" ? String(contentRaw) : "").trim();
+        if (content) {
+          const userRaw =
+            userInfo.nickname ??
+            userInfo.nick_name ??
+            userInfo.nickName ??
+            userInfo.name ??
+            userInfo.user_name ??
+            userInfo.username ??
+            record.nickname ??
+            record.nickName ??
+            record.user_name ??
+            record.userName;
+          const user =
+            typeof userRaw === "string" ? userRaw : typeof userRaw === "number" ? String(userRaw) : "";
+          const userIdRaw =
+            userInfo.user_id ??
+            userInfo.userid ??
+            userInfo.userId ??
+            userInfo.uid ??
+            userInfo.id ??
+            record.user_id ??
+            record.userId ??
+            record.uid;
+          const userId =
+            typeof userIdRaw === "string" ? userIdRaw : typeof userIdRaw === "number" ? String(userIdRaw) : "";
+          const parentIdRaw = record.parent_comment_id ?? record.parentId ?? current.parentCommentId ?? "";
+          const parentCommentId =
+            typeof parentIdRaw === "string" ? parentIdRaw : typeof parentIdRaw === "number" ? String(parentIdRaw) : "";
+          const rootIdRaw = record.root_comment_id ?? record.rootId ?? current.rootCommentId ?? commentId ?? "";
+          const rootCommentId =
+            typeof rootIdRaw === "string" ? rootIdRaw : typeof rootIdRaw === "number" ? String(rootIdRaw) : "";
+          const replyToUserRaw =
+            targetUserInfo.nickname ??
+            targetUserInfo.nick_name ??
+            targetUserInfo.nickName ??
+            targetUserInfo.name ??
+            targetUserInfo.user_name ??
+            record.reply_to_name ??
+            record.replyToName;
+          const replyToUser =
+            typeof replyToUserRaw === "string"
+              ? replyToUserRaw
+              : typeof replyToUserRaw === "number"
+                ? String(replyToUserRaw)
+                : "";
+          const replyToUserIdRaw =
+            targetUserInfo.user_id ??
+            targetUserInfo.userid ??
+            targetUserInfo.userId ??
+            targetUserInfo.uid ??
+            targetUserInfo.id ??
+            record.reply_to_user_id ??
+            record.replyToUserId ??
+            record.reply_uid;
+          const replyToUserId =
+            typeof replyToUserIdRaw === "string"
+              ? replyToUserIdRaw
+              : typeof replyToUserIdRaw === "number"
+                ? String(replyToUserIdRaw)
+                : "";
+          const publishedRaw = record.create_time ?? record.time ?? record.ip_location ?? record.timestamp;
+          const publishedAt =
+            typeof publishedRaw === "string" ? publishedRaw : typeof publishedRaw === "number" ? String(publishedRaw) : "";
+          const likeRaw = record.like_count ?? record.likes ?? record.liked_count ?? record.likeCount;
+          const likeCount = typeof likeRaw === "string" ? likeRaw : typeof likeRaw === "number" ? String(likeRaw) : "";
+          const imageUrls: string[] = [];
+          const imageLikeKeys = [
+            "image_list",
+            "images",
+            "imageList",
+            "pictures",
+            "picture_list",
+            "pics",
+            "img_list",
+            "imgList",
+          ];
+          for (let k = 0; k < imageLikeKeys.length; k += 1) {
+            const v = record[imageLikeKeys[k]];
+            if (!Array.isArray(v)) {
+              continue;
+            }
+            for (let m = 0; m < v.length; m += 1) {
+              const item = v[m];
+              if (typeof item === "string") {
+                imageUrls.push(item);
+                continue;
+              }
+              if (!item || typeof item !== "object") {
+                continue;
+              }
+              const entry = item as Record<string, unknown>;
+              const direct = entry.url ?? entry.originUrl ?? entry.image_url ?? entry.imageUrl ?? entry.src;
+              if (typeof direct === "string" && direct) {
+                imageUrls.push(direct);
+              }
+              const infoList = entry.info_list ?? entry.infoList;
+              if (Array.isArray(infoList)) {
+                for (let n = 0; n < infoList.length; n += 1) {
+                  const info = infoList[n];
+                  if (!info || typeof info !== "object") {
+                    continue;
+                  }
+                  const infoRecord = info as Record<string, unknown>;
+                  const infoUrl = infoRecord.url ?? infoRecord.originUrl ?? infoRecord.src;
+                  if (typeof infoUrl === "string" && infoUrl) {
+                    imageUrls.push(infoUrl);
+                  }
+                }
+              }
+            }
+          }
+
+          out.push({
+            commentId,
+            parentCommentId,
+            rootCommentId,
+            level: parentCommentId ? 2 : 1,
+            userId,
+            user,
+            replyToUserId,
+            replyToUser,
+            content,
+            publishedAt,
+            likeCount,
+            imageUrls,
+          });
+        }
+
+        const childKeys = ["sub_comments", "subCommentList", "replies", "reply_list", "children"];
+        for (let i = 0; i < childKeys.length; i += 1) {
+          const children = record[childKeys[i]];
+          if (!Array.isArray(children)) {
+            continue;
+          }
+          for (let j = 0; j < children.length; j += 1) {
+            queue.push({
+              node: children[j],
+              depth: current.depth + 1,
+              parentCommentId: commentId || current.parentCommentId,
+              rootCommentId: current.rootCommentId || commentId || current.parentCommentId,
+              level: current.level + 1,
+            });
+          }
+        }
+      }
+
+      const values = Object.values(record);
+      for (let i = 0; i < values.length; i += 1) {
+        queue.push({
+          node: values[i],
+          depth: current.depth + 1,
+          parentCommentId: current.parentCommentId,
+          rootCommentId: current.rootCommentId,
+          level: current.level,
+        });
+      }
+    }
+
+    return out;
+  });
+
+  const domComments = await page.evaluate(() => {
+    const out: Array<{
+      commentId?: string;
+      parentCommentId?: string;
+      rootCommentId?: string;
+      level?: number;
+      userId?: string;
+      user: string;
+      replyToUserId?: string;
+      replyToUser?: string;
+      content: string;
+      publishedAt?: string;
+      likeCount?: string;
+    }> = [];
+    const itemSelectors = [
+      ".comment-item",
+      ".comments-container .item",
+      ".comment-container .item",
+      "[class*='comment-item']",
+      "[class*='commentItem']",
+      "[data-testid*='comment']",
+      "[class*='comment']",
+    ];
+    const contentSelectors = [".content", ".desc", ".text", "[class*='content']", "[class*='desc']"];
+    const userSelectors = [".name", ".author", ".user-name", "[class*='name']", "[class*='author']"];
+    const timeSelectors = [".time", ".date", "[class*='time']", "[class*='date']"];
+    const likeSelectors = [".like", ".liked", "[class*='like']"];
+
+    for (let s = 0; s < itemSelectors.length; s += 1) {
+      const nodes = Array.from(document.querySelectorAll(itemSelectors[s]));
+      if (nodes.length === 0) {
+        continue;
+      }
+      for (let i = 0; i < nodes.length; i += 1) {
+        const root = nodes[i] as HTMLElement;
+        if (root.querySelectorAll("[class*='comment']").length > 40) {
+          continue;
+        }
+        let content = "";
+        for (let j = 0; j < contentSelectors.length; j += 1) {
+          const text = root.querySelector(contentSelectors[j])?.textContent?.trim() || "";
+          if (text) {
+            content = text;
+            break;
+          }
+        }
+        if (!content) {
+          content = root.textContent?.trim() || "";
+        }
+        if (!content) {
+          continue;
+        }
+        let user = "";
+        for (let j = 0; j < userSelectors.length; j += 1) {
+          const text = root.querySelector(userSelectors[j])?.textContent?.trim() || "";
+          if (text) {
+            user = text;
+            break;
+          }
+        }
+        let publishedAt = "";
+        for (let j = 0; j < timeSelectors.length; j += 1) {
+          const text = root.querySelector(timeSelectors[j])?.textContent?.trim() || "";
+          if (text) {
+            publishedAt = text;
+            break;
+          }
+        }
+        let likeCount = "";
+        for (let j = 0; j < likeSelectors.length; j += 1) {
+          const text = root.querySelector(likeSelectors[j])?.textContent?.trim() || "";
+          if (text) {
+            likeCount = text;
+            break;
+          }
+        }
+
+        const profileAnchor = root.querySelector("a[href*='/user/profile/']") as HTMLAnchorElement | null;
+        const profileHref = profileAnchor?.getAttribute("href") || "";
+        const userId = profileHref.match(/\/user\/profile\/([a-zA-Z0-9]+)/)?.[1] || "";
+        const commentId = root.getAttribute("data-comment-id") || root.getAttribute("data-id") || root.getAttribute("id") || "";
+        let parentCommentId = root.getAttribute("data-parent-comment-id") || root.getAttribute("data-parent-id") || "";
+        let rootCommentId = root.getAttribute("data-root-comment-id") || "";
+        const inReplyContainer = !!root.closest(".reply-container, [class*='reply-container']");
+        if (!parentCommentId && inReplyContainer) {
+          const parentBlock = root.closest(".parent-comment, [class*='parent-comment']");
+          const parentRoot = parentBlock?.querySelector(":scope > .comment-item, .comment-item") as HTMLElement | null;
+          const parentRootId =
+            parentRoot?.getAttribute("data-comment-id") ||
+            parentRoot?.getAttribute("data-id") ||
+            parentRoot?.getAttribute("id") ||
+            "";
+          if (parentRootId) {
+            parentCommentId = parentRootId;
+            if (!rootCommentId) {
+              rootCommentId = parentRootId;
+            }
+          }
+        }
+
+        let replyToUser = "";
+        let replyToUserId = "";
+        const replyToAnchor = root.querySelector("[class*='reply'] a[href*='/user/profile/']") as HTMLAnchorElement | null;
+        if (replyToAnchor) {
+          replyToUser = (replyToAnchor.textContent || "").trim().replace(/^@+/, "");
+          replyToUserId = (replyToAnchor.getAttribute("href") || "").match(/\/user\/profile\/([a-zA-Z0-9]+)/)?.[1] || "";
+        }
+
+        const replyPrefixMatch = content.match(/^\s*(?:回复|reply)\s*([^\s:：]{1,40})\s*[:：]/i);
+        const hasReplyPrefix = !!replyPrefixMatch;
+        if (!replyToUser && replyPrefixMatch?.[1]) {
+          replyToUser = replyPrefixMatch[1].trim();
+        }
+        if (!parentCommentId) {
+          let walker = root.parentElement;
+          while (walker) {
+            const maybeParentId =
+              walker.getAttribute("data-comment-id") || walker.getAttribute("data-id") || walker.getAttribute("id") || "";
+            if (maybeParentId && maybeParentId !== commentId) {
+              parentCommentId = maybeParentId;
+              break;
+            }
+            walker = walker.parentElement;
+          }
+        }
+        if (parentCommentId && !/^(comment-)?[a-zA-Z0-9]{8,}$/.test(parentCommentId)) {
+          parentCommentId = "";
+        }
+        if (rootCommentId && !/^(comment-)?[a-zA-Z0-9]{8,}$/.test(rootCommentId)) {
+          rootCommentId = "";
+        }
+        if (replyToUserId && userId && replyToUserId === userId) {
+          replyToUserId = "";
+        }
+        if (replyToUser && user && replyToUser === user) {
+          replyToUser = "";
+        }
+        const inferredLevel = inReplyContainer || parentCommentId || replyToUser || replyToUserId || hasReplyPrefix ? 2 : 1;
+
+        const imageUrls = Array.from(root.querySelectorAll("img"))
+          .map((img) => {
+            const element = img as HTMLImageElement;
+            return (element.currentSrc || element.src || "").trim();
+          })
+          .filter((url) => /^https?:\/\//i.test(url))
+          .filter((url) => {
+            const lower = url.toLowerCase();
+            return !(
+              lower.includes("avatar") ||
+              lower.includes("emoji") ||
+              lower.includes("icon") ||
+              lower.includes("logo") ||
+              lower.includes("sprite")
+            );
+          });
+
+        out.push({
+          commentId,
+          parentCommentId,
+          rootCommentId: rootCommentId || (inferredLevel === 2 ? parentCommentId || commentId : commentId),
+          level: inferredLevel,
+          userId,
+          user,
+          replyToUserId,
+          replyToUser,
+          content,
+          publishedAt,
+          likeCount,
+          imageUrls,
+        });
+      }
+      if (out.length > 0) {
+        break;
+      }
+    }
+    return out;
+  });
+
+  return dedupeComments([...domComments, ...stateComments]);
+}
+
 export function dedupeUrls(urls: string[]): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
@@ -349,10 +1099,11 @@ export function dedupeUrls(urls: string[]): string[] {
     if (!isHttpUrl(url)) {
       continue;
     }
-    if (seen.has(url)) {
+    const identity = toUrlIdentity(url);
+    if (seen.has(identity)) {
       continue;
     }
-    seen.add(url);
+    seen.add(identity);
     out.push(url);
   }
   return out;
@@ -519,32 +1270,11 @@ async function downloadOne(
   kind: "image" | "video",
   overwrite: boolean
 ): Promise<{ path: string; url: string }> {
-  const response = await page.request.get(url, {
-    timeout: 60000,
-    failOnStatusCode: false,
-    headers: {
-      referer: page.url(),
-    },
-  });
-
-  if (!response.ok()) {
-    throw new Error(`HTTP ${response.status()}`);
-  }
-
-  const contentType = response.headers()["content-type"];
-  if (kind === "image" && !looksLikeImageUrl(url, contentType)) {
-    throw new Error(`Not an image response: ${contentType || "unknown"}`);
-  }
-  if (kind === "video" && !looksLikeVideoUrl(url, contentType)) {
-    throw new Error(`Not a video response: ${contentType || "unknown"}`);
-  }
-
-  const ext =
-    inferExtensionFromContentType(contentType) ||
-    inferExtensionFromUrl(url) ||
-    (kind === "video" ? ".mp4" : ".webp");
+  const extFromUrl = inferExtensionFromUrl(url) || (kind === "video" ? ".mp4" : ".webp");
   const fileName =
-    kind === "video" ? `video-${String(index).padStart(3, "0")}${ext}` : `${String(index).padStart(3, "0")}${ext}`;
+    kind === "video"
+      ? `video-${String(index).padStart(3, "0")}${extFromUrl}`
+      : `${String(index).padStart(3, "0")}${extFromUrl}`;
   const target = resolve(outputDir, fileName);
 
   if (!overwrite) {
@@ -563,9 +1293,59 @@ async function downloadOne(
       });
   }
 
-  const buffer = await response.body();
-  await writeFile(target, Buffer.from(buffer));
-  return { path: target, url };
+  const maxAttempts = 3;
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const response = await page.request.get(url, {
+        timeout: 90000,
+        failOnStatusCode: false,
+        headers: {
+          referer: page.url(),
+        },
+      });
+
+      if (!response.ok()) {
+        throw new Error(`HTTP ${response.status()}`);
+      }
+
+      const contentType = response.headers()["content-type"];
+      if (kind === "image" && !looksLikeImageUrl(url, contentType)) {
+        throw new Error(`Not an image response: ${contentType || "unknown"}`);
+      }
+      if (kind === "video" && !looksLikeVideoUrl(url, contentType)) {
+        throw new Error(`Not a video response: ${contentType || "unknown"}`);
+      }
+
+      const ext = inferExtensionFromContentType(contentType) || extFromUrl;
+      const adjustedTarget =
+        ext === extFromUrl
+          ? target
+          : resolve(
+              outputDir,
+              kind === "video"
+                ? `video-${String(index).padStart(3, "0")}${ext}`
+                : `${String(index).padStart(3, "0")}${ext}`
+            );
+      const buffer = await response.body();
+      await writeFile(adjustedTarget, Buffer.from(buffer));
+      return { path: adjustedTarget, url };
+    } catch (error) {
+      lastError = error;
+      const message = error instanceof Error ? error.message : String(error);
+      const isRetryable =
+        message.includes("Timeout") ||
+        message.includes("ECONNRESET") ||
+        message.includes("ETIMEDOUT") ||
+        message.includes("EPIPE") ||
+        message.includes("network");
+      if (!isRetryable || attempt >= maxAttempts) {
+        throw error;
+      }
+      await new Promise((resolveSleep) => setTimeout(resolveSleep, 700 * attempt));
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }
 
 export async function downloadImages(
@@ -638,6 +1418,139 @@ export async function writePostMarkdown(params: {
 
   const target = resolve(params.noteDir, "post.md");
   await writeFile(target, content, "utf-8");
+  return target;
+}
+
+export async function writeCommentsJson(noteDir: string, comments: PostComment[]): Promise<string> {
+  const target = resolve(noteDir, "comments.json");
+  await writeFile(target, `${JSON.stringify(comments, null, 2)}\n`, "utf-8");
+  return target;
+}
+
+export function collectCommentImageUrls(comments: PostComment[]): string[] {
+  const urls: string[] = [];
+  const seen = new Set<string>();
+  for (const comment of comments) {
+    for (const raw of comment.imageUrls || []) {
+      const url = cleanUrl(raw);
+      if (!isHttpUrl(url)) {
+        continue;
+      }
+      const identity = toUrlIdentity(url);
+      if (seen.has(identity)) {
+        continue;
+      }
+      seen.add(identity);
+      urls.push(url);
+    }
+  }
+  return filterPostImageUrls(urls);
+}
+
+export async function writeCommentsMarkdown(
+  noteDir: string,
+  comments: PostComment[],
+  imageLinkByIdentity?: Record<string, string>
+): Promise<string> {
+  const lines: string[] = ["# Comments", "", `Count: ${comments.length}`, ""];
+  if (comments.length === 0) {
+    lines.push("(No comments extracted)");
+    lines.push("");
+  } else {
+    type RootNode = { root: PostComment; replies: PostComment[] };
+    const roots: RootNode[] = [];
+    const rootIndexById = new Map<string, number>();
+    let lastRootIndex = -1;
+
+    for (const comment of comments) {
+      const level = comment.level || 1;
+      const explicitRootId = comment.rootCommentId || comment.parentCommentId || "";
+      const explicitIndex = explicitRootId ? rootIndexById.get(explicitRootId) : undefined;
+
+      if (level === 1 || (!explicitIndex && lastRootIndex < 0)) {
+        roots.push({ root: comment, replies: [] });
+        lastRootIndex = roots.length - 1;
+        if (comment.commentId) {
+          rootIndexById.set(comment.commentId, lastRootIndex);
+        }
+        if (comment.rootCommentId) {
+          rootIndexById.set(comment.rootCommentId, lastRootIndex);
+        }
+        continue;
+      }
+
+      if (explicitIndex !== undefined) {
+        roots[explicitIndex].replies.push(comment);
+        continue;
+      }
+
+      roots[lastRootIndex].replies.push(comment);
+    }
+
+    let rootNo = 1;
+    for (const node of roots) {
+      const root = node.root;
+      const rootUser = root.user || "(unknown-name)";
+      const rootPrefix = `${rootUser}${root.userId ? ` (${root.userId})` : ""}`;
+      lines.push(`- 一级评论 ${rootNo}: ${rootPrefix}`);
+      lines.push(`  - ${root.content || "(Empty comment)"}`);
+      if (root.likeCount) {
+        lines.push(`  - Likes: ${root.likeCount}`);
+      }
+      if (root.publishedAt) {
+        lines.push(`  - Published At: ${root.publishedAt}`);
+      }
+      const rootImageLinks: string[] = [];
+      const rootImageSeen = new Set<string>();
+      for (const raw of root.imageUrls || []) {
+        const identity = toUrlIdentity(raw);
+        const linked = imageLinkByIdentity?.[identity] || raw;
+        if (rootImageSeen.has(linked)) {
+          continue;
+        }
+        rootImageSeen.add(linked);
+        rootImageLinks.push(linked);
+      }
+      for (let i = 0; i < rootImageLinks.length; i += 1) {
+        lines.push(`  - ![comment-image-${i + 1}](${rootImageLinks[i]})`);
+      }
+
+      for (const child of node.replies) {
+        const childUser = child.user || "(unknown-name)";
+        const childPrefixBase = `${childUser}${child.userId ? ` (${child.userId})` : ""}`;
+        const childPrefix =
+          child.replyToUser || child.replyToUserId
+            ? `${childPrefixBase} 回复 ${child.replyToUser || "(unknown-name)"}${child.replyToUserId ? ` (${child.replyToUserId})` : ""}`
+            : childPrefixBase;
+        lines.push(`  - 二级评论: ${childPrefix}`);
+        lines.push(`    - ${child.content || "(Empty comment)"}`);
+        if (child.likeCount) {
+          lines.push(`    - Likes: ${child.likeCount}`);
+        }
+        if (child.publishedAt) {
+          lines.push(`    - Published At: ${child.publishedAt}`);
+        }
+        const childImageLinks: string[] = [];
+        const childImageSeen = new Set<string>();
+        for (const raw of child.imageUrls || []) {
+          const identity = toUrlIdentity(raw);
+          const linked = imageLinkByIdentity?.[identity] || raw;
+          if (childImageSeen.has(linked)) {
+            continue;
+          }
+          childImageSeen.add(linked);
+          childImageLinks.push(linked);
+        }
+        for (let i = 0; i < childImageLinks.length; i += 1) {
+          lines.push(`    - ![reply-image-${i + 1}](${childImageLinks[i]})`);
+        }
+      }
+      lines.push("");
+      rootNo += 1;
+    }
+  }
+  const target = resolve(noteDir, "comments.md");
+  await writeFile(target, `${lines.join("\n").trimEnd()}\n`, "utf-8");
   return target;
 }
 

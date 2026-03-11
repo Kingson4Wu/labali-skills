@@ -1,6 +1,6 @@
 ---
 name: labali-xiaohongshu-download-post-assets
-description: Download Xiaohongshu post assets to a specified local directory using browser-only automation with manual-login session reuse. Use when tasks require guided flow: open browser, guide login if needed, ask for post URL, normalize URL to /explore/<note_id>, save post images, generate post.md, and download video when available.
+description: Download Xiaohongshu post assets to a specified local directory using browser-only automation with manual-login session reuse. Use when tasks require guided flow: open browser, guide login if needed, ask for post URL, normalize URL to /explore/<note_id>, save post images, generate post.md, download video when available, and optionally export post comments.
 ---
 
 # labali-xiaohongshu-download-post-assets
@@ -28,6 +28,9 @@ Treat this skill as a layered system, not a single script.
 - Prefer semantic extraction from visible page state and loaded resources.
 - Download only target post assets: images plus optional post video.
 - Generate `post.md` for extracted text metadata.
+- Export comments only when `include_comments=true`, and write `comments/comments.json` + `comments/comments.md`.
+- Download comment images into `comments/images/`.
+- Treat comment export as best-effort (not a fully reliable/comprehensive feature).
 - Do not generate `manifest.json`.
 - If multiple video segments are downloaded, merge them into one file and delete segment files.
 - Normalize post URL to canonical format: `https://www.xiaohongshu.com/explore/<note_id>`.
@@ -42,7 +45,12 @@ A run is successful only when all conditions hold:
 4. Post image files are saved in the folder.
 5. Post video files are saved when the post contains video.
 6. If multiple video files are generated, they are merged into one and segment files are removed.
-7. URL output and logs use canonical `/explore/<note_id>` form without token query.
+7. When `include_comments=true`, comments are exported under `comments/` with `comments.json` and `comments.md`.
+8. When comment images exist, they are downloaded under `comments/images/`.
+9. URL output and logs use canonical `/explore/<note_id>` form without token query.
+
+Comment export quality note:
+- Even when execution succeeds, comment coverage and hierarchy/reply linking can be partial due to page-side rendering and loading variability.
 
 ## Runtime Inputs
 
@@ -51,6 +59,7 @@ Use `skill.yaml` as the source of truth for input schema.
 ## Operational Mode
 
 - Default mode: guided browser flow + semantic extraction + authenticated media download.
+- Optional mode: add semantic comment extraction, comment image download, and write `comments/comments.json` + `comments/comments.md` when `include_comments=true`.
 - Startup guidance:
   - launch/reuse Chrome by the unified `open -na "Google Chrome"` CDP command,
   - connect via CDP port,

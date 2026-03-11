@@ -22,6 +22,7 @@
 - Extract post publish time.
 - Extract post text and post image candidates.
 - Extract optional post video URL when available.
+- If `include_comments=true`, extract comments (state-first, DOM fallback).
 
 ## Stage 5: Login Recovery
 - Detect likely login-gated page state.
@@ -33,7 +34,9 @@
 - Download post images into this folder.
 - Download post video into this folder when available.
 - If multiple video segments exist, merge into one video file and remove segment files.
+- If `include_comments=true`, download comment images into `comments/images/`.
 
 ## Stage 7: Outputs
 - Write `post.md`.
+- If `include_comments=true`, write `comments/comments.json` and `comments/comments.md`.
 - Return summary counts and output paths (no `manifest.json`).

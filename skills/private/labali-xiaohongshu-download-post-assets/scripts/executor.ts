@@ -1,6 +1,9 @@
 import { chromium } from "playwright";
 import { createInterface } from "node:readline/promises";
+import { readFile, unlink } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import {
+  collectCommentImageUrls,
   DEFAULT_CDP_PORT,
   DEFAULT_PROFILE_DIR,
   canonicalizePostUrl,
@@ -10,11 +13,15 @@ import {
   ensureAbsolutePath,
   ensureDir,
   extractPostSnapshot,
+  extractPostComments,
   isLoginRequired,
   mergeVideosAndCleanup,
+  mediaUrlIdentity,
   normalizePublishTime,
   parseNoteId,
   waitForManualLogin,
+  writeCommentsJson,
+  writeCommentsMarkdown,
   writePostMarkdown,
   type DownloadPostInputs,
   type DownloadPostResult,
@@ -23,6 +30,34 @@ import {
 export interface ExecutorContext {
   logger?: (message: string) => void;
   prompt?: (message: string) => Promise<void>;
+}
+
+async function dedupeSavedFilesByContent(
+  saved: Array<{ path: string; url: string }>
+): Promise<{
+  uniqueSaved: Array<{ path: string; url: string }>;
+  aliasByIdentity: Record<string, string>;
+}> {
+  const keptByHash = new Map<string, { path: string; url: string }>();
+  const aliasByIdentity: Record<string, string> = {};
+  const uniqueSaved: Array<{ path: string; url: string }> = [];
+
+  for (const item of saved) {
+    const buffer = await readFile(item.path);
+    const digest = createHash("sha256").update(buffer).digest("hex");
+    const identity = mediaUrlIdentity(item.url);
+    const existing = keptByHash.get(digest);
+    if (!existing) {
+      keptByHash.set(digest, item);
+      uniqueSaved.push(item);
+      aliasByIdentity[identity] = item.path;
+      continue;
+    }
+    aliasByIdentity[identity] = existing.path;
+    await unlink(item.path).catch(() => undefined);
+  }
+
+  return { uniqueSaved, aliasByIdentity };
 }
 
 function toTimeout(value: number | undefined): number {
@@ -81,6 +116,7 @@ export async function execute(inputs: DownloadPostInputs, context?: ExecutorCont
   const cdpPort = (inputs.cdp_port || DEFAULT_CDP_PORT).trim();
   const timeoutMs = toTimeout(inputs.timeout_ms);
   const overwrite = inputs.overwrite ?? false;
+  const includeComments = inputs.include_comments ?? false;
   await ensureDir(profileDir);
 
   await ensureChromeWithRemoteDebugging(cdpPort, profileDir, log);
@@ -149,6 +185,46 @@ export async function execute(inputs: DownloadPostInputs, context?: ExecutorCont
       publishedAt: snapshot.publishedAt,
     });
     const failed = [...imageResult.failed, ...videoResult.failed];
+    let commentsJsonFile: string | undefined;
+    let commentsMdFile: string | undefined;
+    let commentsDir: string | undefined;
+    let commentImagesDir: string | undefined;
+    let commentImageFiles: string[] = [];
+    let commentsCount = 0;
+    let commentImageCount = 0;
+    if (includeComments) {
+      const comments = await extractPostComments(page);
+      commentsCount = comments.length;
+      commentsDir = ensureAbsolutePath(`${noteDir}/comments`);
+      commentImagesDir = ensureAbsolutePath(`${commentsDir}/images`);
+      await ensureDir(commentsDir);
+      await ensureDir(commentImagesDir);
+
+      const commentImageUrls = collectCommentImageUrls(comments);
+      const commentImageResult = await downloadImages(page, commentImageUrls, commentImagesDir, overwrite);
+      const dedupedCommentImage = await dedupeSavedFilesByContent(commentImageResult.saved);
+      commentImageCount = dedupedCommentImage.uniqueSaved.length;
+      commentImageFiles = dedupedCommentImage.uniqueSaved.map((item) => item.path);
+      for (const failedItem of commentImageResult.failed) {
+        failed.push(failedItem);
+      }
+
+      const imageLinkByIdentity: Record<string, string> = {};
+      for (const saved of dedupedCommentImage.uniqueSaved) {
+        const identity = mediaUrlIdentity(saved.url);
+        const relPath = saved.path.replace(`${commentsDir}/`, "");
+        imageLinkByIdentity[identity] = relPath;
+      }
+      for (const [identity, finalPath] of Object.entries(dedupedCommentImage.aliasByIdentity)) {
+        if (imageLinkByIdentity[identity]) {
+          continue;
+        }
+        imageLinkByIdentity[identity] = finalPath.replace(`${commentsDir}/`, "");
+      }
+
+      commentsJsonFile = await writeCommentsJson(commentsDir, comments);
+      commentsMdFile = await writeCommentsMarkdown(commentsDir, comments, imageLinkByIdentity);
+    }
 
     const result: DownloadPostResult = {
       output_dir: outputDir,
@@ -157,15 +233,27 @@ export async function execute(inputs: DownloadPostInputs, context?: ExecutorCont
       post_url: canonicalPostUrl,
       publish_time: publishTime,
       post_md_file: postMdFile,
+      comments_json_file: commentsJsonFile,
+      comments_md_file: commentsMdFile,
+      comments_dir: commentsDir,
+      comment_images_dir: commentImagesDir,
       image_count: imageResult.saved.length,
       video_count: mergedVideoFiles.length,
+      comments_count: commentsCount,
+      comment_image_count: commentImageCount,
       failed_count: failed.length,
       failed,
-      files: [...imageResult.saved.map((item) => item.path), ...mergedVideoFiles],
+      files: [
+        ...imageResult.saved.map((item) => item.path),
+        ...mergedVideoFiles,
+        ...commentImageFiles,
+        ...(commentsJsonFile ? [commentsJsonFile] : []),
+        ...(commentsMdFile ? [commentsMdFile] : []),
+      ],
     };
 
     log(
-      `done: images=${result.image_count}, videos=${result.video_count}, failed=${result.failed_count}, output=${result.note_dir}`
+      `done: images=${result.image_count}, videos=${result.video_count}, comments=${result.comments_count}, comment_images=${result.comment_image_count}, failed=${result.failed_count}, output=${result.note_dir}`
     );
     return result;
   } finally {
