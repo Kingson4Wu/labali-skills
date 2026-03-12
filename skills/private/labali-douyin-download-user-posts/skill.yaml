@@ -1,0 +1,52 @@
+name: labali-douyin-download-user-posts
+description: Browser-only automation skill to export a Douyin user's timeline posts and media into a local folder.
+executor: scripts/executor.ts
+inputs:
+  user_url:
+    type: string
+    required: false
+    description: Full Douyin user profile URL. If omitted, runner prompts interactively.
+  output_dir:
+    type: string
+    required: false
+    default: ./downloads/douyin-user
+    description: Target local directory for exported files.
+  fixed_user_dir:
+    type: string
+    required: false
+    description: Reuse an existing user export directory directly and do not create a new timestamp folder.
+  profile_dir:
+    type: string
+    required: false
+    default: ~/.chrome-labali
+    description: Chrome user-data-dir used by unified open -na Google Chrome startup command.
+  cdp_port:
+    type: string
+    required: false
+    default: "9222"
+    description: Chrome DevTools remote-debugging port.
+  timeout_ms:
+    type: string
+    required: false
+    default: "180000"
+    description: Navigation, extraction, and media download timeout in milliseconds.
+  overwrite:
+    type: boolean
+    required: false
+    default: false
+    description: Overwrite existing files with same generated names when true.
+  max_posts:
+    type: string
+    required: false
+    default: "0"
+    description: Maximum posts to export; 0 means no explicit cap.
+  include_videos:
+    type: boolean
+    required: false
+    default: true
+    description: Download videos when present.
+  collect_links_only:
+    type: boolean
+    required: false
+    default: false
+    description: Only collect and export post detail links (/video/* and /note/*), without downloading media.
