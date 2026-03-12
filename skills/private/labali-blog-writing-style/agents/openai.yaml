@@ -1,0 +1,5 @@
+version: 1
+interface:
+  display_name: Labali Blog Writing Style
+  description: Draft or revise personal blog posts in Kingson Wu's established voice while improving article structure, hierarchy, and readability.
+  default_prompt: Write or revise a blog post in my established article voice. Preserve my judgment style and core meaning, but improve structure, section hierarchy, transitions, and overall readability.
