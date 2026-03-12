@@ -1,0 +1,16 @@
+name: labali-subtitle-correct-with-reference-text
+description: Correct subtitle text by aligning it to a reference script while preserving subtitle timeline.
+executor: scripts/run.ts
+inputs:
+  subtitle_path:
+    type: string
+    required: true
+    description: Input subtitle file path (.srt or .vtt) with correct timestamps.
+  reference_path:
+    type: string
+    required: true
+    description: Reference text file path containing the correct wording.
+  output_path:
+    type: string
+    required: false
+    description: Optional output subtitle file path. Default is <subtitle_stem>.corrected.<ext>.

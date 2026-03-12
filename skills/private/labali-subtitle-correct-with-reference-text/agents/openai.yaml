@@ -1,0 +1,5 @@
+version: 1
+interface:
+  display_name: Subtitle Text Corrector
+  description: Fix subtitle wording using a reference script while keeping original timestamps.
+  default_prompt: Correct this subtitle file's text using my reference script and output a new corrected subtitle.
