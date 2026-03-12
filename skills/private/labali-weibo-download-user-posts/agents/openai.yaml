@@ -1,5 +1,5 @@
 version: 1
 interface:
-  display_name: Weibo User Downloader
+  display_name: Labali Weibo Download User Posts
   description: Download all posts and media from one Weibo user page via browser + CDP.
   default_prompt: Download all posts from this Weibo user profile with browser automation and save text/media locally.

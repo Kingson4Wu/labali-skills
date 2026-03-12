@@ -12,6 +12,12 @@ Use this skill when the user says things like:
 
 This is a prompt-and-spec skill. It defines deterministic script specs clearly and simply.
 
+## Runtime Inputs
+
+- `intent`: required task goal from user request.
+- `environment`: optional runtime context (OS, toolchain, auth state, paths).
+- `constraints`: optional hard limits (timeouts, no-network, safety restrictions).
+
 ## Input Mode (Minimal)
 
 If the user provides only one sentence, it is enough. Assume:
@@ -28,6 +34,15 @@ Return exactly these sections:
 4. `Step Assertions`
 5. `Fail-Fast Rules`
 6. `Script Skeleton` (runnable shape with `status/data/error`)
+
+## Success Criteria
+
+A response is complete only when:
+
+1. All required parameters are explicit (or marked required placeholders).
+2. Deterministic steps are executable in fixed order.
+3. Assertions and fail-fast conditions are concrete and testable.
+4. Script skeleton can run without requiring additional reasoning loops.
 
 ## Hard Rules
 

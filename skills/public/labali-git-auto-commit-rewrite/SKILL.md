@@ -7,6 +7,12 @@ description: Generate a clear, structured conventional commit message from curre
 
 Use this skill for one-shot local commit workflows with strong commit-message quality.
 
+## Runtime Inputs
+
+- Repository working tree state.
+- User intent to commit all current changes.
+- Optional commit focus if user specifies scope emphasis.
+
 ## Execution Contract
 
 1. Verify current directory is a Git repository.
@@ -21,6 +27,12 @@ Use this skill for one-shot local commit workflows with strong commit-message qu
 6. Commit once with the generated subject and body.
 7. MUST run `scripts/clean_commit.sh` immediately after commit (non-optional).
 8. Return final commit hash and final subject line.
+
+## Failure Handling
+
+- If repository is not a Git repo, fail fast with explicit message.
+- If there are no changes to commit, return `No changes to commit.`.
+- Never fabricate commit/test outcomes; report command failures verbatim.
 
 ## Message Quality Rules
 

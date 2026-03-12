@@ -7,6 +7,12 @@ description: Reusable architecture preference template for building robust skill
 
 Use this skill as a reusable architecture policy when creating or refactoring complex skills.
 
+## Runtime Inputs
+
+- `target_skill`: skill name and location (public/private).
+- `task_profile`: what the skill must do, risk level, and expected determinism.
+- `constraints`: execution constraints (tooling, auth, runtime limits).
+
 ## Layer Contract
 
 1. `SKILL.md` is the policy layer.
@@ -25,6 +31,15 @@ Use this skill as a reusable architecture policy when creating or refactoring co
   - policy baseline fallback for reliability.
 - Deterministic mode is optional acceleration.
 - Policy executor is mandatory baseline capability.
+
+## Output Contract
+
+When applying this template, always produce:
+
+1. Layer mapping (`policy / strategy / execution`) with file placement.
+2. Deterministic baseline workflow and bounded fallback rules.
+3. Explicit business-state verification gates.
+4. Regression-test expectations for behavior changes.
 
 ## Required Constraints
 
