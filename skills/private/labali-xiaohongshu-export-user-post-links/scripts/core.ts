@@ -18,6 +18,9 @@ export interface ExportUserPostLinksInputs {
   profile_url?: string;
   output_path?: string;
   include_token?: boolean;
+  include_publish_time?: boolean;
+  exclude_sticky?: boolean;
+  limit?: number;
   profile_dir?: string;
   cdp_port?: string;
   timeout_ms?: number;
@@ -27,6 +30,9 @@ export interface ExportUserPostLinksInputs {
 export interface UserPostCard {
   noteId: string;
   xsecToken?: string;
+  title?: string;
+  sticky: boolean;
+  profileIndex: number;
 }
 
 export interface ExportUserPostLinksResult {
@@ -35,6 +41,16 @@ export interface ExportUserPostLinksResult {
   output_file: string;
   total_links: number;
   links: string[];
+  records: ExportedPostRecord[];
+}
+
+export interface ExportedPostRecord {
+  note_id: string;
+  url: string;
+  title?: string;
+  sticky: boolean;
+  profile_index: number;
+  publish_time?: string;
 }
 
 function isHttpUrl(url: string): boolean {
@@ -112,8 +128,17 @@ export function dedupeLinks(links: string[]): string[] {
   return out;
 }
 
-export async function writeLinksFile(outputFile: string, links: string[]): Promise<void> {
-  const body = dedupeLinks(links).join("\n") + "\n";
+export async function writeLinksFile(
+  outputFile: string,
+  records: ExportedPostRecord[],
+  includePublishTime: boolean
+): Promise<void> {
+  const body =
+    records
+      .map((record) =>
+        includePublishTime ? `${record.publish_time || ""}\t${record.url}`.trimEnd() : record.url
+      )
+      .join("\n") + "\n";
   await writeFile(outputFile, body, "utf-8");
 }
 
@@ -131,10 +156,11 @@ export async function extractPostCardsFromState(page: Page): Promise<UserPostCar
 
     const notesValue = state?.user?.notes?._value;
     if (!notesValue || !Array.isArray(notesValue)) {
-      return [] as Array<{ noteId: string; xsecToken?: string }>;
+      return [] as Array<{ noteId: string; xsecToken?: string; title?: string; sticky: boolean; profileIndex: number }>;
     }
 
-    const out: Array<{ noteId: string; xsecToken?: string }> = [];
+    const out: Array<{ noteId: string; xsecToken?: string; title?: string; sticky: boolean; profileIndex: number }> = [];
+    let profileIndex = 0;
     for (const bucket of notesValue) {
       if (!Array.isArray(bucket)) {
         continue;
@@ -157,8 +183,32 @@ export async function extractPostCardsFromState(page: Page): Promise<UserPostCar
           (typeof obj.xsecToken === "string" && obj.xsecToken) ||
           (noteCard && typeof noteCard.xsecToken === "string" ? noteCard.xsecToken : "");
 
+        const title =
+          (noteCard && typeof noteCard.displayTitle === "string" ? noteCard.displayTitle : "") ||
+          (typeof obj.displayTitle === "string" ? obj.displayTitle : "");
+
+        const sticky =
+          (noteCard &&
+          noteCard.interactInfo &&
+          typeof noteCard.interactInfo === "object" &&
+          typeof (noteCard.interactInfo as Record<string, unknown>).sticky === "boolean"
+            ? ((noteCard.interactInfo as Record<string, unknown>).sticky as boolean)
+            : false) ||
+          (obj.interactInfo &&
+          typeof obj.interactInfo === "object" &&
+          typeof (obj.interactInfo as Record<string, unknown>).sticky === "boolean"
+            ? ((obj.interactInfo as Record<string, unknown>).sticky as boolean)
+            : false);
+
         if (noteId) {
-          out.push({ noteId, xsecToken: xsecToken || undefined });
+          out.push({
+            noteId,
+            xsecToken: xsecToken || undefined,
+            title: title || undefined,
+            sticky,
+            profileIndex,
+          });
+          profileIndex += 1;
         }
       }
     }
@@ -173,9 +223,47 @@ export async function extractPostCardsFromState(page: Page): Promise<UserPostCar
       continue;
     }
     seen.add(card.noteId);
-    out.push({ noteId: card.noteId, xsecToken: card.xsecToken });
+    out.push({
+      noteId: card.noteId,
+      xsecToken: card.xsecToken,
+      title: card.title,
+      sticky: card.sticky,
+      profileIndex: card.profileIndex,
+    });
   }
   return out;
+}
+
+export async function extractPublishTimeFromPostPage(page: Page, noteId: string): Promise<string | undefined> {
+  const raw = await page.evaluate((targetNoteId) => {
+    const state = (window as { __INITIAL_STATE__?: unknown }).__INITIAL_STATE__ as
+      | {
+          note?: {
+            noteDetailMap?: Record<
+              string,
+              {
+                note?: {
+                  time?: string | number;
+                };
+                time?: string | number;
+              }
+            >;
+          };
+        }
+      | undefined;
+
+    const entry = state?.note?.noteDetailMap?.[targetNoteId];
+    const value = entry?.note?.time ?? entry?.time;
+    if (typeof value === "number") {
+      return String(value);
+    }
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+    return "";
+  }, noteId);
+
+  return raw || undefined;
 }
 
 export async function scrollForNextPage(page: Page): Promise<void> {

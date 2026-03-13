@@ -32,7 +32,7 @@ A run is successful only when all conditions hold:
 1. The profile is opened and parsed for post cards.
 2. Scrolling pagination continues until no new posts are discovered.
 3. Extracted links are deduplicated.
-4. Output file is written with one link per line.
+4. Output file is written as plain text lines, with optional publish-time prefix.
 
 ## Runtime Inputs
 
@@ -50,7 +50,9 @@ Use `skill.yaml` as the source of truth for input schema.
   - if `output_path` is missing, prompt interactively with default.
 - Export policy:
   - default output links include `xsec_token` and `xsec_source=pc_user`,
-  - optional canonical-only mode can output `/explore/<note_id>` URLs.
+  - optional canonical-only mode can output `/explore/<note_id>` URLs,
+  - optional latest-only mode can stop early after enough non-sticky candidates are found,
+  - optional publish-time mode can prefix each exported line with `publish_time<TAB>`.
 
 ## Resources
 

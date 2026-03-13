@@ -65,6 +65,9 @@ function printUsage(): void {
     --profile_url "https://www.xiaohongshu.com/user/profile/<user_id>?xsec_token=..." \\
     --output_path "/absolute/or/relative/output/file-or-dir" \\
     [--include_token true|false] \\
+    [--include_publish_time true|false] \\
+    [--exclude_sticky true|false] \\
+    [--limit 2] \\
     [--profile_dir ~/.chrome-labali] \\
     [--cdp_port 9222] \\
     [--timeout_ms 90000] \\
@@ -82,6 +85,9 @@ async function main(): Promise<void> {
     profile_url: optionalString(args, "profile_url"),
     output_path: optionalString(args, "output_path"),
     include_token: parseBoolean(args.include_token, true),
+    include_publish_time: parseBoolean(args.include_publish_time, false),
+    exclude_sticky: parseBoolean(args.exclude_sticky, false),
+    limit: optionalNumber(args, "limit"),
     profile_dir: optionalString(args, "profile_dir"),
     cdp_port: optionalString(args, "cdp_port"),
     timeout_ms: optionalNumber(args, "timeout_ms"),

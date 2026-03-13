@@ -15,10 +15,12 @@
 
 ## Stage 4: Post Link Extraction Loop
 - Parse notes from `__INITIAL_STATE__.user.notes._value`.
-- Extract `noteId` and `xsecToken` from card fields.
+- Extract `noteId`, `xsecToken`, sticky flag, and title from card fields.
 - Build final links and dedupe.
+- If latest-only mode is enabled, stop once enough non-sticky candidates are discovered.
 - Scroll page and repeat until no new links are discovered over threshold rounds.
 
 ## Stage 5: Output
-- Write final links to output file (one per line).
+- Optionally enrich selected posts with `publish_time` from note detail pages.
+- Write final links to output file.
 - Return counts and output path summary.

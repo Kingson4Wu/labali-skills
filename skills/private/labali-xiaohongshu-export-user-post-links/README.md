@@ -7,6 +7,8 @@ Current output policy:
 - Deduplicate links
 - Default output includes `xsec_token` and `xsec_source=pc_user`
 - Optional canonical mode outputs `https://www.xiaohongshu.com/explore/<note_id>` only
+- Optional publish-time mode outputs `publish_time<TAB>url`
+- Optional latest-only mode can exclude pinned posts and stop early after enough candidates are found
 
 ## 1) Install and Update
 
@@ -26,8 +28,22 @@ npx tsx skills/private/labali-xiaohongshu-export-user-post-links/scripts/run.ts 
   --output_path "/absolute/output/path/or/dir"
 ```
 
+Latest two non-sticky posts with publish time:
+
+```bash
+npx tsx skills/private/labali-xiaohongshu-export-user-post-links/scripts/run.ts \
+  --profile_url "https://www.xiaohongshu.com/user/profile/<user_id>?xsec_token=...&xsec_source=pc_search" \
+  --output_path "/absolute/output/path/or/dir" \
+  --exclude_sticky true \
+  --limit 2 \
+  --include_publish_time true
+```
+
 Optional flags:
 - `--include_token true|false` (default `true`)
+- `--include_publish_time true|false` (default `false`)
+- `--exclude_sticky true|false` (default `false`)
+- `--limit 2`
 - `--profile_dir ~/.chrome-labali`
 - `--cdp_port 9222`
 - `--timeout_ms 90000`
@@ -44,9 +60,10 @@ If `profile_url` or `output_path` is omitted, the script prompts interactively.
 5. Open target profile URL.
 6. Extract post cards from page state: `window.__INITIAL_STATE__.user.notes._value`.
 7. Scroll page repeatedly to trigger pagination.
-8. Keep collecting new posts until stagnant rounds hit threshold.
+8. Keep collecting new posts until stagnant rounds hit threshold, or stop early after enough latest-only candidates are collected.
 9. Build `/explore/<note_id>` links (with or without token).
-10. Deduplicate and write output file.
+10. Optionally open selected posts to enrich `publish_time`.
+11. Write output file.
 
 ## 4) Technical Method
 
@@ -55,9 +72,9 @@ Execution stack:
 - CDP communication: Playwright `connectOverCDP`
 - Data extraction:
   - Primary path: `window.__INITIAL_STATE__.user.notes._value`
-  - Parses `noteId` and `xsecToken` from each post card object
+  - Parses `noteId`, `xsecToken`, sticky flag, and title from each post card object
 - Pagination: repeated viewport scrolling with stagnant-round stopping
-- Output: plain text file, one URL per line
+- Output: plain text file, either `url` or `publish_time<TAB>url` per line
 
 ## 5) Output Structure
 
@@ -84,6 +101,12 @@ Or canonical mode (`--include_token false`):
 
 ```text
 https://www.xiaohongshu.com/explore/<note_id>
+```
+
+Publish-time mode (`--include_publish_time true`) example:
+
+```text
+1773381736000	https://www.xiaohongshu.com/explore/<note_id>?xsec_token=...&xsec_source=pc_user
 ```
 
 ## 6) Limitations and Fragility
@@ -114,6 +137,9 @@ This skill is robust for current pages, but not fully inference-driven. Main ris
 - If exported count is lower than expected:
   - Increase `--max_scroll_rounds`.
   - Re-run after refreshing profile page.
+- If you only need latest posts:
+  - Use `--exclude_sticky true --limit <N>`.
+  - Add `--include_publish_time true` to make the selection easier to verify later.
 - If output path behaves unexpectedly:
   - Pass absolute path explicitly and verify write permission.
 

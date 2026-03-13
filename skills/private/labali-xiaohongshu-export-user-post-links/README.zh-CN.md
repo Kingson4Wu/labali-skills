@@ -7,6 +7,8 @@
 - 自动去重
 - 默认包含 `xsec_token` 和 `xsec_source=pc_user`
 - 可选 canonical 模式，仅输出 `https://www.xiaohongshu.com/explore/<note_id>`
+- 可选发表时间模式，输出 `publish_time<TAB>url`
+- 可选“最新 N 条”模式，可跳过置顶并在候选足够后提前停止
 
 ## 1) 安装与更新
 
@@ -26,8 +28,22 @@ npx tsx skills/private/labali-xiaohongshu-export-user-post-links/scripts/run.ts 
   --output_path "/absolute/output/path/or/dir"
 ```
 
+导出最新 2 条非置顶笔记并附带发表时间：
+
+```bash
+npx tsx skills/private/labali-xiaohongshu-export-user-post-links/scripts/run.ts \
+  --profile_url "https://www.xiaohongshu.com/user/profile/<user_id>?xsec_token=...&xsec_source=pc_search" \
+  --output_path "/absolute/output/path/or/dir" \
+  --exclude_sticky true \
+  --limit 2 \
+  --include_publish_time true
+```
+
 可选参数：
 - `--include_token true|false`（默认 `true`）
+- `--include_publish_time true|false`（默认 `false`）
+- `--exclude_sticky true|false`（默认 `false`）
+- `--limit 2`
 - `--profile_dir ~/.chrome-labali`
 - `--cdp_port 9222`
 - `--timeout_ms 90000`
@@ -44,9 +60,10 @@ npx tsx skills/private/labali-xiaohongshu-export-user-post-links/scripts/run.ts 
 5. 打开目标用户主页链接。
 6. 从页面状态提取帖子卡片：`window.__INITIAL_STATE__.user.notes._value`。
 7. 循环滚动页面触发分页加载。
-8. 连续多轮无新增后停止。
+8. 连续多轮无新增后停止，或在“最新 N 条”模式下候选足够时提前停止。
 9. 组装 `/explore/<note_id>` 链接（按配置可带 token）。
-10. 去重并写入输出文件。
+10. 按需打开已选帖子详情页补抓 `publish_time`。
+11. 写入输出文件。
 
 ## 4) 技术实现方法
 
@@ -55,9 +72,9 @@ npx tsx skills/private/labali-xiaohongshu-export-user-post-links/scripts/run.ts 
 - CDP 通信：Playwright `connectOverCDP`
 - 数据提取：
   - 主路径：`window.__INITIAL_STATE__.user.notes._value`
-  - 从帖子卡片对象解析 `noteId` 和 `xsecToken`
+  - 从帖子卡片对象解析 `noteId`、`xsecToken`、置顶标记和标题
 - 分页策略：持续滚动 + 停滞轮次阈值停止
-- 输出格式：纯文本文件，每行一个 URL
+- 输出格式：纯文本文件，每行一个 URL，或 `publish_time<TAB>url`
 
 ## 5) 输出结构
 
@@ -84,6 +101,12 @@ https://www.xiaohongshu.com/explore/<note_id>?xsec_token=...&xsec_source=pc_user
 
 ```text
 https://www.xiaohongshu.com/explore/<note_id>
+```
+
+发表时间模式（`--include_publish_time true`）示例：
+
+```text
+1773381736000	https://www.xiaohongshu.com/explore/<note_id>?xsec_token=...&xsec_source=pc_user
 ```
 
 ## 6) 局限与脆弱点
@@ -114,6 +137,9 @@ https://www.xiaohongshu.com/explore/<note_id>
 - 如果导出数量偏少：
   - 增大 `--max_scroll_rounds`。
   - 刷新主页后重跑。
+- 如果只需要最新几条：
+  - 使用 `--exclude_sticky true --limit <N>`。
+  - 再加 `--include_publish_time true`，后续更容易判断和复核。
 - 如果输出路径不符合预期：
   - 显式传绝对路径并确认目录可写。
 

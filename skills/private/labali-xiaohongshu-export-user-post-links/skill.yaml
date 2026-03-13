@@ -16,6 +16,20 @@ inputs:
     required: false
     default: true
     description: Include xsec_token and xsec_source in exported explore URLs.
+  include_publish_time:
+    type: boolean
+    required: false
+    default: false
+    description: Prefix each exported line with publish time and a tab separator.
+  exclude_sticky:
+    type: boolean
+    required: false
+    default: false
+    description: Exclude pinned posts from the exported result set.
+  limit:
+    type: string
+    required: false
+    description: Stop after collecting enough candidates for the latest N posts and export only N results.
   profile_dir:
     type: string
     required: false

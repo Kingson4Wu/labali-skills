@@ -23,9 +23,9 @@ printf "Running regression checks for %s\n" "$ROOT_DIR"
 
 rg -n "Layer Contract|Success Criteria|Operational Mode" "$SKILL_MD" >/dev/null
 rg -n "Layered Boundaries|Execution Model|Output Correctness Standards" "$ARCH" >/dev/null
-rg -n "scroll|notes|dedupe|output file|xsec_token|explore/<note_id>" "$PLAN" "$SKILL_MD" "$EXECUTOR" "$CORE" >/dev/null
+rg -n "scroll|notes|dedupe|output file|xsec_token|explore/<note_id>|publish time|sticky|limit" "$PLAN" "$SKILL_MD" "$EXECUTOR" "$CORE" >/dev/null
 
-rg -n -- "--profile_url|--output_path|--include_token|--profile_dir|--cdp_port|--timeout_ms|--max_scroll_rounds" "$RUNNER" >/dev/null
-rg -n "connectOverCDP|ensureChromeWithRemoteDebugging|waitForManualLogin|extractPostCardsFromState|writeLinksFile" "$EXECUTOR" "$CORE" >/dev/null
+rg -n -- "--profile_url|--output_path|--include_token|--include_publish_time|--exclude_sticky|--limit|--profile_dir|--cdp_port|--timeout_ms|--max_scroll_rounds" "$RUNNER" >/dev/null
+rg -n "connectOverCDP|ensureChromeWithRemoteDebugging|waitForManualLogin|extractPostCardsFromState|extractPublishTimeFromPostPage|writeLinksFile|candidate target reached" "$EXECUTOR" "$CORE" >/dev/null
 
 echo "Regression checks passed"
