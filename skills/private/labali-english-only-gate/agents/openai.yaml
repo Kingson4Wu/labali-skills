@@ -1,0 +1,5 @@
+version: 1
+interface:
+  display_name: Labali English Only Gate
+  description: Gate prompts with an English-dominant language policy and return a fixed refusal message when the prompt is Chinese-first or clearly non-English.
+  default_prompt: Enforce the English-dominant language gate for this conversation. Reject Chinese-first or clearly non-English prompts with the configured fixed message, but allow English-majority prompts with only small non-English fragments.

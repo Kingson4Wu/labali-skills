@@ -1,0 +1,134 @@
+[
+  {
+    "name": "english_only",
+    "text": "Please refactor this function and keep the API unchanged.",
+    "expected_status": "ALLOW"
+  },
+  {
+    "name": "english_dominant_mixed",
+    "text": "Please refactor this function. 这个变量名不太清楚, but keep the behavior the same.",
+    "expected_status": "ALLOW"
+  },
+  {
+    "name": "english_leading_with_short_cjk_fragment",
+    "text": "Please fix this bug, 中文补充, and keep the API unchanged.",
+    "expected_status": "ALLOW"
+  },
+  {
+    "name": "english_with_cjk_quote",
+    "text": "Please summarize this note in English. Original title: \"关于系统架构调整的说明\".",
+    "expected_status": "ALLOW"
+  },
+  {
+    "name": "english_with_small_cjk_explanation",
+    "text": "I cannot share the full log. 这里只贴关键错误, can you infer the likely cause?",
+    "expected_status": "ALLOW"
+  },
+  {
+    "name": "english_markdown_with_cjk_labels",
+    "text": "Please clean up this list and keep the response in English:\\n- label: 首页\\n- label: 设置\\n- label: 帮助",
+    "expected_status": "ALLOW"
+  },
+  {
+    "name": "chinese_dominant",
+    "text": "请帮我重构这个函数，并解释原因。",
+    "expected_status": "REJECT"
+  },
+  {
+    "name": "non_english_leading_mixed",
+    "text": "请先看一下这个 bug, then refactor the function.",
+    "expected_status": "REJECT"
+  },
+  {
+    "name": "non_english_leading_short_request",
+    "text": "这个 PR looks risky, can you review it?",
+    "expected_status": "REJECT"
+  },
+  {
+    "name": "non_english_leading_with_english_tail",
+    "text": "先解释一下这个报错, then propose a minimal fix.",
+    "expected_status": "REJECT"
+  },
+  {
+    "name": "path_with_cjk",
+    "text": "Please edit /tmp/中文目录/demo.py and keep all comments in English.",
+    "expected_status": "ALLOW"
+  },
+  {
+    "name": "path_only_payload",
+    "text": "/tmp/中文目录/demo.py",
+    "expected_status": "ALLOW"
+  },
+  {
+    "name": "inline_code_with_cjk",
+    "text": "Please inspect `/tmp/中文目录/demo.py` and rename the helper function.",
+    "expected_status": "ALLOW"
+  },
+  {
+    "name": "command_with_cjk_token",
+    "text": "Please review this command and explain it: grep \"中文\" app.log",
+    "expected_status": "ALLOW"
+  },
+  {
+    "name": "url_with_cjk_path",
+    "text": "Please fetch https://example.com/中文/guide and summarize the English sections only.",
+    "expected_status": "ALLOW"
+  },
+  {
+    "name": "mixed_input_disabled",
+    "text": "Please refactor this function. 这个变量名不太清楚.",
+    "config": {
+      "mode": "english-dominant",
+      "max_non_english_ratio": 0.2,
+      "allow_mixed_input": false,
+      "allow_cjk_in_code_or_paths": true,
+      "prefer_english_leading_narrative": true,
+      "ignore_short_cjk_fragments_under": 6,
+      "rejection_message": "Please ask your question in English only."
+    },
+    "expected_status": "REJECT"
+  },
+  {
+    "name": "leading_non_english_allowed_when_preference_disabled",
+    "text": "请先看一下这个 bug, then refactor the function.",
+    "config": {
+      "mode": "english-dominant",
+      "max_non_english_ratio": 0.5,
+      "allow_mixed_input": true,
+      "allow_cjk_in_code_or_paths": true,
+      "prefer_english_leading_narrative": false,
+      "ignore_short_cjk_fragments_under": 0,
+      "rejection_message": "Please ask your question in English only."
+    },
+    "expected_status": "ALLOW"
+  },
+  {
+    "name": "strict_mode_rejects_mixed",
+    "text": "Please refactor this function. 这个变量名不太清楚.",
+    "config": {
+      "mode": "strict-english",
+      "max_non_english_ratio": 0.02,
+      "allow_mixed_input": true,
+      "allow_cjk_in_code_or_paths": true,
+      "prefer_english_leading_narrative": true,
+      "ignore_short_cjk_fragments_under": 0,
+      "rejection_message": "Please ask your question in English only."
+    },
+    "expected_status": "REJECT"
+  },
+  {
+    "name": "code_block_with_cjk_comment",
+    "text": "Please review this snippet and focus on performance. ```python\n# 中文注释\nprint('hello')\n```",
+    "expected_status": "ALLOW"
+  },
+  {
+    "name": "english_request_with_cjk_ui_terms",
+    "text": "Please keep these UI labels unchanged: 登录, 注册, 帮助中心. Everything else should be rewritten in English.",
+    "expected_status": "ALLOW"
+  },
+  {
+    "name": "english_request_with_cjk_filename",
+    "text": "Please rename 报告-final.md to report-final.md and update internal links.",
+    "expected_status": "ALLOW"
+  }
+]

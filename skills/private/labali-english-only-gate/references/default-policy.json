@@ -1,0 +1,9 @@
+{
+  "mode": "english-dominant",
+  "max_non_english_ratio": 0.2,
+  "allow_mixed_input": true,
+  "allow_cjk_in_code_or_paths": true,
+  "prefer_english_leading_narrative": true,
+  "ignore_short_cjk_fragments_under": 6,
+  "rejection_message": "Please ask your question in English only."
+}
