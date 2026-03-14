@@ -50,7 +50,9 @@ async function fillDeterministicMetadata(
   const season = inputs.season_number?.trim() ?? "";
   const episode = inputs.episode_number?.trim() ?? "";
   const title = JSON.stringify(inputs.title);
-  const description = JSON.stringify(inputs.description);
+  // Normalize line endings to Windows-style \r\n for better rich text editor compatibility
+  const normalizedDescription = inputs.description.replace(/\r?\n/g, '\r\n');
+  const description = JSON.stringify(normalizedDescription);
   const seasonJs = JSON.stringify(season);
   const episodeJs = JSON.stringify(episode);
 
@@ -75,7 +77,7 @@ async function fillDeterministicMetadata(
         (name.includes("description") && !name.includes("title"));
       const blockedNoise = name.includes("shortcut") || name.includes("search");
       if (likelyDescription && !blockedNoise) {
-        descriptionNative = await nativeTypeRef(client, refKey, inputs.description);
+        descriptionNative = await nativeTypeRef(client, refKey, normalizedDescription);
       }
     }
   }
@@ -104,7 +106,14 @@ async function fillDeterministicMetadata(
       .find((node) => node && node.offsetParent !== null);
     if (editor && !${descriptionNative ? "true" : "false"}) {
       editor.focus();
-      editor.textContent = ${description};
+      // Convert \r\n to <br> for rich text editor
+      const htmlDesc = ${description}
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\r\n\r\n/g, '<br><br>')
+        .replace(/\r\n/g, '<br>');
+      editor.innerHTML = htmlDesc;
       editor.dispatchEvent(new Event('input', { bubbles: true }));
       editor.dispatchEvent(new Event('change', { bubbles: true }));
     }

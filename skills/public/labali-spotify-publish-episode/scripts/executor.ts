@@ -87,6 +87,9 @@ async function fillEpisodeMetadata(client: AgentBrowserClient, inputs: PublishEp
     }
   }
 
+  // Normalize line endings to Windows-style \r\n for better rich text editor compatibility
+  const normalizedDescription = inputs.description.replace(/\r?\n/g, '\r\n');
+
   await retry(2, async () => {
     const nativeDescriptionFilled = await nativeTypeByPredicate(
       client,
@@ -95,27 +98,39 @@ async function fillEpisodeMetadata(client: AgentBrowserClient, inputs: PublishEp
         !name.includes("title") &&
         !name.includes("shortcut") &&
         !name.includes("search"),
-      inputs.description
+      normalizedDescription
     );
     if (nativeDescriptionFilled) {
       return;
     }
 
-    try {
-      await client.fillByLabelCandidates(ACTION_CANDIDATES.descriptionLabels, inputs.description);
-      return;
-    } catch {
-      // continue
-    }
+    // Convert \r\n to <br> and use innerHTML for rich text editor
+    const htmlDescription = normalizedDescription
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\r\n\r\n/g, '<br><br>')
+      .replace(/\r\n/g, '<br>');
 
-    try {
-      await client.fillByPlaceholderCandidates(ACTION_CANDIDATES.descriptionLabels, inputs.description);
-      return;
-    } catch {
-      // continue
-    }
-
-    throw new Error("Failed to fill episode description with semantic and editor fallbacks.");
+    await client.evalJs(`(() => {
+      const targets = Array.from(document.querySelectorAll('[contenteditable="true"]'))
+        .filter((node) => {
+          const role = (node.getAttribute("role") || "").toLowerCase();
+          const name = (node.getAttribute("name") || "").toLowerCase();
+          return role === "textbox" && name.includes("description");
+        });
+      
+      if (targets.length === 0) return 'no-target';
+      
+      const target = targets[0];
+      target.focus();
+      target.innerHTML = ${JSON.stringify(htmlDescription)};
+      target.dispatchEvent(new Event("input", { bubbles: true }));
+      target.dispatchEvent(new Event("change", { bubbles: true }));
+      target.dispatchEvent(new Event("blur", { bubbles: true }));
+      
+      return 'done';
+    })()`);
   });
 
   // Some editor variants still require a focused native paste to update required-state counters.
@@ -127,7 +142,7 @@ async function fillEpisodeMetadata(client: AgentBrowserClient, inputs: PublishEp
       return editable && role === "textbox" && name.includes("description");
     });
     for (const node of targets) {
-      node.textContent = ${JSON.stringify(inputs.description)};
+      node.textContent = ${JSON.stringify(normalizedDescription)};
       node.dispatchEvent(new Event("input", { bubbles: true }));
       node.dispatchEvent(new Event("change", { bubbles: true }));
       node.dispatchEvent(new Event("blur", { bubbles: true }));

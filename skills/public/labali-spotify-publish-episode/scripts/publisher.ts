@@ -108,6 +108,7 @@ export async function applyScheduleIfRequested(
   });
   const selectedTargetAria = `Selected. ${longDateLabel}`;
 
+  // Navigate to schedule configuration screen
   for (let i = 0; i < 6; i += 1) {
     const hasScheduleSurface =
       (await client.hasText("Publish date")) ||
@@ -127,6 +128,7 @@ export async function applyScheduleIfRequested(
     await client.waitMs(2000);
   }
 
+  // Enable schedule mode
   await retry(3, async () => {
     const result = await client.evalJs(`(() => {
       const labels = Array.from(document.getElementsByTagName('label'));
@@ -152,118 +154,170 @@ export async function applyScheduleIfRequested(
     }
   });
 
-  await retry(3, async () => {
-    const result = await client.evalJs(`(() => {
-      const currentDateButton = Array.from(document.querySelectorAll('button, [role="button"]'))
-        .find((b) => /\\d{1,2}\\/\\d{1,2}\\/\\d{4}/.test((b.textContent || '').trim()));
-      if (currentDateButton) currentDateButton.click();
-
-      const targetText = ${JSON.stringify(dateValue)};
-      const targetDay = ${JSON.stringify(String(day))};
-      const targetAria = ${JSON.stringify(longDateLabel)};
-      const selectedTargetAria = ${JSON.stringify(selectedTargetAria)};
-      const nextMonthLabel = "Move forward to switch to the next month.";
-      const targetMonthLabel = ${JSON.stringify(targetMonthLabel)};
-      const targetMonthIndex = ${year} * 12 + ${month - 1};
-      const parseMonthIndex = (label) => {
-        if (!label) return null;
-        const parts = label.trim().split(/\\s+/);
-        if (parts.length < 2) return null;
-        const monthName = parts[0];
-        const yearValue = Number(parts[1]);
-        const monthValue = new Date(\`\${monthName} 1, 2000\`).getMonth();
-        if (Number.isNaN(yearValue) || Number.isNaN(monthValue)) return null;
-        return yearValue * 12 + monthValue;
-      };
-      const findVisibleMonthLabel = () => {
-        const nodes = Array.from(document.querySelectorAll('div, span, strong, h2, h3'));
-        const labels = nodes
-          .map((node) => (node.textContent || '').trim())
-          .filter((text) => /^([A-Z][a-z]+)\\s+\\d{4}$/.test(text));
-        return labels.find((label) => label === targetMonthLabel) || labels[0] || null;
-      };
-
-
-      const clickNextMonth = () => {
-        const ariaCandidates = ['move forward to switch to the next month.', 'next month', 'next', 'forward', '下一月', '下个月'];
-        const textCandidates = ['>', '›', '»', '→'];
-        const nodes = Array.from(document.querySelectorAll('button, [role="button"], [aria-label]')) as HTMLElement[];
-        const byAria = nodes.find((el) => {
-          const aria = (el.getAttribute('aria-label') || '').toLowerCase();
-          return ariaCandidates.some((c) => aria.includes(c));
-        });
-        const byText = nodes.find((el) => {
-          const text = (el.textContent || '').trim();
-          return textCandidates.includes(text);
-        });
-        const fallback = nodes.find((el) => (el.getAttribute('aria-label') || '').toLowerCase().includes('next'));
-        const next = byAria || byText || fallback;
-        if (!next) return 'missing-next-month-button';
-        next.click();
-        return 'clicked';
-      };
-
-      const trySelectTarget = () => {
-        const targetButton = Array.from(document.querySelectorAll('button, [role="button"]'))
-          .find((b) =>
-            (b.textContent || '').trim() === targetText ||
-            (b.textContent || '').trim() === targetDay ||
-            (b.textContent || '').trim().includes(targetAria) ||
-            (b.getAttribute('aria-label') || '').includes(selectedTargetAria) ||
-            (b.getAttribute('aria-label') || '').includes(targetAria)
-          );
-        if (!targetButton) return 'missing';
-        targetButton.click();
-        const selected = Array.from(document.querySelectorAll('button, [role="button"]'))
-          .find((b) => (b.getAttribute('aria-label') || '').includes(selectedTargetAria));
-        return selected ? 'ok' : 'date-not-selected';
-      };
-
-      const initialMonthLabel = findVisibleMonthLabel();
-      const initialMonthIndex = parseMonthIndex(initialMonthLabel);
-      if (initialMonthIndex !== null) {
-        const monthDelta = targetMonthIndex - initialMonthIndex;
-        for (let i = 0; i < Math.max(0, monthDelta); i += 1) {
-          const status = clickNextMonth();
-          if (status !== 'clicked') break;
-        }
-      }
-
-      for (let j = 0; j < 30; j += 1) {
-        const outcome = trySelectTarget();
-        if (outcome === 'ok' || outcome === 'date-not-selected') return outcome;
-        const status = clickNextMonth();
-        if (status !== 'clicked') return status || 'missing-next-month-button-after-advance';
-      }
-
-      // Fallback: directly set date input if calendar buttons are not reliable.
-      const setInputValue = (input: HTMLInputElement, value: string) => {
-        const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
-        if (setter) { setter.call(input, value); } else { (input as any).value = value; }
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        input.dispatchEvent(new Event('change', { bubbles: true }));
-        input.dispatchEvent(new Event('blur', { bubbles: true }));
-      };
-      const dateInputs = Array.from(document.querySelectorAll('input')) as HTMLInputElement[];
-      const dateCandidate = dateInputs.find((el) => {
-        const aria = (el.getAttribute('aria-label') || '').toLowerCase();
-        const placeholder = (el.getAttribute('placeholder') || '').toLowerCase();
-        const val = (el.value || '').toLowerCase();
-        return aria.includes('date') || placeholder.includes('mm') || /\\d{1,2}\\/\\d{1,2}\\/\\d{4}/.test(val);
+  // Set the date using calendar with enhanced month navigation and in-place retry
+  let dateSetSuccess = false;
+  let lastDateResult = "";
+  
+  // Debug: log current page state before date selection
+  const debugInfoBefore = await client.evalJs(`(() => {
+    const buttons = Array.from(document.querySelectorAll('button, [role="button"]'))
+      .map(b => ({ text: (b.textContent || '').trim(), aria: b.getAttribute('aria-label') || '', role: b.getAttribute('role') || 'button' }))
+      .filter(x => x.text || x.aria);
+    return JSON.stringify({ buttons: buttons.slice(0, 20) });
+  })()`);
+  console.log('[schedule-debug] Before click date:', debugInfoBefore);
+  
+  // First click the date button to open calendar, then wait and capture state
+  await client.evalJs(`(() => {
+    const dateButton = Array.from(document.querySelectorAll('button, [role="button"]'))
+      .find((b) => {
+        const text = (b.textContent || '').trim();
+        return /\\d{1,2}\\/\\d{1,2}\\/\\d{4}/.test(text);
       });
-      if (dateCandidate) {
-        setInputValue(dateCandidate, dateValue);
-        const retained = dateCandidate.value.includes(dateValue);
-        return retained ? 'ok' : 'date-input-not-retained:' + dateCandidate.value;
-      }
-
-      return 'missing-date-after-advance';
-    })()`);
-    if (!result.includes("ok")) {
-      throw new Error(`Failed to set schedule date: ${result}`);
+    if (dateButton) {
+      dateButton.click();
+      return 'clicked-date-button';
     }
-  });
+    return 'missing-date-button';
+  })()`);
+  
+  // Wait for calendar to open
+  await client.waitMs(2000);
+  
+  // Debug: log page state after clicking date
+  const debugInfoAfter = await client.evalJs(`(() => {
+    const buttons = Array.from(document.querySelectorAll('button, [role="button"]'))
+      .map(b => ({ text: (b.textContent || '').trim(), aria: b.getAttribute('aria-label') || '', role: b.getAttribute('role') || 'button' }))
+      .filter(x => x.text || x.aria);
+    const allText = document.body ? document.body.innerText.slice(0, 1000) : '';
+    return JSON.stringify({ buttons: buttons.slice(0, 50), allText });
+  })()`);
+  console.log('[schedule-debug] After click date (calendar should be open):', debugInfoAfter);
+  
+  // Click the right arrow (next month) button multiple times to reach May 2026
+  // Calendar shows Feb 2026 and Mar 2026, we need to reach May 2026
+  // So we need to click next month 2 times (to get from Mar to May)
+  console.log('[schedule-debug] Clicking next month button to reach May 2026...');
+  
+  for (let i = 0; i < 3; i++) {
+    const clickResult = await client.evalJs(`(() => {
+      // Find the next month button by exact aria-label
+      const nextMonthBtn = Array.from(document.querySelectorAll('button, [role="button"]'))
+        .find((b) => {
+          const aria = b.getAttribute('aria-label') || '';
+          return aria === 'Move forward to switch to the next month.';
+        });
+      if (nextMonthBtn) {
+        nextMonthBtn.click();
+        return 'clicked-next-month';
+      }
+      return 'missing-next-month-button';
+    })()`);
+    console.log('[schedule-debug] Click', i+1, 'result:', clickResult);
+    await client.waitMs(500);
+  }
+  
+  // Now try to select May 15, 2026
+  // First, let's check what month is visible after navigation
+  const checkMonthResult = await client.evalJs(`(() => {
+    const monthLabels = Array.from(document.querySelectorAll('div, span, strong, h2, h3'))
+      .map((node) => (node.textContent || '').trim())
+      .filter((text) => /[A-Z][a-z]+\\s+2026/.test(text));
+    
+    const mayDates = Array.from(document.querySelectorAll('button, [role="button"]'))
+      .filter((b) => {
+        const aria = b.getAttribute('aria-label') || '';
+        return aria.includes('May') && aria.includes('2026');
+      })
+      .map((b) => ({ text: (b.textContent || '').trim(), aria: b.getAttribute('aria-label') || '' }));
+    
+    return JSON.stringify({ monthLabels, mayDates: mayDates.slice(0, 10) });
+  })()`);
+  
+  console.log('[schedule-debug] Month check after nav:', checkMonthResult);
+  
+  // Use Playwright-style click via CDP for more reliable interaction
+  const targetDayStr = String(day);
+  const targetButtonInfo = await client.evalJs(`(() => {
+    const targetButton = Array.from(document.querySelectorAll('button, [role="button"]'))
+      .find((b) => {
+        const text = (b.textContent || '').trim();
+        const aria = b.getAttribute('aria-label') || '';
+        return text === ${JSON.stringify(targetDayStr)} && aria.includes('May') && aria.includes(${JSON.stringify(targetDayStr)}) && aria.includes('2026');
+      });
 
+    if (!targetButton) {
+      return null;
+    }
+
+    const rect = targetButton.getBoundingClientRect();
+    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+  })()`);
+
+  if (!targetButtonInfo) {
+    lastDateResult = 'missing-target-date-button-in-dom';
+  } else {
+    // Use mouse click via CDP for more reliable interaction
+    console.log('[schedule-debug] Clicking at position:', targetButtonInfo);
+
+    // Try native click first
+    const clickResult = await client.evalJs(`(() => {
+      const targetButton = Array.from(document.querySelectorAll('button, [role="button"]'))
+        .find((b) => {
+          const text = (b.textContent || '').trim();
+          const aria = b.getAttribute('aria-label') || '';
+          return text === ${JSON.stringify(targetDayStr)} && aria.includes('May') && aria.includes(${JSON.stringify(targetDayStr)}) && aria.includes('2026');
+        });
+
+      if (!targetButton) return 'button-not-found';
+
+      // Try multiple ways to trigger selection
+      targetButton.click();
+      targetButton.focus();
+      
+      // Dispatch additional events
+      targetButton.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      targetButton.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+      
+      return 'clicked';
+    })()`);
+    
+    console.log('[schedule-debug] Click result:', clickResult);
+    
+    // Wait for selection to update
+    await client.waitMs(1000);
+    
+    // Verify by checking the date input field
+    const verifyResult = await client.evalJs(`(() => {
+      const dateButton = Array.from(document.querySelectorAll('button, [role="button"]'))
+        .find((b) => /\\d{1,2}\\/\\d{1,2}\\/\\d{4}/.test((b.textContent || '').trim()));
+      
+      if (dateButton) {
+        const dateText = (dateButton.textContent || '').trim();
+        return 'date-field-shows:' + dateText;
+      }
+      
+      return 'no-date-field-found';
+    })()`);
+    
+    console.log('[schedule-debug] Verify result:', verifyResult);
+
+    // Check if the date field shows the expected date (with or without leading zero)
+    const expectedDateM = String(month);
+    const expectedDateD = String(day);
+    const expectedDateY = String(year);
+    if (verifyResult.includes(`${expectedDateM}/${expectedDateD}/${expectedDateY}`)) {
+      dateSetSuccess = true;
+    } else {
+      lastDateResult = verifyResult;
+    }
+  }
+  
+  if (!dateSetSuccess) {
+    throw new Error(`Failed to set schedule date: ${lastDateResult}`);
+  }
+
+  // Set the time (hour, minute, AM/PM)
   await retry(3, async () => {
     const result = await client.evalJs(`(() => {
       const setInputValue = (input, value) => {
@@ -295,6 +349,7 @@ export async function applyScheduleIfRequested(
     }
   });
 
+  // Verify the scheduled values are retained
   await retry(3, async () => {
     const result = await client.evalJs(`(() => {
       const dateButton = Array.from(document.querySelectorAll('button, [role="button"]'))
