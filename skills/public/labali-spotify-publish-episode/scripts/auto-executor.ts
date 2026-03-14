@@ -16,7 +16,7 @@ interface FallbackRecord {
   deterministic_success: boolean;
   deterministic_error?: string;
   final_mode: "deterministic" | "policy";
-  final_status: "published";
+  final_status: "published" | "scheduled";
   final_url: string;
 }
 
@@ -30,7 +30,7 @@ async function appendFallbackRecord(record: FallbackRecord): Promise<void> {
 export async function execute(
   inputs: PublishEpisodeInputs,
   context: AutoExecutorContext = {}
-): Promise<{ status: "published"; show: string; url: string }> {
+): Promise<{ status: "published" | "scheduled"; show: string; url: string }> {
   const log = context.logger ?? ((msg: string) => console.log(`[spotify-publish-auto] ${msg}`));
   const disableDeterministicCache = inputs.disable_deterministic_cache ?? false;
   const preferDeterministic = context.preferDeterministic ?? !disableDeterministicCache;

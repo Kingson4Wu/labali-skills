@@ -27,7 +27,13 @@ import {
   uploadEpisodeAudio,
 } from "./stage-detector";
 import { applyScheduleIfRequested, publishEpisode } from "./publisher";
-import { verifyPublishedInList, verifyPublishedOnly } from "./verifier";
+import {
+  deleteDraftEpisodes,
+  shouldVerifyAsScheduled,
+  verifyPublishedInList,
+  verifyPublishedOnly,
+  verifyScheduledInList,
+} from "./verifier";
 
 async function nativeTypeRef(client: AgentBrowserClient, refKey: string, value: string): Promise<boolean> {
   if (!(await client.clickRef(refKey))) {
@@ -346,7 +352,7 @@ async function ensureMetadataRequiredFields(
 }
 
 export async function execute(inputs: PublishEpisodeInputs, context: ExecutorContext = {}): Promise<{
-  status: "published";
+  status: "published" | "scheduled";
   show: string;
   url: string;
 }> {
@@ -403,7 +409,7 @@ export async function execute(inputs: PublishEpisodeInputs, context: ExecutorCon
     });
 
     const loginState = await timed("login-state-check", async () => ensureDashboardOrShows(client));
-    if (loginState !== "logged-in") {
+    if (loginState === "logged-out") {
       await timed("manual-login", async () => {
         log("Manual login required. Complete login in the opened browser window.");
         await promptManualLogin(
@@ -528,31 +534,53 @@ export async function execute(inputs: PublishEpisodeInputs, context: ExecutorCon
 
     await timed("publish-action", async () => {
       log("Publish episode");
-      await publishEpisode(client, confirmPublish);
+      await publishEpisode(
+        client,
+        confirmPublish,
+        shouldVerifyAsScheduled(inputs.publish_at) ? "schedule" : "publish"
+      );
     });
 
-    const publishedConfirmed = await timed("verify-published", async () =>
-      verifyPublishedInList(
-        client,
-        inputs.title,
-        targetShowUrl
-      )
-    );
-    if (!publishedConfirmed) {
-      const foundInPublishedOnly = await timed("verify-published-only", async () =>
-        verifyPublishedOnly(
+    if (shouldVerifyAsScheduled(inputs.publish_at)) {
+      const scheduledConfirmed = await timed("verify-scheduled", async () =>
+        verifyScheduledInList(client, inputs.title, targetShowUrl)
+      );
+      if (!scheduledConfirmed) {
+        throw new Error("Schedule action completed but episode not found in Scheduled list.");
+      }
+    } else {
+      const publishedConfirmed = await timed("verify-published", async () =>
+        verifyPublishedInList(
           client,
           inputs.title,
           targetShowUrl
         )
       );
-      if (!foundInPublishedOnly) {
-        throw new Error("Publish action completed but episode not found in Published list.");
+      if (!publishedConfirmed) {
+        const foundInPublishedOnly = await timed("verify-published-only", async () =>
+          verifyPublishedOnly(
+            client,
+            inputs.title,
+            targetShowUrl
+          )
+        );
+        if (!foundInPublishedOnly) {
+          throw new Error("Publish action completed but episode not found in Published list.");
+        }
+        throw new Error(
+          "Episode appears in Published list but still exists in Draft list. Review publish-date required fields in wizard."
+        );
       }
-      throw new Error(
-        "Episode appears in Published list but still exists in Draft list. Review publish-date required fields in wizard."
-      );
     }
+
+    await timed("draft-cleanup", async () => {
+      const deleted = await deleteDraftEpisodes(
+        client,
+        [inputs.title, "Untitled"],
+        targetShowUrl
+      );
+      log(`Deleted draft leftovers: ${deleted}`);
+    });
 
     const url = await client.getUrl();
     const totalMs = Date.now() - runStartedAt;
@@ -561,7 +589,7 @@ export async function execute(inputs: PublishEpisodeInputs, context: ExecutorCon
     log(`[timing] total: ${(totalMs / 1000).toFixed(1)}s`);
     log(`[timing] top-steps: ${topSteps.join(", ")}`);
     return {
-      status: "published",
+      status: shouldVerifyAsScheduled(inputs.publish_at) ? "scheduled" : "published",
       show: inputs.show_name ?? inputs.show_id ?? "unknown-show",
       url,
     };

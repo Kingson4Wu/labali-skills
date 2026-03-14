@@ -13,9 +13,22 @@ import {
   validateInputs,
   type LogFn,
 } from "./core";
-import { waitForPreviewReady } from "./publisher";
-import { ensureDashboardOrShows, ensureLoginRoute } from "./stage-detector";
-import { verifyPublishedInList, verifyPublishedOnly } from "./verifier";
+import { applyScheduleIfRequested, waitForPreviewReady } from "./publisher";
+import {
+  ensureDashboardOrShows,
+  ensureLoginRoute,
+  isEpisodeWizardUrl,
+  isCreatorsUrl,
+  isUploadSurfaceVisible,
+  isSameShowByUrl,
+} from "./stage-detector";
+import {
+  deleteDraftEpisodes,
+  shouldVerifyAsScheduled,
+  verifyPublishedInList,
+  verifyPublishedOnly,
+  verifyScheduledInList,
+} from "./verifier";
 
 async function nativeTypeRef(client: AgentBrowserClient, refKey: string, value: string): Promise<boolean> {
   if (!(await client.clickRef(refKey))) {
@@ -187,7 +200,7 @@ async function advanceDeterministicToPublish(client: AgentBrowserClient): Promis
 export async function executeDeterministic(
   inputs: PublishEpisodeInputs,
   context: ExecutorContext = {}
-): Promise<{ status: "published"; show: string; url: string }> {
+): Promise<{ status: "published" | "scheduled"; show: string; url: string }> {
   validateInputs(inputs);
   const log: LogFn = context.logger ?? ((msg) => console.log(`[spotify-publish-deterministic] ${msg}`));
 
@@ -205,29 +218,48 @@ export async function executeDeterministic(
   try {
     const showHome = inputs.show_home_url ?? SPOTIFY_CREATORS_URL;
     const episodesPage = `${showHome.replace(/\/home$/, "")}/episodes?filter=PUBLISHED_EPISODES&currentPage=1`;
+    const currentUrl = await client.getUrl();
 
-    log(`Open deterministic entry: ${episodesPage}`);
-    await client.open(episodesPage);
+    if (isEpisodeWizardUrl(currentUrl)) {
+      log(`Reuse deterministic wizard page: ${currentUrl}`);
+    } else if (isCreatorsUrl(currentUrl) && isSameShowByUrl(currentUrl, showHome)) {
+      log(`Reuse deterministic entry page: ${currentUrl}`);
+    } else {
+      log(`Open deterministic entry: ${episodesPage}`);
+      await client.open(episodesPage);
+    }
     await ensureLoginRoute(client);
 
     const loginState = await ensureDashboardOrShows(client);
-    if (loginState !== "logged-in") {
+    if (loginState === "logged-out") {
       log("Manual login required. Complete login in the opened browser window.");
       await promptManualLogin("Sign in to Spotify for Creators manually.", context.prompt);
       await client.waitForTextAny(ACTION_CANDIDATES.dashboardMarkers, 120000);
     }
 
-    log("Click New episode");
-    try {
-      await client.clickRoleByNames("link", ["New episode"]);
-    } catch {
-      await client.clickRoleByNames("link", ["Create a new episode"]);
-    }
-    await client.waitMs(4000);
+    const currentStageUrl = await client.getUrl();
+    const wizardVisible = isEpisodeWizardUrl(currentStageUrl);
+    const uploadVisible = await isUploadSurfaceVisible(client);
 
-    log("Upload audio");
-    await client.uploadBySemanticCandidates(ACTION_CANDIDATES.audioUpload, audioFile);
-    await client.waitMs(5000);
+    if (!wizardVisible) {
+      log("Click New episode");
+      try {
+        await client.clickRoleByNames("link", ["New episode"]);
+      } catch {
+        await client.clickRoleByNames("link", ["Create a new episode"]);
+      }
+      await client.waitMs(4000);
+    } else {
+      log(`Reuse existing wizard before upload/metadata: ${currentStageUrl}`);
+    }
+
+    if (uploadVisible || !(await client.hasText("Title"))) {
+      log("Upload audio");
+      await client.uploadBySemanticCandidates(ACTION_CANDIDATES.audioUpload, audioFile);
+      await client.waitMs(5000);
+    } else {
+      log("Audio already present in wizard; skip re-upload");
+    }
 
     log("Fill deterministic metadata");
     await fillDeterministicMetadata(client, inputs);
@@ -236,30 +268,56 @@ export async function executeDeterministic(
     log("Next to publish step");
     await advanceDeterministicToPublish(client);
 
-    log("Select Now and Publish");
-    try {
-      await client.clickRoleByNames("radio", ["Now"]);
-    } catch {
-      await client.evalJs(
-        "(() => { const label = document.querySelector('label[for=\"publish-date-now\"]'); if (label) label.click(); const input = document.getElementById('publish-date-now'); if (input) { input.checked = true; input.dispatchEvent(new Event('change', { bubbles: true })); } return 'ok'; })()"
-      );
+    if (shouldVerifyAsScheduled(inputs.publish_at)) {
+      log(`Apply deterministic schedule: ${inputs.publish_at}`);
+      await applyScheduleIfRequested(client, inputs.publish_at);
+    } else {
+      log("Select Now and Publish");
+      try {
+        await client.clickRoleByNames("radio", ["Now"]);
+      } catch {
+        await client.evalJs(
+          "(() => { const label = document.querySelector('label[for=\"publish-date-now\"]'); if (label) label.click(); const input = document.getElementById('publish-date-now'); if (input) { input.checked = true; input.dispatchEvent(new Event('change', { bubbles: true })); } return 'ok'; })()"
+        );
+      }
     }
     log("Wait for upload preview to be ready before publish");
-    await waitForPreviewReady(client);
-    await client.clickRoleByNames("button", ["Publish", "Publish episode", "Save and publish"]);
+    await waitForPreviewReady(
+      client,
+      shouldVerifyAsScheduled(inputs.publish_at) ? "schedule" : "publish"
+    );
+    await client.clickRoleByNames(
+      "button",
+      shouldVerifyAsScheduled(inputs.publish_at)
+        ? ["Schedule"]
+        : ["Publish", "Publish episode", "Save and publish"]
+    );
     await client.waitMs(3000);
 
-    const publishedConfirmed = await verifyPublishedInList(client, inputs.title, inputs.show_home_url);
-    if (!publishedConfirmed) {
-      const foundInPublishedOnly = await verifyPublishedOnly(client, inputs.title, inputs.show_home_url);
-      if (!foundInPublishedOnly) {
-        throw new Error("Deterministic publish completed but episode not found in Published.");
+    if (shouldVerifyAsScheduled(inputs.publish_at)) {
+      const scheduledConfirmed = await verifyScheduledInList(client, inputs.title, inputs.show_home_url);
+      if (!scheduledConfirmed) {
+        throw new Error("Deterministic schedule completed but episode not found in Scheduled.");
       }
-      throw new Error("Deterministic publish found title in Published and Draft simultaneously.");
+    } else {
+      const publishedConfirmed = await verifyPublishedInList(client, inputs.title, inputs.show_home_url);
+      if (!publishedConfirmed) {
+        const foundInPublishedOnly = await verifyPublishedOnly(client, inputs.title, inputs.show_home_url);
+        if (!foundInPublishedOnly) {
+          throw new Error("Deterministic publish completed but episode not found in Published.");
+        }
+        throw new Error("Deterministic publish found title in Published and Draft simultaneously.");
+      }
     }
 
+    await deleteDraftEpisodes(
+      client,
+      [inputs.title, "Untitled"],
+      inputs.show_home_url
+    );
+
     return {
-      status: "published",
+      status: shouldVerifyAsScheduled(inputs.publish_at) ? "scheduled" : "published",
       show: inputs.show_name ?? inputs.show_id ?? "unknown-show",
       url: await client.getUrl(),
     };

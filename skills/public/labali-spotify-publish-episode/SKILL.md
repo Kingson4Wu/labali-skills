@@ -42,13 +42,18 @@ The deterministic first-level cache script is available at `scripts/deterministi
 - Use semantic interactions first (visible text, label, role).
 - Login is manual; session reuse is required.
 - Publish success is validated by business state, not by click success.
+- If `publish_at` is later than the current time, success must be verified in `Scheduled`, not `Published`.
+- If `publish_at` is not later than the current time, success must be verified in `Published`.
 - Do not click `Publish` while upload is still processing. Wait until upload is complete, with `Preview ready!` as the preferred readiness marker.
+- For scheduled runs, do not rely on partial date-picker progress. Keep advancing the calendar until the exact target date is visible and selected before allowing the final action.
+- In deterministic mode, prefer computing the month delta from the currently visible calendar month to the target month, then advance the right-arrow exactly that many times before selecting the target day.
+- For schedule time controls, direct DOM value assignment is acceptable only when followed by `input`/`change` and retention checks.
 
 ## Success Criteria
 
 A run is successful only when all conditions hold:
 
-1. The target episode title appears in `Published`.
+1. The target episode title appears in `Scheduled` when `publish_at` is in the future; otherwise it appears in `Published`.
 2. The same title does not appear in `Draft`.
 3. No required publish controls remain unresolved in review step.
 

@@ -152,10 +152,7 @@ export class AgentBrowserClient {
   async open(url: string): Promise<void> {
     const opened = await this.try(["open", url]);
     if (!opened) {
-      const tabOpened = await this.try(["tab", "new", url]);
-      if (!tabOpened) {
-        throw new Error(`Failed to open URL: ${url}`);
-      }
+      throw new Error(`Failed to open URL in current tab: ${url}`);
     }
     await this.run(["wait", "--load", "domcontentloaded"], { allowFailure: true });
     await this.waitForLoad();
