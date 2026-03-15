@@ -121,17 +121,35 @@ async function fillDeterministicMetadata(
     }
 
     // Use more robust selector for season/episode inputs
-    // Try multiple possible name patterns and aria-labels
+    // Match policy executor strategy: look for spinbutton role first, then fallback to input[type="number"]
     const seasonInput = document.querySelector('input[name="podcastSeasonNumber"]') ||
                        document.querySelector('input[name="seasonNumber"]') ||
                        document.querySelector('input[aria-label*="Season" i]') ||
+                       Array.from(document.querySelectorAll('[role="spinbutton"]'))
+                         .find((el) => {
+                           const ariaLabel = (el.getAttribute('aria-label') || '').toLowerCase();
+                           return ariaLabel.includes('season');
+                         }) ||
                        Array.from(document.querySelectorAll('input[type="number"]'))
                          .find((input) => {
                            const parent = input.closest('div, label');
                            const label = parent ? parent.querySelector('label, span') : null;
                            return label && (label.textContent || '').toLowerCase().includes('season');
                          });
-    
+
+    // Debug: log what inputs we found
+    const allNumberInputs = Array.from(document.querySelectorAll('input[type="number"]'))
+      .map((input) => {
+        const parent = input.closest('div, label');
+        const label = parent ? (parent.querySelector('label, span') || {}).textContent : '';
+        return { name: input.name, ariaLabel: input.getAttribute('aria-label'), parentLabel: label };
+      });
+    const allSpinbuttons = Array.from(document.querySelectorAll('[role="spinbutton"]'))
+      .map((el) => ({ ariaLabel: el.getAttribute('aria-label'), role: el.getAttribute('role') }));
+    console.log('[deterministic-debug] Number inputs found:', JSON.stringify(allNumberInputs));
+    console.log('[deterministic-debug] Spinbuttons found:', JSON.stringify(allSpinbuttons));
+    console.log('[deterministic-debug] Season input found:', !!seasonInput);
+
     if (seasonInput && ${seasonJs}) {
       setInputValue(seasonInput, ${seasonJs});
       // Force blur to ensure React state update
@@ -141,13 +159,20 @@ async function fillDeterministicMetadata(
     const episodeInput = document.querySelector('input[name="podcastEpisodeNumber"]') ||
                         document.querySelector('input[name="episodeNumber"]') ||
                         document.querySelector('input[aria-label*="Episode" i]') ||
+                        Array.from(document.querySelectorAll('[role="spinbutton"]'))
+                          .find((el) => {
+                            const ariaLabel = (el.getAttribute('aria-label') || '').toLowerCase();
+                            return ariaLabel.includes('episode');
+                          }) ||
                         Array.from(document.querySelectorAll('input[type="number"]'))
                           .find((input) => {
                             const parent = input.closest('div, label');
                             const label = parent ? parent.querySelector('label, span') : null;
                             return label && (label.textContent || '').toLowerCase().includes('episode');
                           });
-    
+
+    console.log('[deterministic-debug] Episode input found:', !!episodeInput);
+
     if (episodeInput && ${episodeJs}) {
       setInputValue(episodeInput, ${episodeJs});
       // Force blur to ensure React state update
