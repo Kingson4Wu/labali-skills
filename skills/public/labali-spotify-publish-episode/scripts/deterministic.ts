@@ -120,66 +120,26 @@ async function fillDeterministicMetadata(
       editor.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
-    // Use more robust selector for season/episode inputs
-    // Match policy executor strategy: look for spinbutton role first, then fallback to input[type="number"]
-    const seasonInput = document.querySelector('input[name="podcastSeasonNumber"]') ||
-                       document.querySelector('input[name="seasonNumber"]') ||
-                       document.querySelector('input[aria-label*="Season" i]') ||
-                       Array.from(document.querySelectorAll('[role="spinbutton"]'))
-                         .find((el) => {
-                           const ariaLabel = (el.getAttribute('aria-label') || '').toLowerCase();
-                           return ariaLabel.includes('season');
-                         }) ||
-                       Array.from(document.querySelectorAll('input[type="number"]'))
-                         .find((input) => {
-                           const parent = input.closest('div, label');
-                           const label = parent ? parent.querySelector('label, span') : null;
-                           return label && (label.textContent || '').toLowerCase().includes('season');
-                         });
-
-    // Debug: log what inputs we found
-    const allNumberInputs = Array.from(document.querySelectorAll('input[type="number"]'))
-      .map((input) => {
-        const parent = input.closest('div, label');
-        const label = parent ? (parent.querySelector('label, span') || {}).textContent : '';
-        return { name: input.name, ariaLabel: input.getAttribute('aria-label'), parentLabel: label };
-      });
-    const allSpinbuttons = Array.from(document.querySelectorAll('[role="spinbutton"]'))
-      .map((el) => ({ ariaLabel: el.getAttribute('aria-label'), role: el.getAttribute('role') }));
-    console.log('[deterministic-debug] Number inputs found:', JSON.stringify(allNumberInputs));
-    console.log('[deterministic-debug] Spinbuttons found:', JSON.stringify(allSpinbuttons));
-    console.log('[deterministic-debug] Season input found:', !!seasonInput);
-
-    if (seasonInput && ${seasonJs}) {
-      setInputValue(seasonInput, ${seasonJs});
-      // Force blur to ensure React state update
-      seasonInput.blur();
-    }
-
-    const episodeInput = document.querySelector('input[name="podcastEpisodeNumber"]') ||
-                        document.querySelector('input[name="episodeNumber"]') ||
-                        document.querySelector('input[aria-label*="Episode" i]') ||
-                        Array.from(document.querySelectorAll('[role="spinbutton"]'))
-                          .find((el) => {
-                            const ariaLabel = (el.getAttribute('aria-label') || '').toLowerCase();
-                            return ariaLabel.includes('episode');
-                          }) ||
-                        Array.from(document.querySelectorAll('input[type="number"]'))
-                          .find((input) => {
-                            const parent = input.closest('div, label');
-                            const label = parent ? parent.querySelector('label, span') : null;
-                            return label && (label.textContent || '').toLowerCase().includes('episode');
-                          });
-
-    console.log('[deterministic-debug] Episode input found:', !!episodeInput);
-
-    if (episodeInput && ${episodeJs}) {
-      setInputValue(episodeInput, ${episodeJs});
-      // Force blur to ensure React state update
-      episodeInput.blur();
-    }
     return "ok";
   })()`);
+
+  // Use policy executor strategy: fill season/episode via snapshot refs with spinbutton role
+  // This is more reliable than evalJs DOM querying
+  log(`[deterministic] Filling season=${season}, episode=${episode} via snapshot refs`);
+  const seasonEpisodeRefs = Object.entries(snapshot.data?.refs ?? {})
+    .filter(([, refData]) => (refData.role ?? "").toLowerCase() === "spinbutton")
+    .map(([refKey]) => refKey);
+
+  log(`[deterministic] Found ${seasonEpisodeRefs.length} spinbutton refs`);
+
+  if (season && seasonEpisodeRefs[0]) {
+    const seasonFilled = await client.fillRef(seasonEpisodeRefs[0], season);
+    log(`[deterministic] Season filled via ref ${seasonEpisodeRefs[0]}: ${seasonFilled}`);
+  }
+  if (episode && seasonEpisodeRefs[1]) {
+    const episodeFilled = await client.fillRef(seasonEpisodeRefs[1], episode);
+    log(`[deterministic] Episode filled via ref ${seasonEpisodeRefs[1]}: ${episodeFilled}`);
+  }
 
   // Verify critical fields were applied; deterministic path should fail fast if not.
   // Add detailed debug logging to help diagnose failures
