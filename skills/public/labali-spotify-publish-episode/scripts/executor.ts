@@ -105,10 +105,12 @@ async function fillEpisodeMetadata(client: AgentBrowserClient, inputs: PublishEp
     }
 
     // Convert \r\n to <br> and use innerHTML for rich text editor
-    const htmlDescription = normalizedDescription
+    // HTML-escape the description first, then convert line breaks to <br>
+    const htmlEscaped = normalizedDescription
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
+      .replace(/>/g, '&gt;');
+    const htmlDescription = htmlEscaped
       .replace(/\r\n\r\n/g, '<br><br>')
       .replace(/\r\n/g, '<br>');
 
@@ -119,16 +121,17 @@ async function fillEpisodeMetadata(client: AgentBrowserClient, inputs: PublishEp
           const name = (node.getAttribute("name") || "").toLowerCase();
           return role === "textbox" && name.includes("description");
         });
-      
+
       if (targets.length === 0) return 'no-target';
-      
+
       const target = targets[0];
       target.focus();
+      // Directly assign HTML string (already escaped and with <br> tags)
       target.innerHTML = ${JSON.stringify(htmlDescription)};
       target.dispatchEvent(new Event("input", { bubbles: true }));
       target.dispatchEvent(new Event("change", { bubbles: true }));
       target.dispatchEvent(new Event("blur", { bubbles: true }));
-      
+
       return 'done';
     })()`);
   });

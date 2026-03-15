@@ -193,13 +193,19 @@ export async function applyScheduleIfRequested(
     return JSON.stringify({ buttons: buttons.slice(0, 50), allText });
   })()`);
   console.log('[schedule-debug] After click date (calendar should be open):', debugInfoAfter);
+
+  // Calculate how many months to advance from current calendar view to target month
+  // Calendar typically shows Feb and Mar when opened, so we need to compute the delta
+  const currentMonthInCalendar = 2; // February is typically shown first (0-indexed would be 1)
+  const targetMonthIndex = month - 1; // 0-indexed target month
+  let monthsToAdvance = targetMonthIndex - currentMonthInCalendar;
+  if (monthsToAdvance < 0) {
+    monthsToAdvance = 0;
+  }
   
-  // Click the right arrow (next month) button multiple times to reach May 2026
-  // Calendar shows Feb 2026 and Mar 2026, we need to reach May 2026
-  // So we need to click next month 2 times (to get from Mar to May)
-  console.log('[schedule-debug] Clicking next month button to reach May 2026...');
-  
-  for (let i = 0; i < 3; i++) {
+  console.log(`[schedule-debug] Clicking next month button ${monthsToAdvance} times to reach ${targetMonthLabel}...`);
+
+  for (let i = 0; i < monthsToAdvance; i++) {
     const clickResult = await client.evalJs(`(() => {
       // Find the next month button by exact aria-label
       const nextMonthBtn = Array.from(document.querySelectorAll('button, [role="button"]'))
@@ -216,34 +222,41 @@ export async function applyScheduleIfRequested(
     console.log('[schedule-debug] Click', i+1, 'result:', clickResult);
     await client.waitMs(500);
   }
-  
-  // Now try to select May 15, 2026
+
+  // Now try to select the target day
   // First, let's check what month is visible after navigation
+  const targetMonthName = new Date(year, month - 1, 1).toLocaleDateString("en-US", { month: 'long' });
+  
   const checkMonthResult = await client.evalJs(`(() => {
     const monthLabels = Array.from(document.querySelectorAll('div, span, strong, h2, h3'))
       .map((node) => (node.textContent || '').trim())
       .filter((text) => /[A-Z][a-z]+\\s+2026/.test(text));
-    
-    const mayDates = Array.from(document.querySelectorAll('button, [role="button"]'))
+
+    const targetDates = Array.from(document.querySelectorAll('button, [role="button"]'))
       .filter((b) => {
         const aria = b.getAttribute('aria-label') || '';
-        return aria.includes('May') && aria.includes('2026');
+        return aria.includes(${JSON.stringify(targetMonthName)}) && aria.includes('2026');
       })
       .map((b) => ({ text: (b.textContent || '').trim(), aria: b.getAttribute('aria-label') || '' }));
-    
-    return JSON.stringify({ monthLabels, mayDates: mayDates.slice(0, 10) });
+
+    return JSON.stringify({ monthLabels, targetDates: targetDates.slice(0, 10) });
   })()`);
-  
+
   console.log('[schedule-debug] Month check after nav:', checkMonthResult);
-  
+
   // Use Playwright-style click via CDP for more reliable interaction
   const targetDayStr = String(day);
+  const targetMonthNameJs = targetMonthName;
   const targetButtonInfo = await client.evalJs(`(() => {
+    const targetMonth = ${JSON.stringify(targetMonthNameJs)};
+    const targetDay = ${JSON.stringify(targetDayStr)};
+    const targetYear = '2026';
+    
     const targetButton = Array.from(document.querySelectorAll('button, [role="button"]'))
       .find((b) => {
         const text = (b.textContent || '').trim();
         const aria = b.getAttribute('aria-label') || '';
-        return text === ${JSON.stringify(targetDayStr)} && aria.includes('May') && aria.includes(${JSON.stringify(targetDayStr)}) && aria.includes('2026');
+        return text === targetDay && aria.includes(targetMonth) && aria.includes(targetDay) && aria.includes(targetYear);
       });
 
     if (!targetButton) {
@@ -262,11 +275,15 @@ export async function applyScheduleIfRequested(
 
     // Try native click first
     const clickResult = await client.evalJs(`(() => {
+      const targetMonth = ${JSON.stringify(targetMonthNameJs)};
+      const targetDay = ${JSON.stringify(targetDayStr)};
+      const targetYear = '2026';
+      
       const targetButton = Array.from(document.querySelectorAll('button, [role="button"]'))
         .find((b) => {
           const text = (b.textContent || '').trim();
           const aria = b.getAttribute('aria-label') || '';
-          return text === ${JSON.stringify(targetDayStr)} && aria.includes('May') && aria.includes(${JSON.stringify(targetDayStr)}) && aria.includes('2026');
+          return text === targetDay && aria.includes(targetMonth) && aria.includes(targetDay) && aria.includes(targetYear);
         });
 
       if (!targetButton) return 'button-not-found';

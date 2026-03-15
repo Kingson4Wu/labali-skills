@@ -107,25 +107,50 @@ async function fillDeterministicMetadata(
     if (editor && !${descriptionNative ? "true" : "false"}) {
       editor.focus();
       // Convert \r\n to <br> for rich text editor
+      // First HTML-escape, then convert line breaks to <br>
       const htmlDesc = ${description}
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
-        .replace(/\r\n\r\n/g, '<br><br>')
-        .replace(/\r\n/g, '<br>');
+        .replace(/\\r\\n\\r\\n/g, '<br><br>')
+        .replace(/\\r\\n/g, '<br>');
       editor.innerHTML = htmlDesc;
       editor.dispatchEvent(new Event('input', { bubbles: true }));
       editor.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
-    const seasonInput = document.querySelector('input[name="podcastSeasonNumber"]');
+    // Use more robust selector for season/episode inputs
+    // Try multiple possible name patterns and aria-labels
+    const seasonInput = document.querySelector('input[name="podcastSeasonNumber"]') ||
+                       document.querySelector('input[name="seasonNumber"]') ||
+                       document.querySelector('input[aria-label*="Season" i]') ||
+                       Array.from(document.querySelectorAll('input[type="number"]'))
+                         .find((input) => {
+                           const parent = input.closest('div, label');
+                           const label = parent ? parent.querySelector('label, span') : null;
+                           return label && (label.textContent || '').toLowerCase().includes('season');
+                         });
+    
     if (seasonInput && ${seasonJs}) {
       setInputValue(seasonInput, ${seasonJs});
+      // Force blur to ensure React state update
+      seasonInput.blur();
     }
 
-    const episodeInput = document.querySelector('input[name="podcastEpisodeNumber"]');
+    const episodeInput = document.querySelector('input[name="podcastEpisodeNumber"]') ||
+                        document.querySelector('input[name="episodeNumber"]') ||
+                        document.querySelector('input[aria-label*="Episode" i]') ||
+                        Array.from(document.querySelectorAll('input[type="number"]'))
+                          .find((input) => {
+                            const parent = input.closest('div, label');
+                            const label = parent ? parent.querySelector('label, span') : null;
+                            return label && (label.textContent || '').toLowerCase().includes('episode');
+                          });
+    
     if (episodeInput && ${episodeJs}) {
       setInputValue(episodeInput, ${episodeJs});
+      // Force blur to ensure React state update
+      episodeInput.blur();
     }
     return "ok";
   })()`);
@@ -133,14 +158,36 @@ async function fillDeterministicMetadata(
   // Verify critical fields were applied; deterministic path should fail fast if not.
   const verified = await client.evalJs(`(() => {
     const titleInput = document.querySelector('input[name="title"]');
-    const seasonInput = document.querySelector('input[name="podcastSeasonNumber"]');
-    const episodeInput = document.querySelector('input[name="podcastEpisodeNumber"]');
+    
+    // Use robust selector for season/episode inputs (same as fill logic)
+    const seasonInput = document.querySelector('input[name="podcastSeasonNumber"]') ||
+                       document.querySelector('input[name="seasonNumber"]') ||
+                       document.querySelector('input[aria-label*="Season" i]') ||
+                       Array.from(document.querySelectorAll('input[type="number"]'))
+                         .find((input) => {
+                           const parent = input.closest('div, label');
+                           const label = parent ? parent.querySelector('label, span') : null;
+                           return label && (label.textContent || '').toLowerCase().includes('season');
+                         });
+    
+    const episodeInput = document.querySelector('input[name="podcastEpisodeNumber"]') ||
+                        document.querySelector('input[name="episodeNumber"]') ||
+                        document.querySelector('input[aria-label*="Episode" i]') ||
+                        Array.from(document.querySelectorAll('input[type="number"]'))
+                          .find((input) => {
+                            const parent = input.closest('div, label');
+                            const label = parent ? parent.querySelector('label, span') : null;
+                            return label && (label.textContent || '').toLowerCase().includes('episode');
+                          });
+    
     const descriptionNode = Array.from(document.querySelectorAll('[contenteditable="true"]'))
       .find((node) => node && node.offsetParent !== null);
+    
     const titleOk = !!titleInput && (titleInput.value || '').trim().length > 0;
     const descOk = !!descriptionNode && (descriptionNode.textContent || '').trim().length > 0;
     const seasonOk = !${seasonJs} || (!!seasonInput && (seasonInput.value || '').trim() === ${seasonJs});
     const episodeOk = !${episodeJs} || (!!episodeInput && (episodeInput.value || '').trim() === ${episodeJs});
+    
     return JSON.stringify({ titleOk, descOk, seasonOk, episodeOk });
   })()`);
   const parsed = JSON.parse(verified || "{}") as unknown;
@@ -250,7 +297,39 @@ export async function executeDeterministic(
     const wizardVisible = isEpisodeWizardUrl(currentStageUrl);
     const uploadVisible = await isUploadSurfaceVisible(client);
 
-    if (!wizardVisible) {
+    // Always start fresh from show home to avoid stale wizard state
+    // This is the key difference from previous deterministic approach
+    // showHome is already defined above, reuse it here
+
+    if (wizardVisible && uploadVisible) {
+      // Check if this is a clean wizard (no user data entered)
+      const wizardState = await client.evalJs(`(() => {
+        const titleInput = document.querySelector('input[name="title"]');
+        const titleValue = titleInput ? (titleInput.value || '').trim() : '';
+        const hasAudio = document.querySelector('button[data-testid="upload-audio-button"]') !== null ||
+                        document.querySelector('[data-testid="upload-progress"]') !== null;
+        return JSON.stringify({
+          hasTitle: titleValue.length > 0,
+          hasAudio
+        });
+      })()`);
+      
+      const wizardStateParsed = JSON.parse(wizardState);
+      log(`Wizard state check: ${JSON.stringify(wizardStateParsed)}`);
+      
+      // Only reuse wizard if completely empty (no title, no audio)
+      if (wizardStateParsed.hasTitle || wizardStateParsed.hasAudio) {
+        log("Wizard has partial data, resetting to show home...");
+        await client.open(showHome);
+        await client.waitMs(2000);
+      }
+    }
+
+    if (!wizardVisible || !uploadVisible) {
+      log("Open create episode flow from show home");
+      await client.open(showHome);
+      await client.waitMs(2000);
+      
       log("Click New episode");
       try {
         await client.clickRoleByNames("link", ["New episode"]);
@@ -259,16 +338,13 @@ export async function executeDeterministic(
       }
       await client.waitMs(4000);
     } else {
-      log(`Reuse existing wizard before upload/metadata: ${currentStageUrl}`);
+      log(`Reuse clean wizard: ${currentStageUrl}`);
     }
 
-    if (uploadVisible || !(await client.hasText("Title"))) {
-      log("Upload audio");
-      await client.uploadBySemanticCandidates(ACTION_CANDIDATES.audioUpload, audioFile);
-      await client.waitMs(5000);
-    } else {
-      log("Audio already present in wizard; skip re-upload");
-    }
+    // Always upload audio (deterministic approach - no skip logic)
+    log("Upload audio");
+    await client.uploadBySemanticCandidates(ACTION_CANDIDATES.audioUpload, audioFile);
+    await client.waitMs(5000);
 
     log("Fill deterministic metadata");
     await fillDeterministicMetadata(client, inputs);
