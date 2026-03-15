@@ -65,6 +65,7 @@ function printUsage(): void {
     [--show_name "Show Name"] \\
     [--season_number 1] \\
     [--episode_number 1] \\
+    [--publish_at "2026-07-03T21:00:00+08:00"] \\
     [--show_home_url https://creators.spotify.com/pod/show/<id>/home] \\
     [--cdp_port 9222]`);
 }
@@ -84,6 +85,7 @@ async function main(): Promise<void> {
     show_name: optionalString(args, "show_name"),
     season_number: optionalString(args, "season_number"),
     episode_number: optionalString(args, "episode_number"),
+    publish_at: optionalString(args, "publish_at"),
     show_home_url: optionalString(args, "show_home_url"),
     cdp_port: optionalString(args, "cdp_port"),
     profile_dir: optionalString(args, "profile_dir"),

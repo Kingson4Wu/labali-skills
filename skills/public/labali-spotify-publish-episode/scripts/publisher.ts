@@ -195,14 +195,29 @@ export async function applyScheduleIfRequested(
   console.log('[schedule-debug] After click date (calendar should be open):', debugInfoAfter);
 
   // Calculate how many months to advance from current calendar view to target month
-  // Calendar typically shows Feb and Mar when opened, so we need to compute the delta
-  const currentMonthInCalendar = 2; // February is typically shown first (0-indexed would be 1)
-  const targetMonthIndex = month - 1; // 0-indexed target month
-  let monthsToAdvance = targetMonthIndex - currentMonthInCalendar;
+  // Calendar typically shows current month when opened, so we need to compute the delta
+  // Get current calendar month from the page dynamically
+  const currentMonthInfo = await client.evalJs(`(() => {
+    const monthLabels = Array.from(document.querySelectorAll('div, span, strong, h2, h3'))
+      .map((node) => (node.textContent || '').trim())
+      .filter((text) => /^[A-Z][a-z]+\\s+\\d{4}$/.test(text));
+    if (monthLabels.length === 0) return { month: 2, year: 2026 };
+    const firstMonth = monthLabels[0];
+    const match = firstMonth.match(/([A-Z][a-z]+)\\s+(\\d{4})/);
+    if (!match) return { month: 2, year: 2026 };
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    return { month: monthNames.indexOf(match[1]) + 1, year: parseInt(match[2], 10) };
+  })()`);
+  
+  const currentMonthInCalendar = currentMonthInfo.month || 2;
+  const currentYearInCalendar = currentMonthInfo.year || 2026;
+  
+  // Calculate months to advance accounting for year difference
+  let monthsToAdvance = (year - currentYearInCalendar) * 12 + (month - currentMonthInCalendar);
   if (monthsToAdvance < 0) {
     monthsToAdvance = 0;
   }
-  
+
   console.log(`[schedule-debug] Clicking next month button ${monthsToAdvance} times to reach ${targetMonthLabel}...`);
 
   for (let i = 0; i < monthsToAdvance; i++) {
@@ -230,12 +245,12 @@ export async function applyScheduleIfRequested(
   const checkMonthResult = await client.evalJs(`(() => {
     const monthLabels = Array.from(document.querySelectorAll('div, span, strong, h2, h3'))
       .map((node) => (node.textContent || '').trim())
-      .filter((text) => /[A-Z][a-z]+\\s+2026/.test(text));
+      .filter((text) => /[A-Z][a-z]+\\s+\\d{4}/.test(text));
 
     const targetDates = Array.from(document.querySelectorAll('button, [role="button"]'))
       .filter((b) => {
         const aria = b.getAttribute('aria-label') || '';
-        return aria.includes(${JSON.stringify(targetMonthName)}) && aria.includes('2026');
+        return aria.includes(${JSON.stringify(targetMonthName)}) && aria.includes(${JSON.stringify(String(year))});
       })
       .map((b) => ({ text: (b.textContent || '').trim(), aria: b.getAttribute('aria-label') || '' }));
 
@@ -250,8 +265,8 @@ export async function applyScheduleIfRequested(
   const targetButtonInfo = await client.evalJs(`(() => {
     const targetMonth = ${JSON.stringify(targetMonthNameJs)};
     const targetDay = ${JSON.stringify(targetDayStr)};
-    const targetYear = '2026';
-    
+    const targetYear = ${JSON.stringify(String(year))};
+
     const targetButton = Array.from(document.querySelectorAll('button, [role="button"]'))
       .find((b) => {
         const text = (b.textContent || '').trim();
@@ -277,8 +292,8 @@ export async function applyScheduleIfRequested(
     const clickResult = await client.evalJs(`(() => {
       const targetMonth = ${JSON.stringify(targetMonthNameJs)};
       const targetDay = ${JSON.stringify(targetDayStr)};
-      const targetYear = '2026';
-      
+      const targetYear = ${JSON.stringify(String(year))};
+
       const targetButton = Array.from(document.querySelectorAll('button, [role="button"]'))
         .find((b) => {
           const text = (b.textContent || '').trim();
@@ -291,11 +306,11 @@ export async function applyScheduleIfRequested(
       // Try multiple ways to trigger selection
       targetButton.click();
       targetButton.focus();
-      
+
       // Dispatch additional events
       targetButton.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
       targetButton.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
-      
+
       return 'clicked';
     })()`);
     
