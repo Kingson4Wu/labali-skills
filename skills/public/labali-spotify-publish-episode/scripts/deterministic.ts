@@ -375,6 +375,29 @@ export async function executeDeterministic(
     const wizardVisible = isEpisodeWizardUrl(currentStageUrl);
     const uploadVisible = await isUploadSurfaceVisible(client);
 
+    // Debug: log current page state
+    const pageStateDebug = await client.evalJs(`(() => {
+      const titleInput = document.querySelector('input[name="title"]');
+      const uploadButton = document.querySelector('button[data-testid="upload-audio-button"]');
+      const descriptionEditor = document.querySelector('[contenteditable="true"]');
+      const allInputs = Array.from(document.querySelectorAll('input'))
+        .slice(0, 10)
+        .map((input: HTMLInputElement) => ({ name: input.name, type: input.type, value: (input.value || '').slice(0, 20) }));
+      const buttons = Array.from(document.querySelectorAll('button, [role="button"]'))
+        .slice(0, 15)
+        .map((b) => (b.textContent || '').trim().slice(0, 30));
+      return JSON.stringify({
+        url: window.location.href,
+        hasTitleInput: !!titleInput,
+        hasUploadButton: !!uploadButton,
+        hasDescriptionEditor: !!descriptionEditor,
+        allInputs: allInputs,
+        buttons: buttons
+      });
+    })()`);
+    log(`[deterministic-debug] Page state before wizard check: ${pageStateDebug}`);
+    log(`[deterministic-debug] wizardVisible=${wizardVisible}, uploadVisible=${uploadVisible}, currentUrl=${currentStageUrl}`);
+
     // Always start fresh from show home to avoid stale wizard state
     // This is the key difference from previous deterministic approach
     // showHome is already defined above, reuse it here
