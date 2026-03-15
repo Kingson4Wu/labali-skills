@@ -45,7 +45,8 @@ async function nativeTypeRef(client: AgentBrowserClient, refKey: string, value: 
 
 async function fillDeterministicMetadata(
   client: AgentBrowserClient,
-  inputs: PublishEpisodeInputs
+  inputs: PublishEpisodeInputs,
+  log: LogFn
 ): Promise<void> {
   const season = inputs.season_number?.trim() ?? "";
   const episode = inputs.episode_number?.trim() ?? "";
@@ -427,7 +428,7 @@ export async function executeDeterministic(
     log(`[deterministic] After upload state: ${afterUploadState}`);
 
     log("Fill deterministic metadata");
-    await fillDeterministicMetadata(client, inputs);
+    await fillDeterministicMetadata(client, inputs, log);
     await client.waitMs(1500);
 
     log("Next to publish step");
