@@ -156,9 +156,10 @@ async function fillDeterministicMetadata(
   })()`);
 
   // Verify critical fields were applied; deterministic path should fail fast if not.
+  // Add detailed debug logging to help diagnose failures
   const verified = await client.evalJs(`(() => {
     const titleInput = document.querySelector('input[name="title"]');
-    
+
     // Use robust selector for season/episode inputs (same as fill logic)
     const seasonInput = document.querySelector('input[name="podcastSeasonNumber"]') ||
                        document.querySelector('input[name="seasonNumber"]') ||
@@ -169,7 +170,7 @@ async function fillDeterministicMetadata(
                            const label = parent ? parent.querySelector('label, span') : null;
                            return label && (label.textContent || '').toLowerCase().includes('season');
                          });
-    
+
     const episodeInput = document.querySelector('input[name="podcastEpisodeNumber"]') ||
                         document.querySelector('input[name="episodeNumber"]') ||
                         document.querySelector('input[aria-label*="Episode" i]') ||
@@ -179,16 +180,32 @@ async function fillDeterministicMetadata(
                             const label = parent ? parent.querySelector('label, span') : null;
                             return label && (label.textContent || '').toLowerCase().includes('episode');
                           });
-    
+
     const descriptionNode = Array.from(document.querySelectorAll('[contenteditable="true"]'))
       .find((node) => node && node.offsetParent !== null);
-    
+
     const titleOk = !!titleInput && (titleInput.value || '').trim().length > 0;
     const descOk = !!descriptionNode && (descriptionNode.textContent || '').trim().length > 0;
     const seasonOk = !${seasonJs} || (!!seasonInput && (seasonInput.value || '').trim() === ${seasonJs});
     const episodeOk = !${episodeJs} || (!!episodeInput && (episodeInput.value || '').trim() === ${episodeJs});
-    
-    return JSON.stringify({ titleOk, descOk, seasonOk, episodeOk });
+
+    // Debug: log actual values for troubleshooting
+    const debugInfo = {
+      titleValue: titleInput ? (titleInput.value || '').trim() : 'missing',
+      descLength: descriptionNode ? (descriptionNode.textContent || '').trim().length : 'missing',
+      seasonValue: seasonInput ? (seasonInput.value || '').trim() : 'missing',
+      episodeValue: episodeInput ? (episodeInput.value || '').trim() : 'missing',
+      expectedSeason: ${seasonJs},
+      expectedEpisode: ${episodeJs}
+    };
+
+    return JSON.stringify({ 
+      titleOk, 
+      descOk, 
+      seasonOk, 
+      episodeOk,
+      debugInfo
+    });
   })()`);
   const parsed = JSON.parse(verified || "{}") as unknown;
   const result = (typeof parsed === "string" ? JSON.parse(parsed) : parsed) as {
@@ -196,12 +213,22 @@ async function fillDeterministicMetadata(
     descOk?: boolean;
     seasonOk?: boolean;
     episodeOk?: boolean;
+    debugInfo?: {
+      titleValue?: string;
+      descLength?: number | string;
+      seasonValue?: string;
+      episodeValue?: string;
+      expectedSeason?: string;
+      expectedEpisode?: string;
+    };
   };
   if (!result.titleOk || !result.descOk || !result.seasonOk || !result.episodeOk) {
+    log(`[deterministic-debug] Metadata verification failed: ${JSON.stringify(result)}`);
     throw new Error(
-      `Deterministic metadata verify failed: ${JSON.stringify(result)}`
+      `Deterministic metadata verify failed: titleOk=${result.titleOk}, descOk=${result.descOk}, seasonOk=${result.seasonOk}, episodeOk=${result.episodeOk}. Debug: ${JSON.stringify(result.debugInfo)}`
     );
   }
+  log(`[deterministic-debug] Metadata verification passed: ${JSON.stringify(result.debugInfo)}`);
 
   // Learned guard from policy recovery: if required counter still shows 0/4000,
   // deterministic path should fail fast so policy executor can take over.
@@ -230,22 +257,47 @@ async function waitNextReady(client: AgentBrowserClient): Promise<boolean> {
   return Boolean(state.found && state.ready);
 }
 
-async function advanceDeterministicToPublish(client: AgentBrowserClient): Promise<void> {
+async function advanceDeterministicToPublish(client: AgentBrowserClient, log: LogFn): Promise<void> {
+  log("[deterministic] Advancing to publish step...");
+  
   for (let i = 0; i < 10; i += 1) {
+    // Check if we've reached the publish step
     const hasPublish = await client.waitForTextAny(
-      ["Publish", "Publish episode", "Save and publish"],
+      ["Publish", "Publish episode", "Save and publish", "Schedule"],
       1500
     );
     if (hasPublish) {
+      log(`[deterministic] Reached publish step after ${i} iterations`);
       return;
     }
 
+    // Debug: log current page state
+    const pageState = await client.evalJs(`(() => {
+      const allText = document.body ? document.body.innerText.slice(0, 500) : '';
+      const buttons = Array.from(document.querySelectorAll('button, [role="button"]'))
+        .map(b => (b.textContent || '').trim())
+        .filter(t => t.length > 0)
+        .slice(0, 10);
+      const inputs = Array.from(document.querySelectorAll('input'))
+        .map((input: HTMLInputElement) => ({
+          name: input.name,
+          type: input.type,
+          value: (input.value || '').slice(0, 20),
+          hasValue: !!(input.value && (input.value as string).trim())
+        }))
+        .slice(0, 5);
+      return JSON.stringify({ buttons, inputs, allText: allText.replace(/\s+/g, ' ').trim() });
+    })()`);
+    log(`[deterministic] Page state at iteration ${i}: ${pageState}`);
+
     const nextReady = await waitNextReady(client);
     if (!nextReady) {
+      log(`[deterministic] Next button not ready at iteration ${i}, waiting...`);
       await client.waitMs(3000);
       continue;
     }
 
+    log(`[deterministic] Clicking Next/Continue at iteration ${i}`);
     await client.clickRoleByNames("button", ["Next", "Continue", "Review"]);
     await client.waitMs(2500);
   }
@@ -308,20 +360,27 @@ export async function executeDeterministic(
         const titleValue = titleInput ? (titleInput.value || '').trim() : '';
         const hasAudio = document.querySelector('button[data-testid="upload-audio-button"]') !== null ||
                         document.querySelector('[data-testid="upload-progress"]') !== null;
+        const descriptionEditor = document.querySelector('[contenteditable="true"]');
+        const descText = descriptionEditor ? (descriptionEditor.textContent || '').trim() : '';
         return JSON.stringify({
           hasTitle: titleValue.length > 0,
-          hasAudio
+          hasAudio,
+          hasDescription: descText.length > 0,
+          wizardVisible: true,
+          uploadVisible: true
         });
       })()`);
-      
+
       const wizardStateParsed = JSON.parse(wizardState);
-      log(`Wizard state check: ${JSON.stringify(wizardStateParsed)}`);
-      
-      // Only reuse wizard if completely empty (no title, no audio)
-      if (wizardStateParsed.hasTitle || wizardStateParsed.hasAudio) {
-        log("Wizard has partial data, resetting to show home...");
+      log(`[deterministic] Wizard state check: ${JSON.stringify(wizardStateParsed)}`);
+
+      // Only reuse wizard if completely empty (no title, no audio, no description)
+      if (wizardStateParsed.hasTitle || wizardStateParsed.hasAudio || wizardStateParsed.hasDescription) {
+        log("[deterministic] Wizard has partial data, resetting to show home...");
         await client.open(showHome);
         await client.waitMs(2000);
+      } else {
+        log("[deterministic] Reusing clean empty wizard");
       }
     }
 
@@ -343,15 +402,36 @@ export async function executeDeterministic(
 
     // Always upload audio (deterministic approach - no skip logic)
     log("Upload audio");
+    const beforeUploadState = await client.evalJs(`(() => {
+      const hasAudioBefore = document.querySelector('button[data-testid="upload-audio-button"]') !== null ||
+                            document.querySelector('[data-testid="upload-progress"]') !== null ||
+                            document.querySelector('[class*="upload-complete"]') !== null;
+      return hasAudioBefore ? 'has-audio' : 'no-audio';
+    })()`);
+    log(`[deterministic] Before upload state: ${beforeUploadState}`);
+    
     await client.uploadBySemanticCandidates(ACTION_CANDIDATES.audioUpload, audioFile);
     await client.waitMs(5000);
+    
+    const afterUploadState = await client.evalJs(`(() => {
+      const progressEl = document.querySelector('[data-testid="upload-progress"]');
+      const completeEl = document.querySelector('[class*="upload-complete"]');
+      const filenameEl = document.querySelector('[class*="filename"]');
+      return JSON.stringify({
+        hasProgress: !!progressEl,
+        hasComplete: !!completeEl,
+        filename: filenameEl ? (filenameEl.textContent || '').trim() : 'none',
+        bodyText: (document.body.innerText || '').slice(0, 200).replace(/\s+/g, ' ')
+      });
+    })()`);
+    log(`[deterministic] After upload state: ${afterUploadState}`);
 
     log("Fill deterministic metadata");
     await fillDeterministicMetadata(client, inputs);
     await client.waitMs(1500);
 
     log("Next to publish step");
-    await advanceDeterministicToPublish(client);
+    await advanceDeterministicToPublish(client, log);
 
     if (shouldVerifyAsScheduled(inputs.publish_at)) {
       log(`Apply deterministic schedule: ${inputs.publish_at}`);
