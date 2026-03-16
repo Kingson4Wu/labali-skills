@@ -57,3 +57,10 @@ When a rule already exists in `DEVELOPMENT.md`, reference it instead of restatin
 ## 6. Language Policy
 
 - Repository docs, prompts, and comments should be written in English unless a user explicitly requests another language.
+- **Exception for localization:** Chinese translations are allowed only in `README.zh-CN.md` files.
+- **All other files MUST use English only:**
+  - Code files (`.ts`, `.js`, `.py`, etc.)
+  - Configuration files (`.yaml`, `.yml`, `.json`, etc.)
+  - Documentation files (`SKILL.md`, `README.md`, `architecture.md`, `plan.md`, etc.)
+  - Test files (`.sh`, `.test.ts`, etc.)
+  - Commit messages
