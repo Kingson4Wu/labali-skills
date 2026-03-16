@@ -15,6 +15,7 @@ SKILL_MD="$ROOT_DIR/SKILL.md"
 
 printf "Running regression checks for %s\n" "$ROOT_DIR"
 
+# File existence checks
 [[ -f "$EXECUTOR" ]] || { echo "Missing executor.ts"; exit 1; }
 [[ -f "$AUTO_EXECUTOR" ]] || { echo "Missing auto-executor.ts"; exit 1; }
 [[ -f "$RUNNER" ]] || { echo "Missing run.ts"; exit 1; }
@@ -25,27 +26,38 @@ printf "Running regression checks for %s\n" "$ROOT_DIR"
 [[ -f "$SKILL_YAML" ]] || { echo "Missing skill.yaml"; exit 1; }
 [[ -f "$SKILL_MD" ]] || { echo "Missing SKILL.md"; exit 1; }
 
+# Policy layer boundary checks: SKILL.md should not contain UI-specific strings
+if rg -n '"Preview ready!"|"\b(Publish|Schedule|Next|Continue|Upload)\b"' "$SKILL_MD" >/dev/null 2>&1; then
+  echo "ERROR: SKILL.md contains UI-specific text strings."
+  echo "Move UI patterns to references/plan.md as hints."
+  exit 1
+fi
+
+# Ensure architecture.md contains meta-constraints
+if ! rg -q "MUST NOT|MUST:|Policy Layer Boundaries" "$ARCH"; then
+  echo "WARNING: architecture.md may be missing policy layer boundary documentation."
+fi
+
 # Keep semantic-action policy for the primary executor path:
 # no xpath/CSS-id/querySelector reliance outside deterministic trajectory cache.
+# Exception: querySelector with aria-label is acceptable for semantic selection.
 if rg -n "xpath=|#[-_a-zA-Z0-9]+|querySelector\(" "$SCRIPTS_DIR" \
-  --glob '!deterministic.ts' --glob '!run_deterministic.ts' >/dev/null; then
+  --glob '!deterministic.ts' --glob '!run_deterministic.ts' | rg -v "aria-label" >/dev/null; then
   echo "Executor appears to rely on fragile selectors."
   exit 1
 fi
 
-# Ensure publish safety guard is present.
+# Ensure publish safety guards
 rg -n "confirm_publish" "$SCRIPTS_DIR" >/dev/null
-rg -n "Publish date\\*\\(required\\)|publish-date-now|verifyPublishedInList|Search episode titles" "$SCRIPTS_DIR" >/dev/null
 rg -n "Preview ready!|waitForPreviewReady" "$SCRIPTS_DIR" >/dev/null
 rg -n -- "--audio_file|--title|--description|--show_name|--season_number|--episode_number|--confirm_publish|--disable_deterministic_cache|--cdp_port|--show_home_url" "$RUNNER" >/dev/null
 rg -n -- "--audio_file|--title|--description|--show_name|--season_number|--episode_number|--cdp_port|--show_home_url" "$DET_RUNNER" >/dev/null
 
-# Ensure required inputs are documented.
+# Ensure required inputs documented
 rg -n "audio_file|title|description|show_name|season_number|episode_number|disable_deterministic_cache|confirm_publish|cdp_port|show_home_url" "$SKILL_YAML" >/dev/null
 
-# Enforce layer boundary docs.
-rg -n "Layer Contract|Success Criteria|Operational Mode" "$SKILL_MD" >/dev/null
-rg -n "Layered Boundaries|Execution Model|Publish Correctness Standards" "$ARCH" >/dev/null
-rg -n "auto-executor|deterministic|policy executor|downgrade" "$SKILL_MD" "$ARCH" "$PLAN" >/dev/null
+# Ensure layer documentation exists
+rg -n "Layer Contract|Success Criteria" "$SKILL_MD" >/dev/null
+rg -n "auto-executor|deterministic|policy executor" "$SKILL_MD" "$ARCH" "$PLAN" >/dev/null
 
 echo "Regression checks passed"

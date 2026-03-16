@@ -2,6 +2,7 @@ name: labali-spotify-publish-episode
 description: Browser-only semantic automation skill for publishing podcast episodes on Spotify for Creators.
 executor: scripts/auto-executor.ts
 inputs:
+  # Episode metadata (required)
   audio_file:
     type: string
     required: true
@@ -14,54 +15,62 @@ inputs:
     type: string
     required: true
     description: Episode description shown in Spotify.
+
+  # Show targeting (provide one of: show_id, show_home_url, show_name)
   show_id:
     type: string
-    required: true
-    description: Spotify show id used to build direct creators URL and open the target show without name search.
-  show_name:
-    type: string
     required: false
-    description: Optional show name fallback for selector-based navigation when direct URL is unavailable.
-  season_number:
-    type: string
-    required: false
-    description: Optional season number to fill in episode metadata (positive integer).
-  episode_number:
-    type: string
-    required: false
-    description: Optional episode number to fill in episode metadata (positive integer).
-  disable_deterministic_cache:
-    type: boolean
-    required: false
-    default: false
-    description: Set true to skip deterministic trajectory cache and run policy executor directly.
-  cover_image:
-    type: string
-    required: false
-    description: Optional cover image path for this episode.
-  publish_at:
-    type: string
-    required: false
-    description: Optional ISO-8601 datetime to schedule publication. If omitted, publish immediately.
+    description: Spotify show id. Preferred method for show targeting.
   show_home_url:
     type: string
     required: false
-    description: Optional direct show home page URL. If omitted, executor derives it from show_id.
+    description: Direct show home page URL. Derived from show_id if omitted.
+  show_name:
+    type: string
+    required: false
+    description: Show name for selector-based navigation when URL unavailable.
+
+  # Episode metadata (optional)
+  season_number:
+    type: string
+    required: false
+    description: Season number (positive integer).
+  episode_number:
+    type: string
+    required: false
+    description: Episode number (positive integer).
+  cover_image:
+    type: string
+    required: false
+    description: Cover image path.
+
+  # Publish control (optional)
+  publish_at:
+    type: string
+    required: false
+    description: ISO-8601 datetime for scheduled publication. Omit for immediate publish.
   confirm_publish:
     type: boolean
     required: false
     default: true
-    description: Optional publish guard. Defaults to true for direct publish; set false to stop before final publish action.
+    description: Publish guard. Set false to stop before final publish action.
+
+  # Runtime configuration (optional)
+  disable_deterministic_cache:
+    type: boolean
+    required: false
+    default: false
+    description: Skip deterministic cache and run policy executor directly.
   profile_dir:
     type: string
     required: false
     default: ~/.chrome-spotify
-    description: Chrome user data dir for login-session reuse when auto-launching local Chrome with remote debugging.
+    description: Chrome user data dir for login-session reuse.
   cdp_port:
     type: string
     required: false
     default: "9222"
-    description: Chrome DevTools Protocol port. Default 9222; executor first reuses it and auto-launches Chrome if absent.
+    description: Chrome DevTools Protocol port.
   headed:
     type: boolean
     required: false

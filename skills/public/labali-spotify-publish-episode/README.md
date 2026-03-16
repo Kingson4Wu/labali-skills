@@ -1,43 +1,47 @@
 # labali-spotify-publish-episode Usage
 
-How to use the `labali-spotify-publish-episode` skill in chat to publish a podcast episode on Spotify for Creators.
+How to use the `labali-spotify-publish-episode` skill to publish podcast episodes on Spotify for Creators.
 
-## 1) Install and Update
+## Quick Start
 
-Install from GitHub:
+### Install
 
 ```bash
 npx skills add github.com/Kingson4Wu/labali-skills --skill labali-spotify-publish-episode
 ```
 
-Update to the latest version (run the install command again)
+### Required Information
 
-## 2) Describe the task in natural language (without naming the skill)
+| Field | Description |
+|-------|-------------|
+| `audio_file` | Audio file path (absolute or workspace-relative) |
+| `title` | Episode title |
+| `description` | Episode description |
+| `show_id` | Spotify show ID (preferred) or `show_home_url` or `show_name` |
 
-Use this mode when you want to describe the goal directly and let the agent select the skill.
+### Optional Parameters
 
-Required information:
+| Field | Description |
+|-------|-------------|
+| `season_number` | Season number (positive integer) |
+| `episode_number` | Episode number (positive integer) |
+| `cover_image` | Cover image path |
+| `publish_at` | Scheduled publish time (ISO-8601) |
+| `confirm_publish` | Execute final publish (`true`/`false`, default `true`) |
+| `disable_deterministic_cache` | Skip deterministic cache (`true`/`false`, default `false`) |
+| `profile_dir` | Chrome user data directory (default `~/.chrome-spotify`) |
+| `cdp_port` | Chrome DevTools port (default `9222`) |
+| `headed` | Run headed browser (default `true`) |
 
-- `audio_file`: audio file path (absolute path or workspace-relative path)
-- `title`: episode title
-- `description`: episode description
-- `show_id`: Spotify show id (used to open the target show directly)
+---
 
-Optional information:
+## Usage Modes
 
-- `show_name`: show name (fallback only)
-- `season_number`: season number (positive integer)
-- `episode_number`: episode number (positive integer)
-- `cover_image`: cover image path
-- `publish_at`: scheduled publish time (ISO-8601 datetime)
-- `confirm_publish`: whether to perform the final publish action (`false` means stop before final publish)
-- `show_home_url`: direct show home page URL (if omitted, derived from `show_id`)
-- `disable_deterministic_cache`: `true` to skip deterministic cache and run policy executor directly
-- `profile_dir`: Chrome user data directory for session reuse (default `~/.chrome-spotify`)
-- `cdp_port`: Chrome DevTools port (default `9222`); executor reuses existing session first, or launches Chrome automatically
-- `headed`: run browser in headed mode (default `true`)
+### Mode 1: Natural Language (Implicit Skill Selection)
 
-### Full Prompt Example (Natural Language)
+Describe your goal; the agent selects the skill automatically.
+
+**Example:**
 
 ```text
 Please publish a podcast episode for me on Spotify for Creators.
@@ -52,21 +56,14 @@ Scheduled publish time: 2026-03-12T09:00:00+08:00
 Please publish directly and do not stop at the confirmation screen.
 ```
 
-## 3) Explicitly specify the skill
+### Mode 2: Explicit Skill Invocation
 
-Use this mode when you want to force execution with this specific skill.
+Force execution with this specific skill by naming it (`$labali-spotify-publish-episode`).
 
-Recommended style: include the skill name explicitly in the prompt (for example `$labali-spotify-publish-episode` or `labali-spotify-publish-episode`).
-
-Information guidance:
-
-- Required fields are: `audio_file`, `title`, `description`, `show_id`
-- Add optional parameters based on your publishing strategy (publish now, schedule, preflight only, etc.)
-
-### Full Prompt Example (Explicit Skill)
+**Example:**
 
 ```text
-Please use $labali-spotify-publish-episode for this publishing task and run strictly with the following parameters:
+Please use $labali-spotify-publish-episode for this publishing task with the following parameters:
 audio_file=/absolute/path/to/audio/2026-03-10-episode-19.mp3
 title=Episode 19 - Deterministic Cache vs Policy Executor
 description=Compare deterministic trajectory cache and policy executor in terms of reliability, speed, and maintenance cost.
@@ -85,7 +82,11 @@ If login is required, pause and prompt me to complete manual login, then continu
 After publishing, verify that this title appears in Published and does not appear in Draft.
 ```
 
-## 4) Minimal Template (Copy/Paste)
+---
+
+## Templates
+
+### Minimal Template
 
 ```text
 Please publish a Spotify podcast episode:
@@ -97,19 +98,18 @@ Publish immediately? (confirm_publish=true/false):
 (Optional) Scheduled publish time (publish_at):
 ```
 
-## 5) Batch Upload Prompt Template (Copy/Paste)
+### Batch Upload Template
 
-Use this when you need to publish multiple episodes in sequence, usually under the same `show_id`.
+Use for publishing multiple episodes in sequence under the same `show_id`.
 
-Recommended wording: require strict list order, publish one item at a time, and verify each item before continuing.
+**Requirements:**
+1. Execute strictly in list order
+2. Publish one item, then continue to the next
+3. Verify each item before continuing (title in `Published`, not in `Draft`)
+4. Stop immediately on failure and report the reason
 
 ```text
 Please use $labali-spotify-publish-episode to batch publish the following podcast episodes.
-Requirements:
-1. Execute strictly in list order.
-2. Publish one item, then continue to the next.
-3. For each item, verify the title appears in Published and not in Draft.
-4. If any item fails, stop immediately and report the failure reason and current page state.
 
 Global parameters:
 show_id=<show_id>
@@ -135,4 +135,14 @@ Episode list:
   episode_number=3
 ```
 
-For immediate publish, omit `publish_at`. For scheduled publish, set `publish_at` per episode item.
+**Note:** For immediate publish, omit `publish_at`. For scheduled publish, set `publish_at` per episode.
+
+---
+
+## Update
+
+To update to the latest version, run the install command again:
+
+```bash
+npx skills add github.com/Kingson4Wu/labali-skills --skill labali-spotify-publish-episode
+```

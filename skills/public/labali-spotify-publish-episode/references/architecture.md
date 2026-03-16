@@ -1,82 +1,105 @@
-# Architecture and Standards
+# Architecture and Development Guidelines
 
-## 1) Layered Boundaries
+## Layer Contract
 
-Use this layered model for complex UI automation. For simple one-step skills, a lightweight structure is acceptable.
+| Layer | File | Purpose | Stability |
+|-------|------|---------|-----------|
+| **Policy** | `SKILL.md` | Goals, constraints, success criteria | **Stable** |
+| **Strategy** | `references/*.md` | Workflow, semantic strategies, UI hints | **Moderate** |
+| **Execution** | `scripts/*.ts` | Concrete implementation | **Mutable** |
 
-### Policy Layer (`SKILL.md`)
-- Scope: intent, constraints, success criteria, boundaries.
-- Must not depend on brittle UI details.
-- Should remain stable across implementation rewrites.
+**Key Principle:** Scripts are replaceable. Policy layer remains stable across UI changes.
 
-### Strategy Layer (`references/*.md`)
-- Scope: workflow map, decision points, fallback policy, quality gates.
-- Can describe likely page variants and semantic cues.
-- Should avoid hard-binding to per-run refs.
+---
 
-### Execution Layer (`scripts/*.ts`)
-- Scope: concrete automated implementation and runtime glue.
-- Scripts may be deterministic trajectory executors, policy executors (strategy cache), or helper utilities.
-- Policy executor means:
-  - keep a stable orchestration skeleton (stage detection, guards, verification),
-  - allow bounded semantic inference per step (candidate sets + fallbacks),
-  - avoid full per-run re-planning unless recovery is needed.
-- Any script is replaceable when UI drifts; the policy layer remains the stable source of intent.
-- Current decomposition:
-  - `auto-executor.ts`: unified deterministic->policy orchestration and fallback recording
-  - `deterministic.ts`: deterministic trajectory cache
-  - `core.ts`: shared browser/runtime primitives
-  - `stage-detector.ts`: page/stage inference and navigation recovery
-  - `publisher.ts`: review/publish actions and required-field handling
-  - `verifier.ts`: post-publish business-state validation
-  - `executor.ts`: policy executor orchestration
+## Policy Layer Boundaries (Development Constraints)
 
-### Execution Asset Taxonomy
+These constraints ensure `SKILL.md` remains stable and professional.
 
-- Deterministic trajectory script:
-  - replay-oriented, low inference, high fragility.
-- Policy executor / strategy cache:
-  - pattern-oriented, bounded inference, balanced robustness and speed.
-- Fully deliberative run:
-  - inference-oriented, high adaptability, highest variance.
+### SKILL.md MUST:
+- Describe **what** to achieve, not **how**
+- Use semantic/functional language (e.g., "readiness indicator", "publish control")
+- Define success in business state terms (e.g., "episode in published list")
+- Specify constraints as principles
 
-For this skill, treat `executor.ts` as a policy executor rather than a pure trajectory replay.
+### SKILL.md MUST NOT:
+- Reference specific UI text strings (e.g., "Preview ready!", "Publish now")
+- Include CSS selectors, XPath, or DOM query patterns
+- Specify exact button labels, menu names, or placeholder text
+- Hard-code URLs beyond entry domain
+- Describe implementation details
 
-## 2) Execution Model
+### Correct Abstraction Examples
 
-1. Run deterministic trajectory cache as optional fast path.
-2. On deterministic failure, auto-downgrade to policy executor in the same run.
-3. If policy executor fails, repair policy first and retry in-loop until business success criteria pass.
-4. Record deterministic failure context and policy recovery outcome for later deterministic optimization.
-5. Validate business outcome in list state (`Published`/`Draft`) before success.
-6. Only after successful completion, feed policy-success evidence back to deterministic optimization.
+| Instead of | Write |
+|------------|-------|
+| `Wait for "Preview ready!"` | `Wait for upload readiness indicator` |
+| `Click "Publish" button` | `Initiate publish action` |
+| `Fill "Title" textbox` | `Provide episode title in designated field` |
 
-## 3) Semantic Interaction Standards
+### Where to Put Details
 
-- First priority: role + accessible name.
-- Second priority: visible text candidates.
-- Third priority: label/placeholder-driven form fills.
-- Last resort: generic file-input fallback for upload wrappers.
-- Never rely on static coordinates or positional indexes.
+| Content | Location |
+|---------|----------|
+| UI pattern hints | `references/plan.md` |
+| Actual selectors | `scripts/*.ts` |
+| Meta-constraints | This file |
 
-## 4) Publish Correctness Standards
+---
 
-- Treat review-step required fields as blockers.
-- If immediate/schedule controls are visible (for example `Now` / `Schedule`), explicitly set the intended mode before publish.
-- Do not assume defaults are applied unless state confirms it.
-- Post-publish verification must include:
-  - title exists in `Published`,
-  - title not present in `Draft`.
+## Execution Model
 
-## 5) Logging and Diagnostics
+```
+Deterministic Cache → Policy Executor → Repair & Retry
+     (optional)      (mandatory baseline)   (in-loop)
+```
 
-- Log stage transitions (`upload`, `details`, `review`, `publish`, `verify`).
-- On failure, capture screenshot and include semantic context in errors.
-- Prefer actionable error messages over generic timeouts.
+1. Run deterministic cache as optional fast path
+2. On failure → auto-downgrade to policy executor
+3. On policy failure → repair and retry until success
+4. Record failures for optimization
 
-## 6) Quality and Taste
+---
 
-- Keep policy text concise and conceptual.
-- Keep strategy text decision-oriented (why/when), not implementation-heavy.
-- Keep scripts modular and replaceable.
-- Optimize for maintainability over one-off hacks.
+## Semantic Interaction Standards
+
+**Priority:**
+1. Role + accessible name
+2. Visible text candidates  
+3. Label/placeholder-driven fills
+4. Generic file-input fallback
+
+**Never:** Static coordinates or positional indexes.
+
+---
+
+## Publish Correctness
+
+- Validate by business state, not click success
+- Verify in `Scheduled` if `publish_at` future; else `Published`
+- Confirm episode not in `Draft`
+
+---
+
+## UI Change Protocol
+
+| Change Type | Update |
+|-------------|--------|
+| Text change | `references/plan.md` only |
+| Element move | `scripts/*.ts` only |
+| New field | `plan.md` + `scripts/` |
+| Workflow restructure | All layers |
+
+---
+
+## Script Roles
+
+| Script | Role |
+|--------|------|
+| `auto-executor.ts` | Unified entry |
+| `deterministic.ts` | Deterministic cache |
+| `executor.ts` | Policy executor |
+| `core.ts` | Shared primitives |
+| `stage-detector.ts` | Stage inference |
+| `publisher.ts` | Publish actions |
+| `verifier.ts` | Post-publish validation |

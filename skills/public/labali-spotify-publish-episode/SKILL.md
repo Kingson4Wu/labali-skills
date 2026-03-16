@@ -1,6 +1,6 @@
 ---
 name: labali-spotify-publish-episode
-description: Publish podcast episodes on Spotify for Creators using browser-only semantic automation with manual-login session reuse. Use when tasks require creating or continuing an episode draft, uploading audio, filling metadata, and publishing/scheduling from creators.spotify.com without APIs.
+description: Publish podcast episodes on Spotify for Creators using browser-only semantic automation with manual-login session reuse.
 ---
 
 # labali-spotify-publish-episode
@@ -9,85 +9,93 @@ Treat this skill as a layered system, not a single script.
 
 ## Layer Contract
 
-1. `SKILL.md` (this file) is the policy layer.
-   - Define goals, constraints, success criteria, and decision boundaries.
-   - Stay semantic and stable across UI changes.
-2. `references/architecture.md` is the strategy layer.
-   - Define execution model, failure handling, and quality standards.
-3. `scripts/*.ts` is the execution layer.
-   - Scripts are execution assets, not the skill definition itself.
-   - Prefer a policy-executor (strategy cache): reusable stage logic + bounded semantic decisions.
-   - Deterministic trajectory scripts are valid for simple stable pages, but not required.
-   - Any execution script can become stale and should be replaceable.
+| Layer | File | Purpose |
+|-------|------|---------|
+| **Policy** | `SKILL.md` | Goals, constraints, success criteria |
+| **Strategy** | `references/architecture.md` | Execution model, failure handling |
+| **Execution** | `scripts/*.ts` | Concrete implementation (replaceable) |
 
-## Script Classification
+**Key Principle:** Scripts are replaceable assets. Policy layer remains stable across UI changes.
 
-- `Deterministic trajectory script`
-  - Fixed UI path replay with minimal runtime inference.
-  - Best for stable UI, fastest when valid, most brittle under UI drift.
-- `Policy executor (strategy cache)` (current reliability baseline)
-  - Fixed orchestration skeleton with semantic candidate selection and fallback.
-  - Reduces repeated reasoning while retaining bounded adaptation to UI changes.
-- `Fully deliberative run`
-  - Runtime-first semantic re-discovery with little pre-structured flow.
-  - Most adaptive but highest variance in speed/cost.
+---
 
-This skill uses unified runtime by design: deterministic trajectory cache first, then policy executor fallback for reliability.
-The deterministic first-level cache script is available at `scripts/deterministic.ts` with CLI wrapper `scripts/run_deterministic.ts`.
+## Goals
+
+Publish podcast episodes to Spotify for Creators via browser automation:
+- Immediate or scheduled publication
+- Metadata management (title, description, season/episode, cover art)
+- Draft cleanup and verification
+
+---
 
 ## Required Constraints
 
-- Use browser automation only.
-- Do not use Spotify APIs.
-- Use semantic interactions first (visible text, label, role).
-- Login is manual; session reuse is required.
-- Publish success is validated by business state, not by click success.
-- If `publish_at` is later than the current time, success must be verified in `Scheduled`, not `Published`.
-- If `publish_at` is not later than the current time, success must be verified in `Published`.
-- Do not click `Publish` while upload is still processing. Wait until upload is complete, with `Preview ready!` as the preferred readiness marker.
-- For scheduled runs, do not rely on partial date-picker progress. Keep advancing the calendar until the exact target date is visible and selected before allowing the final action.
-- In deterministic mode, prefer computing the month delta from the currently visible calendar month to the target month, then advance the right-arrow exactly that many times before selecting the target day.
-- For schedule time controls, direct DOM value assignment is acceptable only when followed by `input`/`change` and retention checks.
+- Browser automation only; no Spotify APIs
+- Prefer semantic interactions (role + accessible name > visible text > label/placeholder)
+- Manual login; session reuse supported
+- Validate success by business state, not action success
+- For future `publish_at`: verify in Scheduled list; otherwise Published list
+- Never publish while media processing (wait for readiness indicator)
+- For scheduled: ensure target date/time fully configured before confirming
+
+---
 
 ## Success Criteria
 
-A run is successful only when all conditions hold:
+A run succeeds **only** when all conditions hold:
 
-1. The target episode title appears in `Scheduled` when `publish_at` is in the future; otherwise it appears in `Published`.
-2. The same title does not appear in `Draft`.
-3. No required publish controls remain unresolved in review step.
+1. Episode appears in appropriate list:
+   - **Scheduled**: when `publish_at` is future
+   - **Published**: when immediate
+2. Same episode does **not** appear in **Draft**
+3. No unresolved required fields remain
+
+---
 
 ## Runtime Inputs
 
-Use `skill.yaml` as the source of truth for input schema.
+See `skill.yaml` for complete schema.
+
+**Required:** `audio_file`, `title`, `description`, and one of (`show_id` | `show_home_url` | `show_name`)
+
+**Optional:** `season_number`, `episode_number`, `cover_image`, `publish_at`, `confirm_publish`, `disable_deterministic_cache`, `profile_dir`, `cdp_port`, `headed`
+
+---
+
+## Example Usage
+
+**Immediate publish:**
+```text
+Publish episode: audio_file=/path/ep.mp3, title="Ep 18", description="...", show_id=abc123
+```
+
+**Scheduled publish:**
+```text
+Publish episode: audio_file=/path/ep.mp3, title="Ep 19", description="...", show_id=abc123, publish_at=2026-03-20T09:00:00+08:00
+```
+
+---
 
 ## Operational Mode
 
-- Default unified mode: run deterministic trajectory cache first, then auto-downgrade to policy executor.
-  - Deterministic trajectory cache (`scripts/deterministic.ts`) is optional acceleration only.
-  - Policy executor (`scripts/executor.ts`) is mandatory reliability baseline and must succeed independently.
-  - Set `disable_deterministic_cache=true` (or CLI `--disable_deterministic_cache true`) to skip deterministic mode and run policy executor directly.
-- If deterministic trajectory cache fails:
-  - continue with policy executor in the same run,
-  - record deterministic failure context for later optimization.
-- If policy executor fails:
-  - prioritize policy repair and retry in a loop until business-success criteria pass,
-  - do not return success before verification passes.
-- After task completion:
-  - use deterministic failure records plus policy-success evidence to optimize deterministic mode incrementally,
-  - keep deterministic mode optional; never weaken policy baseline for speed-only changes.
+| Mode | Behavior |
+|------|----------|
+| **Default (unified)** | Deterministic cache → policy executor fallback |
+| **Policy-only** | Set `disable_deterministic_cache=true` |
+
+**Failure Handling:**
+- Deterministic failure → continue with policy, record for optimization
+- Policy failure → repair and retry until success criteria pass
+
+---
 
 ## Resources
 
-- Architecture and standards: `references/architecture.md`
-- Workflow map and semantic action plan: `references/plan.md`
-- Unified deterministic->policy entry: `scripts/auto-executor.ts`
-- Executor orchestration entry: `scripts/executor.ts`
-- Deterministic first-level cache entry: `scripts/deterministic.ts`
-- Stage detection module: `scripts/stage-detector.ts`
-- Publish module: `scripts/publisher.ts`
-- Verification module: `scripts/verifier.ts`
-- Shared core runtime module: `scripts/core.ts`
-- CLI wrapper: `scripts/run.ts`
-- Deterministic CLI wrapper: `scripts/run_deterministic.ts`
-- Regression checks: `tests/test_regression.sh`
+| File | Purpose |
+|------|---------|
+| `references/architecture.md` | Architecture and development guidelines |
+| `references/plan.md` | Workflow map and UI pattern hints |
+| `scripts/auto-executor.ts` | Unified entry point |
+| `scripts/executor.ts` | Policy executor |
+| `scripts/deterministic.ts` | Deterministic cache |
+| `tests/test_regression.sh` | Regression checks |

@@ -9,11 +9,19 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 
+// ============================================================================
+// Constants
+// ============================================================================
+
 export const SPOTIFY_CREATORS_URL = "https://creators.spotify.com";
 export const DEFAULT_PROFILE_DIR = ".cache/agent-browser/spotify-creators";
 export const DEFAULT_CHROME_CDP_PORT = "9222";
 export const DEFAULT_CHROME_USER_DATA_DIR = resolve(homedir(), ".chrome-spotify");
 export const SEARCH_EPISODES_PLACEHOLDER = "Search episode titles";
+
+// ============================================================================
+// Type Definitions
+// ============================================================================
 
 export type LogFn = (message: string) => void;
 
@@ -52,6 +60,10 @@ export interface AgentBrowserSnapshotJson {
     refs?: Record<string, AgentBrowserRef>;
   };
 }
+
+// ============================================================================
+// Action Candidates (Semantic Selectors)
+// ============================================================================
 
 export const ACTION_CANDIDATES = {
   createEpisode: ["New episode", "Create a new episode", "Create episode", "Add episode", "Create"],
