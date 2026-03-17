@@ -41,43 +41,43 @@ async function promptOptimizationSuggestion(
     return;
   }
 
-  const message = `📊 **Deterministic 模式优化建议**
+  const message = `📊 **Deterministic optimization suggestion**
 
-本次任务通过 **Policy Executor** 成功完成，但 **Deterministic 模式** 失败了：
+This task succeeded via the **Policy Executor** but the **Deterministic mode** failed.
 
-**失败原因：** ${deterministicError}
+**Failure reason:** ${deterministicError}
 
-**建议操作：**
-1. 查看 policy executor 的成功执行日志，了解关键步骤
-2. 将 policy 的成功模式固化到 deterministic.ts 中
-3. 更新 deterministic 的验证逻辑和 fallback 策略
+**Suggested actions:**
+1) Review the successful policy executor log to understand key steps
+2) Fold those successful patterns into deterministic.ts
+3) Update deterministic validation and fallback logic
 
-是否现在尝试根据本次成功经验修复 deterministic 模式？
+Would you like to apply these learnings to fix deterministic mode now?
 
-**选项：**
-- **是**：我将分析 policy 执行日志并提出修复建议
-- **否**：跳过本次优化，保持当前状态
-- **稍后**：记录本次失败，批量优化时再处理`;
+**Options:**
+- **yes**: I will analyze the policy logs and propose fixes
+- **no**: Skip optimization for now
+- **later**: Record this failure for batch optimization`;
 
   try {
     const response = await prompt(message);
     const normalized = (response || "").trim().toLowerCase();
     
-    if (normalized === "是" || normalized === "yes" || normalized === "y" || normalized === "1") {
-      console.log(`[spotify-publish-auto] [optimization] 用户同意优化 deterministic 模式。正在分析 policy 执行模式...`);
+    if (normalized === "yes" || normalized === "y" || normalized === "1") {
+      console.log(`[spotify-publish-auto] [optimization] User accepted deterministic optimization. Analyzing policy trajectory...`);
       // In a full implementation, this would trigger an analysis tool
       // For now, log guidance for manual optimization
-      console.log(`[spotify-publish-auto] [optimization] 请查看以下文件获取 policy 成功模式：`);
-      console.log(`  - scripts/executor.ts (policy executor 主逻辑)`);
-      console.log(`  - scripts/publisher.ts (发布和调度逻辑)`);
-      console.log(`[spotify-publish-auto] [optimization] 对比 deterministic.ts 找出差异并修复。`);
-    } else if (normalized === "稍后" || normalized === "later") {
-      console.log(`[spotify-publish-auto] [optimization] 已记录本次失败，将在批量优化时处理。`);
+      console.log(`[spotify-publish-auto] [optimization] Review these files for the successful policy path:`);
+      console.log(`  - scripts/executor.ts (policy executor core flow)`);
+      console.log(`  - scripts/publisher.ts (publish and scheduling logic)`);
+      console.log(`[spotify-publish-auto] [optimization] Compare with deterministic.ts, align behaviors, and add fallbacks.`);
+    } else if (normalized === "later") {
+      console.log(`[spotify-publish-auto] [optimization] Recorded this failure; will handle during batch optimization.`);
     } else {
-      console.log(`[spotify-publish-auto] [optimization] 已跳过本次优化。`);
+      console.log(`[spotify-publish-auto] [optimization] Skipped optimization.`);
     }
   } catch (promptError) {
-    console.log(`[spotify-publish-auto] [optimization] 无法获取用户响应：${promptError}`);
+    console.log(`[spotify-publish-auto] [optimization] Could not obtain user response: ${promptError}`);
   }
 }
 

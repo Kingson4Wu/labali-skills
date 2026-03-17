@@ -33,6 +33,7 @@ Detect current page state:
 - **Audio upload:** Use semantic upload controls; fallback to generic file input only when wrappers block direct upload
 - **Title/Description:** Native input first (focus/select-all/insert text), then semantic and DOM fallbacks
 - **Cover image:** Optional upload via semantic controls
+- **Large files:** Hitting a 50MB transfer cap usually means the agent-browser Chrome is remote even when using `--cdp`; start a truly local Chrome or expose the file via a local URL to avoid the limit.
 
 ### 5. Review & Publish
 - Advance wizard with `Next` until publish controls available
