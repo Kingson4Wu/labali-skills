@@ -1,0 +1,7 @@
+{
+  "name": "labali-spotify-publish-episode",
+  "private": true,
+  "dependencies": {
+    "playwright": "^1.58.2"
+  }
+}

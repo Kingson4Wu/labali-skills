@@ -1,4 +1,16 @@
-import { execute } from "./executor";
+import { existsSync } from "node:fs";
+import { execSync } from "node:child_process";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __skillRoot = dirname(dirname(fileURLToPath(import.meta.url)));
+
+function ensureDeps(): void {
+  if (!existsSync(`${__skillRoot}/node_modules`)) {
+    console.log("[setup] Installing dependencies (first run)...");
+    execSync("npm install", { cwd: __skillRoot, stdio: "inherit" });
+  }
+}
 
 const HELP_TEXT = `
 Usage:
@@ -41,6 +53,9 @@ function parseArgs(argv: string[]): Record<string, string> {
 }
 
 async function main(): Promise<void> {
+  ensureDeps();
+  const { execute } = await import("./executor");
+
   if (process.argv.includes("--help") || process.argv.includes("-h")) {
     console.log(HELP_TEXT.trim());
     return;

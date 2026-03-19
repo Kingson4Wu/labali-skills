@@ -8,8 +8,5 @@
     "skill:validate": "python3 -B scripts/quick_validate.py",
     "skills:validate": "python3 -B scripts/validate_all.py",
     "check:chinese": "python3 -B scripts/check_chinese.py"
-  },
-  "devDependencies": {
-    "playwright": "^1.58.2"
   }
 }

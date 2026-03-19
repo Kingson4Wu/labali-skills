@@ -1,5 +1,17 @@
-import { execute } from "./executor";
+import { existsSync } from "node:fs";
+import { execSync } from "node:child_process";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { DownloadPostInputs } from "./core";
+
+const __skillRoot = dirname(dirname(fileURLToPath(import.meta.url)));
+
+function ensureDeps(): void {
+  if (!existsSync(`${__skillRoot}/node_modules`)) {
+    console.log("[setup] Installing dependencies (first run)...");
+    execSync("npm install", { cwd: __skillRoot, stdio: "inherit" });
+  }
+}
 
 type ArgMap = Record<string, string | boolean>;
 
@@ -72,6 +84,9 @@ function printUsage(): void {
 }
 
 async function main(): Promise<void> {
+  ensureDeps();
+  const { execute } = await import("./executor");
+
   const args = parseArgs(process.argv.slice(2));
   if (args.help || args.h) {
     printUsage();
