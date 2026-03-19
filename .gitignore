@@ -12,3 +12,6 @@ dist/
 coverage/
 .cache/
 spotify-publish-failure-*.png
+.env
+.env.local
+.env.*
