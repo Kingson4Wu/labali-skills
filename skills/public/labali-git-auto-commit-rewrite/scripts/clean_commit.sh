@@ -8,7 +8,7 @@ msg=$(git log -1 --pretty=%B)
 msg="${msg//\\n/
 }"
 
-msg=$(echo "$msg" | awk '!/^Co-authored-by:/')
+msg=$(echo "$msg" | awk 'tolower($0) !~ /^co-authored-by:/')
 
 msg=$(echo "$msg" | awk 'NF{blank=0} !NF{blank++} blank<2')
 

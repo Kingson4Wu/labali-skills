@@ -120,11 +120,11 @@ Treat the following as non-narrative when `allow_cjk_in_code_or_paths` is enable
 
 ## Practical Interpretation
 
-- `Can you refactor this function? 这个变量名不太清楚` -> allow
-- `Please help fix this bug，顺便解释一下这里为什么会报错` -> allow
-- `请帮我重构这个函数，并解释原因` -> reject
-- `请先看一下这个 bug, then refactor the function` -> reject
-- `Please edit /tmp/中文目录/demo.py and keep comments in English.` -> allow
-- `Please check \`/tmp/中文目录/demo.py\` and rename the function.` -> allow
-- `Please review this command: grep "中文" app.log` -> allow
-- `请帮我处理 /tmp/demo.py` -> reject
+- `Can you refactor this function? [zh: variable name unclear]` -> allow
+- `Please help fix this bug, [zh: also explain why this error]` -> allow
+- `[zh: Please refactor this function and explain why]` -> reject
+- `[zh: Please look at this bug first], then refactor the function` -> reject
+- `Please edit /tmp/[zh-dirname]/demo.py and keep comments in English.` -> allow
+- `Please check /tmp/[zh-dirname]/demo.py and rename the function.` -> allow
+- `Please review this command: grep "[zh-keyword]" app.log` -> allow
+- `[zh: Please handle /tmp/demo.py]` -> reject

@@ -1,0 +1,16 @@
+name: labali-skill-architecture-template
+description: AI-driven reusable architecture template for building layered policy-strategy-execution skills. No script executor — runs fully through AI policy.
+type: policy-only
+inputs:
+  target_skill:
+    type: string
+    required: true
+    description: Name or description of the skill being designed or refactored.
+  task_profile:
+    type: string
+    required: false
+    description: Nature of the task (e.g. browser automation, local script, LLM pipeline).
+  constraints:
+    type: string
+    required: false
+    description: Known hard constraints for this skill (platform, auth model, tools).

@@ -1,0 +1,16 @@
+name: labali-deterministic-script-writer
+description: AI-driven skill to convert a user task into a deterministic no-reasoning script specification. No script executor — runs fully through AI policy.
+type: policy-only
+inputs:
+  intent:
+    type: string
+    required: true
+    description: The task to freeze into a deterministic script spec.
+  environment:
+    type: string
+    required: false
+    description: Runtime environment context (OS, tools, platform).
+  constraints:
+    type: string
+    required: false
+    description: Explicit constraints or hard rules for the script.

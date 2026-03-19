@@ -20,8 +20,8 @@
 ## Pagination/Loading Strategy
 
 - Repeatedly scroll document and timeline-like inner containers.
-- Click visible controls with text patterns like `展开全文`, `更多`, `加载更多`, `下一页`.
-- Stop when no growth for multiple rounds or end markers such as `没有更多` appear.
+- Click visible "expand / load more / next page" controls.
+- Stop when no growth for multiple rounds or an explicit end-of-feed marker appears.
 
 ## Output Contract
 

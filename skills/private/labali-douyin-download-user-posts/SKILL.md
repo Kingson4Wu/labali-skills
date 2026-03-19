@@ -67,7 +67,7 @@ Use `skill.yaml` as the source of truth for input schema.
   - stop when no more new cards appear or explicit end markers appear.
 - Text guidance:
   - prefer detail JSON `desc` from target `postId`,
-  - strip platform-generated suffixes such as "发布在抖音...来抖音，记录美好生活".
+  - strip platform-generated suffixes (e.g. Douyin share/promotion footers appended after the original post text).
 - Publish time guidance:
   - extract from detail JSON `create_time` first,
   - fallback to visible page text parsing.

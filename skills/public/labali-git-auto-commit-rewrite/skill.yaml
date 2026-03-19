@@ -1,0 +1,7 @@
+name: labali-git-auto-commit-rewrite
+description: AI-driven skill to generate a conventional commit message from current repository changes, stage all files, commit, and run the post-commit cleanup script.
+inputs:
+  focus:
+    type: string
+    required: false
+    description: Optional scope emphasis to guide commit message generation (e.g. "focus on config changes").
