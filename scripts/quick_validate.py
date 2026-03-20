@@ -6,7 +6,13 @@ import re
 from pathlib import Path
 
 NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$|^[a-z0-9]$")
-ALLOWED_FRONTMATTER_KEYS = {"name", "description"}
+ALLOWED_FRONTMATTER_KEYS = {
+    "name",
+    "description",
+    "license",
+    "compatibility",
+    "metadata",
+}
 
 
 def parse_frontmatter(text: str) -> dict[str, str]:
@@ -20,6 +26,9 @@ def parse_frontmatter(text: str) -> dict[str, str]:
     raw = text[4:end].strip().splitlines()
     data: dict[str, str] = {}
     for line in raw:
+        # skip indented lines (nested YAML values under a block key)
+        if line and line[0] == " ":
+            continue
         if ":" not in line:
             continue
         key, value = line.split(":", 1)

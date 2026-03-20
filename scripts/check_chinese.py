@@ -38,6 +38,12 @@ ALLOWED_REL_PATHS = {
     "README.md",  # top-level README uses [中文] as link label to the zh-CN version
 }
 
+# Directory prefixes (relative to repo root) whose contents may contain Chinese.
+# Use for skills or assets where Chinese text is intentional and necessary.
+ALLOWED_DIR_PREFIXES = {
+    "skills/private/labali-blog-writing-style",  # examples and assets are intentionally in Chinese
+}
+
 # CJK Unicode ranges covering Chinese characters
 # Note: must use regular strings (not raw strings) so \u escapes are processed
 CJK_RE = re.compile(
@@ -78,6 +84,10 @@ def iter_files() -> list[Path]:
             continue
         # Skip allowed specific paths
         if str(p.relative_to(REPO_ROOT)) in ALLOWED_REL_PATHS:
+            continue
+        # Skip files under allowed directory prefixes
+        rel_str = str(p.relative_to(REPO_ROOT))
+        if any(rel_str.startswith(prefix) for prefix in ALLOWED_DIR_PREFIXES):
             continue
         files.append(p)
     return sorted(files)

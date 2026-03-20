@@ -6,8 +6,8 @@ Conflict priority: user request > `AGENTS.md` > `DEVELOPMENT.md` / `docs/`
 
 ## Repo-Specific Rules
 
-- Always run `npm run skills:validate` and `npm run check:chinese` after any skill change.
-- All git commits must be made using the `labali-git-auto-commit-rewrite` skill.
+- Always run `npm run skills:validate` and `npm run check:chinese` after any skill change, and fix all failures before committing.
+- All git commits must be made using the `labali-git-auto-commit-rewrite` skill. That skill enforces pre-commit validation for skill changes.
 - Do not edit runtime install directories (`~/.skills/skills/`, `~/.agents/skills/`, `~/.claude/skills/`).
 
 ## Quick Links
