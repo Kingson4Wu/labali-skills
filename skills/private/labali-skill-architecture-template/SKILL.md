@@ -1,6 +1,8 @@
 ---
 name: labali-skill-architecture-template
 description: Reusable architecture preference template for building robust skills with layered policy-strategy-execution design, semantic interaction priorities, bounded self-healing, and business-state verification.
+license: MIT
+compatibility: AI agent environment only; no system dependencies.
 ---
 
 # labali-skill-architecture-template

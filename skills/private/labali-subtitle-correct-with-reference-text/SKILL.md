@@ -1,6 +1,8 @@
 ---
 name: labali-subtitle-correct-with-reference-text
 description: Correct subtitle wording using a reference script that has accurate text but no timestamps. Use when the existing subtitle file already has correct timeline but wrong words, and a separate text draft is available for textual correction.
+license: MIT
+compatibility: macOS / Linux; Node.js ≥ 18 + tsx; AI agent environment with file system access.
 ---
 
 # labali-subtitle-correct-with-reference-text

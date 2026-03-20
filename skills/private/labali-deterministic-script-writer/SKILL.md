@@ -1,6 +1,8 @@
 ---
 name: labali-deterministic-script-writer
 description: Convert a user task into a deterministic no-reasoning script specification that can be executed directly without repeated runtime reasoning.
+license: MIT
+compatibility: AI agent environment only; no system dependencies.
 ---
 
 # labali-deterministic-script-writer

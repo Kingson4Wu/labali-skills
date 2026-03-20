@@ -1,6 +1,8 @@
 ---
 name: labali-video-ocr-timeline-transcript
 description: Extract full text from local video frames with real timestamps using ffmpeg keyframe sampling and native macOS Vision OCR, then prepare overlap-based LLM merge chunks to produce a clean timestamped transcript. Use when users want video on-screen text turned into time-indexed paragraphs and prefer Codex/Gemini (not fixed external API) for semantic dedup and merge.
+license: MIT
+compatibility: macOS only (10.15 Catalina or later); requires ffmpeg in PATH and Python 3 with pyobjc-framework-Vision; Node.js ≥ 18 + tsx; Vision.framework provided by macOS.
 ---
 
 # labali-video-ocr-timeline-transcript

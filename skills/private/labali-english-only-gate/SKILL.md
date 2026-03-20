@@ -1,6 +1,8 @@
 ---
 name: labali-english-only-gate
 description: Enforce an English-only or English-dominant interaction gate for Codex tasks. Use when the user asks to accept English prompts only, reject Chinese-first or clearly non-English input, allow English-majority mixed input with small Chinese fragments, or require a fixed refusal message instead of answering the request. Trigger for Chinese characters, mixed Chinese-English prompts, multilingual prompts, language gate policies, or requests to require English-first interaction.
+license: MIT
+compatibility: AI agent environment only; no system dependencies.
 ---
 
 # Labali English Only Gate

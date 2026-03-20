@@ -1,6 +1,8 @@
 ---
 name: labali-whisper-transcribe-media
 description: Transcribe local audio to text with Whisper and transcribe local video by first extracting audio with ffmpeg then running Whisper. Use when users need deterministic speech-to-text from media files with optional language control (for example --language Chinese) and want the agent to assemble fixed script parameters and monitor execution until completion.
+license: MIT
+compatibility: macOS / Linux; requires whisper CLI (openai-whisper or faster-whisper) and ffmpeg in PATH for video extraction; Node.js ≥ 18 + tsx.
 ---
 
 # labali-whisper-transcribe-media

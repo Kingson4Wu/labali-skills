@@ -1,6 +1,8 @@
 ---
 name: labali-image-desensitize
 description: Sanitize and desensitize local images by physically regenerating them with ImageMagick re-encode flow (resize 99% -> 101%, strip metadata, recompress), then print before/after size, dimensions, EXIF count, SHA256, EXIF diff, and a post-sanitize hidden-metadata sensitive-info scan. Use when users want to reduce and verify hidden metadata/tracking info in downloaded images with input image path + output path only. Include deterministic scan plus in-agent model semantic judgment from metadata payload (no OCR required).
+license: MIT
+compatibility: macOS / Linux; requires ImageMagick (convert) and exiftool in PATH.
 ---
 
 # labali-image-desensitize
