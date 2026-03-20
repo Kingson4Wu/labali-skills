@@ -3,6 +3,8 @@ name: labali-douyin-download-user-posts
 description: Download all posts from a specific Douyin user profile by using agent-browser automation over Chrome CDP with manual-login session reuse. Use when tasks require opening/reusing a Douyin user page, extracting post text/media links, downloading images/videos locally, and exporting per-post files.
 license: MIT
 compatibility: macOS / Linux; requires Chrome with remote-debugging enabled (default port 9222) and an authenticated Douyin session; Node.js ≥ 18 + tsx; internet access required.
+metadata:
+  pattern: pipeline
 ---
 
 # labali-douyin-download-user-posts

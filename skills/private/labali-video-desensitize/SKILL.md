@@ -3,6 +3,9 @@ name: labali-video-desensitize
 description: Sanitize local video files by mandatory two-pass local FFmpeg re-encode with metadata/chapter removal, bitexact flags, audio re-encode, MP4 container hardening, and default watermark-resistance transforms (higher CRF + mild scale perturbation), then print before/after diagnostics, metadata diffs, and post-sanitize hidden-metadata sensitive-info scan. Use when users need practical video metadata desensitization with stronger default disruption against platform-level embedded tracking watermarks for local files with input video path + output video path.
 license: MIT
 compatibility: macOS / Linux; requires ffmpeg and exiftool in PATH; sufficient disk space for two-pass re-encode.
+metadata:
+  pattern: pipeline
+  sub-pattern: reviewer
 ---
 
 # labali-video-desensitize
@@ -15,21 +18,28 @@ Treat this skill as a layered system.
 2. `references/architecture.md` is the strategy layer.
 3. `scripts/sanitize-video.sh` is the execution layer.
 
-## Required Constraints
+## Pipeline Steps
 
-- Require only two runtime inputs: input video path and output video path.
-- Use deterministic sanitize command with FFmpeg:
-  - pass 1 local transcode to intermediate mp4 with default watermark-resistance transforms:
+Execute in fixed order:
+
+**Step 1 — Validate prerequisites**
+- Confirm `ffmpeg`, `ffprobe`, and `exiftool` are available in PATH.
+- Fail fast with explicit error if any is missing.
+- Confirm input video path is readable and sufficient disk space exists for two-pass re-encode.
+
+**Step 2 — FFmpeg two-pass re-encode**
+- Run `scripts/sanitize-video.sh` with input and output paths.
+- Pass 1: transcode to intermediate mp4 with watermark-resistance transforms:
   - `-vf "scale=trunc(iw*0.98/2)*2:trunc(ih*0.98/2)*2,scale=trunc(iw/0.98/2)*2:trunc(ih/0.98/2)*2"`
   - `-c:v libx264 -crf 28 -c:a aac -b:a 128k`
-  - pass 2 sanitize from intermediate to output with:
+- Pass 2: sanitize from intermediate to output:
   - `-map_metadata -1 -map_chapters -1`
   - `-fflags +bitexact -flags:v +bitexact -flags:a +bitexact`
-  - `-vf "scale=trunc(iw*0.98/2)*2:trunc(ih*0.98/2)*2,scale=trunc(iw/0.98/2)*2:trunc(ih/0.98/2)*2"`
-  - `-c:v libx264 -crf 28`
-  - `-c:a aac -b:a 128k`
   - `-movflags +faststart -write_tmcd 0`
-- Print before/after diagnostics:
+- Remove intermediate file after pass 2 completes.
+
+**Step 3 — Diagnostics**
+- Print before/after comparison:
   - file size,
   - duration,
   - dimensions,
@@ -37,12 +47,17 @@ Treat this skill as a layered system.
   - SHA256 hash,
   - EXIF diff,
   - ffprobe format-tag diff.
-- Run post-sanitize hidden metadata scan on output video:
-  - check EXIF/container metadata for sensitive key/value patterns,
-  - print `Sensitive info review: PASS|REVIEW_REQUIRED`.
-- Support optional strict gate:
-  - `--strict` makes run fail when suspicious metadata candidates are detected.
-- Fail fast when prerequisites are missing (`ffmpeg`, `ffprobe`, `exiftool`).
+
+**Step 4 — Reviewer: sensitive metadata scan**
+- Run post-sanitize hidden metadata scan on output video via `scripts/check-sensitive-video-info.sh`.
+- Check EXIF/container metadata for sensitive key/value patterns.
+- Print `Sensitive info review: PASS|REVIEW_REQUIRED`.
+
+**Step 5 — Return result**
+- State clearly: this method is practical-risk reduction, not 100% forensic erasure.
+- State clearly: default stronger transforms improve disruption odds for platform watermarking but cannot guarantee full removal.
+- In normal mode: report verdict and summary.
+- In `--strict` mode: exit non-zero when suspicious metadata candidates are detected.
 
 ## Success Criteria
 

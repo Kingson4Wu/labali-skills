@@ -3,6 +3,8 @@ name: labali-video-ocr-timeline-transcript
 description: Extract full text from local video frames with real timestamps using ffmpeg keyframe sampling and native macOS Vision OCR, then prepare overlap-based LLM merge chunks to produce a clean timestamped transcript. Use when users want video on-screen text turned into time-indexed paragraphs and prefer Codex/Gemini (not fixed external API) for semantic dedup and merge.
 license: MIT
 compatibility: macOS only (10.15 Catalina or later); requires ffmpeg in PATH and Python 3 with pyobjc-framework-Vision; Node.js ≥ 18 + tsx; Vision.framework provided by macOS.
+metadata:
+  pattern: pipeline
 ---
 
 # labali-video-ocr-timeline-transcript
@@ -83,6 +85,7 @@ Default output folder: `<video_stem>_ocr_timeline/`
 
 1. Run script to generate raw timeline and chunk files.
 2. Feed each `chunks/chunk_XXX_input.txt` to current assistant with `llm_merge_prompt_template.md`.
+   **DO NOT proceed to Step 3 until ALL chunk files have been processed and chunk-level outputs collected.**
 3. Get chunk-level merged ranges.
 4. Merge chunk outputs once again into `final_transcript.md`.
 

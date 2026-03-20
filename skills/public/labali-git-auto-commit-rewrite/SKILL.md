@@ -3,6 +3,8 @@ name: labali-git-auto-commit-rewrite
 description: Generate a clear, structured conventional commit message from current repository changes, commit all changes locally, and then run scripts/clean_commit.sh to normalize the final commit text. Use when users ask to commit the whole project with high-quality change descriptions.
 license: MIT
 compatibility: macOS / Linux; requires git in PATH; runs in AI agent environment with shell access.
+metadata:
+  pattern: pipeline
 ---
 
 # labali-git-auto-commit-rewrite

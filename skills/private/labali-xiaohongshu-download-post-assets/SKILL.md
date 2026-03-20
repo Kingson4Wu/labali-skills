@@ -3,6 +3,8 @@ name: labali-xiaohongshu-download-post-assets
 description: Download Xiaohongshu post assets to a specified local directory using browser-only automation with manual-login session reuse. Use when tasks require guided flow: open browser, guide login if needed, ask for post URL, normalize URL to /explore/<note_id>, save post images, generate post.md, download video when available, and optionally export post comments.
 license: MIT
 compatibility: macOS / Linux; requires Chrome with remote-debugging enabled (default port 9222) and an authenticated Xiaohongshu session; Node.js ≥ 18 + tsx; internet access required.
+metadata:
+  pattern: pipeline
 ---
 
 # labali-xiaohongshu-download-post-assets

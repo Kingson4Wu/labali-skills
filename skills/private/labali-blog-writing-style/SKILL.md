@@ -3,6 +3,10 @@ name: labali-blog-writing-style
 description: Create, rewrite, or refine personal blog posts in Kingson Wu's established voice for Chinese technical essays, workplace reflections, and reading notes. Use when the task is to draft a new article, revise an existing post, or make AI-written content sound like the author's earlier blog voice while preserving core meaning and improving structure, hierarchy, and readability.
 license: MIT
 compatibility: AI agent environment only; no system dependencies.
+metadata:
+  pattern: inversion+generator
+  interaction: multi-turn
+  output-format: markdown
 ---
 
 # labali-blog-writing-style
@@ -29,31 +33,41 @@ The target result is:
 
 ## Execution Contract
 
-1. Identify the article mode first:
-   - new article,
-   - rewrite of an existing article,
-   - partial refinement of selected sections.
-2. Identify the article subtype:
-   - technical summary,
-   - troubleshooting / postmortem,
-   - workplace reflection,
-   - reading note / idea note.
-3. Read `references/style-profile.md` before drafting or revising.
-4. Read `references/workflow.md` and apply the matching workflow for the current mode.
-5. Keep the author's stable traits:
+### Phase 1 — Inversion (gather before generating)
+
+DO NOT proceed to Phase 2 until all required inputs are known.
+
+Ask the user for any missing required inputs:
+
+1. **Mode** (required): new draft, rewrite, partial refinement, shorten, or expand.
+2. **Subtype** (required): technical summary, troubleshooting/postmortem, workplace reflection, or reading/idea note.
+3. **Article content or topic** (required): existing article text, or topic + key points for a new draft.
+4. **Constraints** (optional): word count target, sections to preserve, language override.
+
+If all inputs are present in the user's initial message, skip asking and proceed directly to Phase 2.
+
+### Phase 2 — Generator (load and produce)
+
+Execute in fixed order:
+
+1. Load `references/style-profile.md` — establish voice and stable trait rules.
+2. Load `references/workflow.md` — apply the matching workflow for the current mode.
+3. Load `assets/article-structure.md` — use the skeleton for the identified subtype as structural scaffolding.
+4. Apply the author's stable traits:
    - pragmatic judgment,
    - direct but reasoned tone,
    - engineering tradeoff awareness,
    - mild personal sharpness without empty emotional venting.
-6. Do not copy weaknesses from older posts:
-   - avoid overly fragmented bullet piles,
-   - avoid weak hierarchy,
-   - avoid note-like stacking without transitions,
-   - avoid loose section boundaries.
-7. Prefer article-shaped prose with selective lists only where lists add clarity.
-8. Preserve core facts, claims, and intent unless the user explicitly asks for substantive changes.
-9. When revising, improve structure first, then wording.
-10. Keep the final text in Chinese unless the user explicitly requests another language.
+5. Avoid copying weaknesses from older posts:
+   - no fragmented bullet piles,
+   - no weak hierarchy,
+   - no note-like stacking without transitions,
+   - no loose section boundaries.
+6. Prefer article-shaped prose; use lists only for inherently list-shaped content.
+7. Preserve core facts and intent unless the user asks for substantive changes.
+8. When revising: improve structure first, then wording.
+9. Keep final text in Chinese unless the user explicitly requests another language.
+10. Output the complete article.
 
 ## Output Rules
 

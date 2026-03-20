@@ -3,6 +3,8 @@ name: labali-spotify-publish-episode
 description: Publish podcast episodes on Spotify for Creators using browser-only semantic automation with manual-login session reuse.
 license: MIT
 compatibility: macOS / Linux; requires agent-browser CLI in PATH, Chrome with remote-debugging enabled (default port 9222), and an authenticated Spotify for Creators session; Node.js ≥ 18 + tsx; internet access required.
+metadata:
+  pattern: pipeline
 ---
 
 # labali-spotify-publish-episode

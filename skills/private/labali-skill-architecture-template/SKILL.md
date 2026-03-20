@@ -3,6 +3,9 @@ name: labali-skill-architecture-template
 description: Reusable architecture preference template for building robust skills with layered policy-strategy-execution design, semantic interaction priorities, bounded self-healing, and business-state verification.
 license: MIT
 compatibility: AI agent environment only; no system dependencies.
+metadata:
+  pattern: inversion+generator
+  interaction: multi-turn
 ---
 
 # labali-skill-architecture-template
@@ -14,6 +17,33 @@ Use this skill as a reusable architecture policy when creating or refactoring co
 - `target_skill`: skill name and location (public/private).
 - `task_profile`: what the skill must do, risk level, and expected determinism.
 - `constraints`: execution constraints (tooling, auth, runtime limits).
+
+## Execution Contract
+
+### Phase 1 — Inversion (gather before generating)
+
+DO NOT proceed to Phase 2 until all required inputs are known.
+
+Ask the user for any missing required inputs:
+
+1. **target_skill** (required): skill name and whether it is public or private.
+2. **task_profile** (required): what the skill must do, risk level, and expected determinism (e.g. browser automation, local CLI, AI-only).
+3. **constraints** (optional): tooling limits, auth model, network restrictions, runtime limits.
+
+If all inputs are present in the user's initial message, skip asking and proceed directly to Phase 2.
+
+### Phase 2 — Generator (produce the scaffold)
+
+Execute in fixed order:
+
+1. Load `templates/skill-skeleton.md` — use it as the canonical scaffold template.
+2. Fill the scaffold with the collected inputs:
+   - Layer contract (policy / strategy / execution).
+   - Required constraints and success criteria.
+   - Resource file map.
+   - Directory layout.
+3. Apply the architecture baseline from the Layer Contract below.
+4. Output the complete scaffold.
 
 ## Layer Contract
 

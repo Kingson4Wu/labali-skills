@@ -3,6 +3,10 @@ name: labali-deterministic-script-writer
 description: Convert a user task into a deterministic no-reasoning script specification that can be executed directly without repeated runtime reasoning.
 license: MIT
 compatibility: AI agent environment only; no system dependencies.
+metadata:
+  pattern: inversion+generator
+  interaction: multi-turn
+  output-format: markdown
 ---
 
 # labali-deterministic-script-writer
@@ -20,22 +24,32 @@ This is a prompt-and-spec skill. It defines deterministic script specs clearly a
 - `environment`: optional runtime context (OS, toolchain, auth state, paths).
 - `constraints`: optional hard limits (timeouts, no-network, safety restrictions).
 
-## Input Mode (Minimal)
+## Execution Contract
 
-If the user provides only one sentence, it is enough. Assume:
-1. `intent`: the task goal in that sentence.
-2. `constraints`: runtime must avoid repeated reasoning.
-3. missing details should be represented as explicit parameters/placeholders in output.
+### Phase 1 — Inversion (clarify before generating)
 
-## Output Contract (Always)
+DO NOT proceed to Phase 2 until all required inputs are confirmed.
 
-Return exactly these sections:
-1. `Preconditions`
-2. `Parameters`
-3. `Deterministic Steps`
-4. `Step Assertions`
-5. `Fail-Fast Rules`
-6. `Script Skeleton` (runnable shape with `status/data/error`)
+If `environment` or `constraints` are missing and cannot be inferred:
+- Ask the user for the target OS/toolchain and any hard limits.
+- If the user provides only one sentence, treat it as `intent` and represent missing details as explicit required placeholders in the output — do not block on asking.
+
+### Phase 2 — Generator (produce the spec)
+
+Execute in fixed order:
+
+1. Load `templates/script-spec.md` — use it as the canonical output scaffold.
+2. Fill all 6 required sections from the template:
+   - `Preconditions`
+   - `Parameters`
+   - `Deterministic Steps`
+   - `Step Assertions`
+   - `Fail-Fast Rules`
+   - `Script Skeleton` (runnable shape with `status/data/error`)
+3. Make all required parameters explicit (or mark as required placeholders).
+4. Ensure deterministic steps are executable in fixed order with no runtime reasoning loops.
+5. Make assertions and fail-fast conditions concrete and testable.
+6. Output the complete spec.
 
 ## Success Criteria
 

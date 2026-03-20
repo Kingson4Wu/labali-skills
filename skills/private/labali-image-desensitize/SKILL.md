@@ -3,6 +3,9 @@ name: labali-image-desensitize
 description: Sanitize and desensitize local images by physically regenerating them with ImageMagick re-encode flow (resize 99% -> 101%, strip metadata, recompress), then print before/after size, dimensions, EXIF count, SHA256, EXIF diff, and a post-sanitize hidden-metadata sensitive-info scan. Use when users want to reduce and verify hidden metadata/tracking info in downloaded images with input image path + output path only. Include deterministic scan plus in-agent model semantic judgment from metadata payload (no OCR required).
 license: MIT
 compatibility: macOS / Linux; requires ImageMagick (convert) and exiftool in PATH.
+metadata:
+  pattern: pipeline
+  sub-pattern: reviewer
 ---
 
 # labali-image-desensitize
@@ -15,28 +18,42 @@ Treat this skill as a layered system.
 2. `references/architecture.md` is the strategy layer.
 3. `scripts/sanitize-image.sh` is the execution layer.
 
-## Required Constraints
+## Pipeline Steps
 
+Execute in fixed order:
+
+**Step 1 — Validate prerequisites**
+- Confirm `magick` and `exiftool` are available in PATH.
+- Fail fast with explicit error if either is missing.
+- Confirm input image path is readable.
+
+**Step 2 — ImageMagick re-encode**
+- Run `scripts/sanitize-image.sh` with input and output paths.
+- Apply `-resize 99% -resize 101% -strip -quality 90`.
 - Require only two runtime inputs: input image path and output image path.
-- Use physical regeneration method via ImageMagick:
-  - `-resize 99% -resize 101% -strip -quality 90`
-- Print before/after diagnostics:
+
+**Step 3 — Diagnostics**
+- Print before/after comparison:
   - file size,
   - dimensions,
   - EXIF line count,
   - SHA256 hash,
   - EXIF diff.
-- Run post-sanitize hidden metadata scan on output image:
-  - check EXIF/XMP/IPTC metadata for sensitive key/value patterns,
-  - print `Sensitive info review: PASS|REVIEW_REQUIRED`,
-  - print `MODEL_REVIEW_SUMMARY` + `MODEL_REVIEW_JSON` payload for model judgment.
-- Support optional strict gate:
-  - `--strict` makes run fail when sensitive metadata candidates are detected.
-- Perform in-agent model judgment (do not require API key):
+
+**Step 4 — Reviewer: sensitive metadata scan**
+- Run post-sanitize hidden metadata scan on output image via `scripts/check-sensitive-info.sh`.
+- Check EXIF/XMP/IPTC metadata for sensitive key/value patterns.
+- Load `references/model-review.md` for review rubric.
+- Print `Sensitive info review: PASS|REVIEW_REQUIRED`.
+- Print `MODEL_REVIEW_SUMMARY` + `MODEL_REVIEW_JSON` payload.
+- Apply in-agent model judgment (no API key required):
   - read payload from script output,
   - decide `PASS|REVIEW_REQUIRED|BLOCK`,
   - report verdict with reason and evidence.
-- Fail fast when prerequisites are missing (`magick`, `exiftool`).
+
+**Step 5 — Return result**
+- In normal mode: report verdict and summary.
+- In `--strict` mode: exit non-zero when sensitive metadata candidates are detected.
 
 ## Success Criteria
 

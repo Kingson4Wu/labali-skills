@@ -3,6 +3,8 @@ name: labali-xiaohongshu-export-user-post-links
 description: Extract all Xiaohongshu post links from a user profile URL and write them to a specified local file using browser-only automation with manual-login session reuse. Use when tasks provide a profile link and need complete per-post explore URLs (with xsec token) exported to disk.
 license: MIT
 compatibility: macOS / Linux; requires Chrome with remote-debugging enabled (default port 9222) and an authenticated Xiaohongshu session; Node.js ≥ 18 + tsx; internet access required.
+metadata:
+  pattern: pipeline
 ---
 
 # labali-xiaohongshu-export-user-post-links

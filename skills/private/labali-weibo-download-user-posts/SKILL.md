@@ -3,6 +3,8 @@ name: labali-weibo-download-user-posts
 description: Download all posts from a specific Weibo user profile by using agent browser automation over Chrome CDP with manual-login session reuse. Use when tasks require opening a Weibo user page, loading more timeline items by scrolling, extracting post text and media links, downloading images/videos to local folders, and exporting structured metadata files.
 license: MIT
 compatibility: macOS / Linux; requires Chrome with remote-debugging enabled (default port 9222) and an authenticated Weibo session; Node.js ≥ 18 + tsx; internet access required.
+metadata:
+  pattern: pipeline
 ---
 
 # labali-weibo-download-user-posts
