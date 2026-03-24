@@ -30,6 +30,18 @@ This document is the overall guide and source of truth for this repository. Deta
 | `docs/testing.md` | Writing or running skill tests |
 | `docs/reference.md` | Architecture concepts and terminology glossary |
 
+## Setup
+
+After cloning, run once to enable pre-commit validation:
+
+```bash
+make setup
+```
+
+This configures git to run `validate_all.py` and `check_chinese.py` before every commit. You can also run them manually with `make validate`.
+
+**Claude Code users:** `.claude/settings.json` includes a `PreToolUse` hook that automatically runs the same checks whenever Claude attempts a `git commit` or `git push`. No additional setup required.
+
 ## Guiding Principles
 
 - Skills are organized under `skills/public/` (shareable) and `skills/private/` (internal-only).
