@@ -1,8 +1,9 @@
 ---
 name: labali-video-desensitize
-description: Sanitize local video files by mandatory two-pass local FFmpeg re-encode with metadata/chapter removal, bitexact flags, audio re-encode, MP4 container hardening, and default watermark-resistance transforms (higher CRF + mild scale perturbation), then print before/after diagnostics, metadata diffs, and post-sanitize hidden-metadata sensitive-info scan. Use when users need practical video metadata desensitization with stronger default disruption against platform-level embedded tracking watermarks for local files with input video path + output video path.
+description: Sanitize local video files by mandatory two-pass local FFmpeg re-encode with metadata/chapter removal, bitexact flags, audio re-encode, MP4 container hardening, and default watermark-resistance transforms (higher CRF + mild scale perturbation), then print before/after diagnostics, metadata diffs, and post-sanitize hidden-metadata sensitive-info scan. Use when you need to strip metadata, remove tracking watermarks, or sanitize local video files with deterministic FFmpeg re-encode. Input: video path + output path.
 license: MIT
 compatibility: macOS / Linux; requires ffmpeg and exiftool in PATH; sufficient disk space for two-pass re-encode.
+allowed-tools: "Bash(ffmpeg:*), Bash(exiftool:*), Bash(bash:*)"
 metadata:
   pattern: pipeline
   sub-pattern: reviewer
@@ -17,6 +18,12 @@ Treat this skill as a layered system.
 1. `SKILL.md` is the policy layer.
 2. `references/architecture.md` is the strategy layer.
 3. `scripts/sanitize-video.sh` is the execution layer.
+
+## NEVER
+
+- Never skip the two-pass encode — single-pass re-encode does not reliably strip all metadata.
+- Never claim full forensic erasure — this method is practical-risk reduction only; state this explicitly in the result.
+- Never overwrite or delete the input file — always write to a separate output path.
 
 ## Pipeline Steps
 
@@ -54,6 +61,7 @@ Execute in fixed order:
 - Print `Sensitive info review: PASS|REVIEW_REQUIRED`.
 
 **Step 5 — Return result**
+- Load `references/risk-notes.md` before writing the result caveats to ensure the framing is accurate.
 - State clearly: this method is practical-risk reduction, not 100% forensic erasure.
 - State clearly: default stronger transforms improve disruption odds for platform watermarking but cannot guarantee full removal.
 - In normal mode: report verdict and summary.

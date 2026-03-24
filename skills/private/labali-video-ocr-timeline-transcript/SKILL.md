@@ -1,8 +1,9 @@
 ---
 name: labali-video-ocr-timeline-transcript
-description: Extract full text from local video frames with real timestamps using ffmpeg keyframe sampling and native macOS Vision OCR, then prepare overlap-based LLM merge chunks to produce a clean timestamped transcript. Use when users want video on-screen text turned into time-indexed paragraphs and prefer Codex/Gemini (not fixed external API) for semantic dedup and merge.
+description: Extract full text from local video frames with real timestamps using ffmpeg keyframe sampling and native macOS Vision OCR, then prepare overlap-based LLM merge chunks to produce a clean timestamped transcript. Use when you want on-screen text from a video (screen recording, lecture, tutorial, or any video with visible text) turned into a time-indexed transcript. Also known as video-to-text or video OCR.
 license: MIT
 compatibility: macOS only (10.15 Catalina or later); requires ffmpeg in PATH and Python 3 with pyobjc-framework-Vision; Node.js ≥ 18 + tsx; Vision.framework provided by macOS.
+allowed-tools: "Bash(ffmpeg:*), Bash(npx:*), Bash(uv:*), Bash(python3:*)"
 metadata:
   pattern: pipeline
 ---
@@ -24,6 +25,12 @@ Treat this skill as a deterministic local pipeline plus LLM merge handoff.
 - If `--debug` is set, keep full intermediate artifacts for inspection.
 - Re-runs overwrite the same output folder by deleting existing contents first, then regenerating.
 - LLM merge stage should be executed by the current AI assistant (Codex/Gemini), not a hardcoded provider SDK.
+
+## NEVER
+
+- Never run on non-macOS — Vision.framework is not available on other platforms; fail fast with an explicit error.
+- Never proceed to the final merge step until all chunk files have been processed and chunk-level outputs collected.
+- Never interpolate timestamps from frame index — time ranges must come from parsed `pts_time` values only.
 
 ## Setup
 
@@ -84,7 +91,9 @@ Default output folder: `<video_stem>_ocr_timeline/`
 ## LLM Merge Workflow
 
 1. Run script to generate raw timeline and chunk files.
-2. Feed each `chunks/chunk_XXX_input.txt` to current assistant with `llm_merge_prompt_template.md`.
+2. > If the merge behavior or chunk strategy is unclear, load `references/architecture.md` before processing chunks.
+
+   Feed each `chunks/chunk_XXX_input.txt` to current assistant with `llm_merge_prompt_template.md`.
    **DO NOT proceed to Step 3 until ALL chunk files have been processed and chunk-level outputs collected.**
 3. Get chunk-level merged ranges.
 4. Merge chunk outputs once again into `final_transcript.md`.

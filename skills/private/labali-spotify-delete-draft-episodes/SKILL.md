@@ -1,8 +1,9 @@
 ---
 name: labali-spotify-delete-draft-episodes
-description: Delete Draft-status podcast episodes for a specified Spotify show_id on creators.spotify.com using browser-only semantic automation with manual-login session reuse. Use when tasks need Draft cleanup without APIs: default behavior deletes only the first Draft episode, and optional full-cleanup mode deletes all Draft episodes.
+description: Delete Draft-status podcast episodes for a specified Spotify show_id on creators.spotify.com using browser-only semantic automation with manual-login session reuse. Use when tasks need Draft cleanup or draft removal without APIs: default behavior deletes only the first Draft episode, and optional full-cleanup mode deletes all Draft episodes.
 license: MIT
 compatibility: macOS / Linux; requires agent-browser CLI in PATH, Chrome with remote-debugging enabled (default port 9222), and an authenticated Spotify for Creators session; Node.js ≥ 18 + tsx; internet access required.
+allowed-tools: "Bash(npx:*), Bash(pnpm:*)"
 metadata:
   pattern: pipeline
 ---
@@ -48,6 +49,12 @@ The deterministic first-level cache script is available at `scripts/deterministi
 - Deletion success is validated by business state, not by click success.
 - Scope deletions to `Draft` filter only.
 
+## NEVER
+
+- Never confirm deletion success by click outcome alone — verify the Draft list no longer contains the deleted episode.
+- Never delete episodes outside the Draft filter scope — only target episodes in the Draft list.
+- Never return success before the policy executor's business-state verification passes.
+
 ## Success Criteria
 
 A run is successful only when all conditions hold:
@@ -75,6 +82,9 @@ Use `skill.yaml` as the source of truth for input schema.
 - If policy executor fails:
   - prioritize policy repair and retry in a loop until business-success criteria pass,
   - do not return success before verification passes.
+
+> If policy executor stage decisions are unclear, load `references/architecture.md` before proceeding.
+
 - After task completion:
   - use deterministic failure records plus policy-success evidence to optimize deterministic mode incrementally,
   - keep deterministic mode optional; never weaken policy baseline for speed-only changes.

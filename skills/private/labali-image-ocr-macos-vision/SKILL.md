@@ -1,8 +1,9 @@
 ---
 name: labali-image-ocr-macos-vision
-description: Run native macOS image OCR through Vision.framework via pyobjc bridge (same engine family used by Preview/Live Text), with Chinese+English recognition defaults and deterministic CLI execution. Use when users need high-quality OCR text extraction from local images on macOS and want output to stdout or a text file.
+description: Run native macOS image OCR through Vision.framework via pyobjc bridge (same engine family used by Preview/Live Text), with Chinese+English recognition defaults and deterministic CLI execution. Use when you need to extract text from local images on macOS — including screenshots, photos, or scanned documents — and want output to stdout or a text file. Also known as image-to-text or read-text-from-image.
 license: MIT
 compatibility: macOS only (10.15 Catalina or later); requires Python 3 with pyobjc-framework-Vision installed; Vision.framework provided by macOS.
+allowed-tools: "Bash(uv:*), Bash(python3:*)"
 metadata:
   pattern: pipeline
 ---
@@ -23,6 +24,11 @@ Treat this skill as a deterministic local OCR executor.
 - Require local file path input for image OCR.
 - Return recognized text in reading order and preserve line breaks.
 - Support optional output text file path.
+
+## NEVER
+
+- Never run on non-macOS — Vision.framework is not available on other platforms; fail fast with an explicit error.
+- Never print OCR output before the Vision request has completed and returned results.
 
 ## Setup
 

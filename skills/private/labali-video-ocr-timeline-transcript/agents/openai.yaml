@@ -1,5 +1,5 @@
 version: 1
 interface:
   display_name: Labali Video OCR Timeline Transcript
-  description: Extract video on-screen text with real timestamps via adaptive ffmpeg frame selection + macOS Vision OCR, then prepare chunk files for Codex/Gemini semantic merge into clean time-indexed transcript.
+  description: Extract on-screen text from local video frames with real timestamps using adaptive ffmpeg sampling + macOS Vision OCR, then produce a time-indexed transcript. Use when transcribing screen recordings, lecture videos, or any video with visible on-screen text.
   default_prompt: Extract all visible text from this video into a clean timestamped transcript using adaptive frame selection (scene-driven with dynamic fallback) plus Vision OCR, then merge chunk outputs semantically with time ranges.

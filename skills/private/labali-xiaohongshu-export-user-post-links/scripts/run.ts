@@ -1,5 +1,5 @@
-import { existsSync } from "node:fs";
-import { execSync } from "node:child_process";
+import { existsSync, statSync } from "node:fs";
+import { execSync, spawnSync } from "node:child_process";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExportUserPostLinksInputs } from "./core";
@@ -7,9 +7,19 @@ import type { ExportUserPostLinksInputs } from "./core";
 const __skillRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
 function ensureDeps(): void {
-  if (!existsSync(`${__skillRoot}/node_modules`)) {
-    console.log("[setup] Installing dependencies (first run)...");
-    execSync("npm install", { cwd: __skillRoot, stdio: "inherit" });
+  const pkgPath = `${__skillRoot}/package.json`;
+  const nmPath = `${__skillRoot}/node_modules`;
+  const needsInstall = !existsSync(nmPath) ||
+    statSync(pkgPath).mtimeMs > statSync(nmPath).mtimeMs;
+  if (needsInstall) {
+    console.log("[setup] Installing dependencies...");
+    const pnpmCheck = spawnSync("pnpm", ["--version"], { stdio: "pipe" });
+    if (pnpmCheck.error || pnpmCheck.status !== 0) {
+      console.error("[labali] pnpm is required but not found.");
+      console.error("  Install: npm install -g pnpm");
+      process.exit(1);
+    }
+    execSync("pnpm install", { cwd: __skillRoot, stdio: "inherit" });
   }
 }
 

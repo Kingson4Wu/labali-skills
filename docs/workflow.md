@@ -37,6 +37,46 @@ npm run check:chinese       # Check for Chinese characters in doc/config files
 4. If skill behavior logic changes, run corresponding tests.
 5. Commit and open a PR.
 
+## Environment Isolation
+
+Skills use isolated dependency environments — no cross-skill contamination and no pollution of the user's system.
+
+| Runtime | Isolation unit | Shared storage |
+|---------|---------------|----------------|
+| Python (uv) | `.venv/` at skill root (auto-created by `uv run`) | `~/.cache/uv` — hardlinks, bytes not duplicated |
+| TypeScript (pnpm) | `node_modules/` at skill root (auto-installed by `ensureDeps()`) | `~/.pnpm-store` — hardlinks, bytes not duplicated |
+
+### Prerequisites
+
+- **Python skills**: requires [`uv`](https://docs.astral.sh/uv/)
+  ```bash
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+  ```
+- **TypeScript skills**: requires [`pnpm`](https://pnpm.io/)
+  ```bash
+  npm install -g pnpm
+  ```
+
+### User choice (Python)
+
+Set `LABALI_PYTHON_RUNNER=system` to bypass `uv` and use `python3` from PATH directly:
+
+```bash
+export LABALI_PYTHON_RUNNER=system
+```
+
+This is useful if you manage your own Python environment (conda, pyenv, etc.).
+
+### Troubleshooting
+
+| Error | Fix |
+|-------|-----|
+| `[labali] uv is required but not found` | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
+| `[labali] pnpm is required but not found` | `npm install -g pnpm` |
+| Python deps not picked up in system mode | Install manually: `pip install -r requirements.txt` |
+| Stale node_modules after dep update | Delete `node_modules/`, re-run the skill |
+| `.venv` broken | Delete `.venv/` in skill root, re-run the skill |
+
 ## CI Gates
 
 PR pipeline order:

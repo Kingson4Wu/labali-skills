@@ -1,5 +1,5 @@
 version: 1
 interface:
   display_name: Labali Weibo Download User Posts
-  description: Download all posts and media from one Weibo user page via browser + CDP.
+  description: Download all posts, images, and videos from a Weibo user profile via browser automation over Chrome CDP with manual-login session reuse. Use when you need to bulk-download posts or media from a Weibo user page.
   default_prompt: Download all posts from this Weibo user profile with browser automation and save text/media locally.

@@ -3,6 +3,7 @@ name: labali-xiaohongshu-export-user-post-links
 description: Extract all Xiaohongshu post links from a user profile URL and write them to a specified local file using browser-only automation with manual-login session reuse. Use when tasks provide a profile link and need complete per-post explore URLs (with xsec token) exported to disk.
 license: MIT
 compatibility: macOS / Linux; requires Chrome with remote-debugging enabled (default port 9222) and an authenticated Xiaohongshu session; Node.js ≥ 18 + tsx; internet access required.
+allowed-tools: "Bash(npx:*), Bash(pnpm:*)"
 metadata:
   pattern: pipeline
 ---
@@ -28,6 +29,12 @@ Treat this skill as a layered system, not a single script.
   `open -na "Google Chrome" --args --remote-debugging-port=9222 --user-data-dir="$HOME/.chrome-labali"`.
 - Parse links from profile page state with pagination scrolling.
 - Export links to a specified local file path.
+
+## NEVER
+
+- Never write links to the output file without deduplication.
+- Never stop scrolling based on a fixed count alone — continue until no new posts are discovered or an explicit end marker is present.
+- Never report success based on action completion alone — verify the output file is written with at least one link.
 
 ## Success Criteria
 
@@ -57,6 +64,9 @@ Use `skill.yaml` as the source of truth for input schema.
   - optional canonical-only mode can output `/explore/<note_id>` URLs,
   - optional latest-only mode can stop early after enough non-sticky candidates are found,
   - optional publish-time mode can prefix each exported line with `publish_time<TAB>`.
+
+> If fallback or pagination decisions are unclear, load `references/architecture.md`.
+> If link-parsing strategy is unclear, load `references/plan.md`.
 
 ## Resources
 

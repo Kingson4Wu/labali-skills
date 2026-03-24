@@ -3,6 +3,7 @@ name: labali-english-only-gate
 description: Enforce an English-only or English-dominant interaction gate for Codex tasks. Use when the user asks to accept English prompts only, reject Chinese-first or clearly non-English input, allow English-majority mixed input with small Chinese fragments, or require a fixed refusal message instead of answering the request. Trigger for Chinese characters, mixed Chinese-English prompts, multilingual prompts, language gate policies, or requests to require English-first interaction.
 license: MIT
 compatibility: AI agent environment only; no system dependencies.
+allowed-tools: "Bash(python3:*)"
 metadata:
   pattern: reviewer
 ---
@@ -35,9 +36,12 @@ Use it as:
   - `strict-english` rejects narrative Chinese/non-English text except tolerated path/code fragments.
 - Treat code, shell commands, file paths, URLs, and filenames as non-narrative context when configured to ignore them.
 - If the prompt is rejected, output exactly the configured rejection message and nothing else.
-- Do not translate the request.
-- Do not answer the original request after a rejection decision.
-- Do not explain the policy unless the user is explicitly editing this skill or asking about the gate design itself.
+
+## NEVER
+
+- Never translate a rejected prompt — output only the configured rejection message.
+- Never answer the original request after a rejection decision has been made.
+- Never explain the gate policy unless the user is explicitly editing this skill or asking about its design.
 
 ## Execution Workflow
 

@@ -1,5 +1,5 @@
 version: 1
 interface:
   display_name: Labali Douyin Download User Posts
-  description: Download all posts and media from one Douyin user page via agent-browser style automation over CDP.
+  description: Download all posts and media from a Douyin user profile via agent-browser automation over Chrome CDP with session reuse. Use when you need to bulk-download posts, images, or videos from a Douyin user page.
   default_prompt: Download all posts from this Douyin user profile with browser automation and save text/media locally.

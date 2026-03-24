@@ -1,8 +1,9 @@
 ---
 name: labali-image-desensitize
-description: Sanitize and desensitize local images by physically regenerating them with ImageMagick re-encode flow (resize 99% -> 101%, strip metadata, recompress), then print before/after size, dimensions, EXIF count, SHA256, EXIF diff, and a post-sanitize hidden-metadata sensitive-info scan. Use when users want to reduce and verify hidden metadata/tracking info in downloaded images with input image path + output path only. Include deterministic scan plus in-agent model semantic judgment from metadata payload (no OCR required).
+description: Sanitize and desensitize local images by physically regenerating them with ImageMagick re-encode flow (resize 99% -> 101%, strip metadata, recompress), then print before/after size, dimensions, EXIF count, SHA256, EXIF diff, and a post-sanitize hidden-metadata sensitive-info scan. Use when you want to strip, clean, or verify hidden metadata (EXIF, GPS, tracking info) from local images, with before/after diagnostics and a post-sanitize scan. Input: image path + output path.
 license: MIT
 compatibility: macOS / Linux; requires ImageMagick (convert) and exiftool in PATH.
+allowed-tools: "Bash(convert:*), Bash(exiftool:*), Bash(bash:*)"
 metadata:
   pattern: pipeline
   sub-pattern: reviewer
@@ -18,9 +19,17 @@ Treat this skill as a layered system.
 2. `references/architecture.md` is the strategy layer.
 3. `scripts/sanitize-image.sh` is the execution layer.
 
+## NEVER
+
+- Never overwrite the input file — always write to a separate output path.
+- Never report PASS on the sensitive-info scan without completing Step 4.
+- Never skip Step 3 diagnostics — before/after comparison is required output regardless of result.
+
 ## Pipeline Steps
 
 Execute in fixed order:
+
+> If the intent or design rationale of any pipeline step is unclear, load `references/plan.md` before proceeding.
 
 **Step 1 — Validate prerequisites**
 - Confirm `magick` and `exiftool` are available in PATH.

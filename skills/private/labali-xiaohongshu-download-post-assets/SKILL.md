@@ -3,6 +3,7 @@ name: labali-xiaohongshu-download-post-assets
 description: Download Xiaohongshu post assets to a specified local directory using browser-only automation with manual-login session reuse. Use when tasks require guided flow: open browser, guide login if needed, ask for post URL, normalize URL to /explore/<note_id>, save post images, generate post.md, download video when available, and optionally export post comments.
 license: MIT
 compatibility: macOS / Linux; requires Chrome with remote-debugging enabled (default port 9222) and an authenticated Xiaohongshu session; Node.js ≥ 18 + tsx; internet access required.
+allowed-tools: "Bash(npx:*), Bash(pnpm:*)"
 metadata:
   pattern: pipeline
 ---
@@ -38,6 +39,12 @@ Treat this skill as a layered system, not a single script.
 - Do not generate `manifest.json`.
 - If multiple video segments are downloaded, merge them into one file and delete segment files.
 - Normalize post URL to canonical format: `https://www.xiaohongshu.com/explore/<note_id>`.
+
+## NEVER
+
+- Never leave multiple video segment files in the output folder after a successful run — merge segments and delete the originals.
+- Never report success if `post.md` was not generated.
+- Never report success based on action completion alone — verify output folder structure and required files exist.
 
 ## Success Criteria
 
@@ -81,6 +88,9 @@ Use `skill.yaml` as the source of truth for input schema.
 - On partial download failures:
   - keep successfully downloaded files,
   - return result with explicit failure count.
+
+> If failure handling or extraction decisions are unclear, load `references/architecture.md`.
+> If extraction or comment export strategy is unclear, load `references/plan.md`.
 
 ## Resources
 

@@ -1,5 +1,8 @@
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __skillRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
 type ArgMap = Record<string, string | boolean>;
 
@@ -43,6 +46,23 @@ function printUsage(): void {
   console.log(`Usage:\n  npx tsx skills/private/labali-video-ocr-timeline-transcript/scripts/run.ts \\\n    --video_path "/path/to/video.mp4" \\\n    [--output_dir "/path/to/output"] \\\n    [--adaptive_mode smart] \\\n    [--fps 0.5] \\\n    [--scene 0.3] \\\n    [--max_gap 0.8] \\\n    [--languages "zh-Hans,zh-Hant,en"] \\\n    [--recognition_level accurate] \\\n    [--chunk_size 80] \\\n    [--chunk_overlap 10] \\\n    [--merge_similarity 0.9] \\\n    [--merge_max_gap 2.0] \\\n    [--debug] \\\n    [--image_format jpg] \\\n    [--cleanup_frames]`);
 }
 
+function buildPythonCmd(scriptPath: string): { cmd: string; leadArgs: string[] } {
+  const runner = (process.env.LABALI_PYTHON_RUNNER ?? "uv").trim();
+  if (runner === "system") {
+    // PYTHON_BIN lets advanced users point to a specific interpreter in system mode
+    const pythonBin = process.env.PYTHON_BIN?.trim() || "python3";
+    return { cmd: pythonBin, leadArgs: [scriptPath] };
+  }
+  const uvCheck = spawnSync("uv", ["--version"], { stdio: "pipe" });
+  if (uvCheck.error || uvCheck.status !== 0) {
+    console.error("[labali] uv is required but not found.");
+    console.error("  Install: curl -LsSf https://astral.sh/uv/install.sh | sh");
+    console.error("  Or use your existing Python: export LABALI_PYTHON_RUNNER=system");
+    process.exit(1);
+  }
+  return { cmd: "uv", leadArgs: ["run", "--project", __skillRoot, "python", scriptPath] };
+}
+
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
   if (args.help || args.h) {
@@ -66,11 +86,8 @@ async function main(): Promise<void> {
   const imageFormat = optionalString(args, "image_format");
   const cleanupFrames = optionalFlag(args, "cleanup_frames");
 
-  const scriptArgs = [
-    "skills/private/labali-video-ocr-timeline-transcript/scripts/video-ocr-timeline.py",
-    "--video_path",
-    videoPath,
-  ];
+  const scriptPath = `${__skillRoot}/scripts/video-ocr-timeline.py`;
+  const scriptArgs = ["--video_path", videoPath];
 
   if (outputDir) scriptArgs.push("--output_dir", outputDir);
   if (adaptiveMode) scriptArgs.push("--adaptive_mode", adaptiveMode);
@@ -87,15 +104,8 @@ async function main(): Promise<void> {
   if (imageFormat) scriptArgs.push("--image_format", imageFormat);
   if (cleanupFrames) scriptArgs.push("--cleanup_frames");
 
-  const preferredPython = process.env.PYTHON_BIN?.trim();
-  const pythonBin =
-    preferredPython && preferredPython.length > 0
-      ? preferredPython
-      : existsSync("/Users/kingsonwu/anaconda3/bin/python3")
-        ? "/Users/kingsonwu/anaconda3/bin/python3"
-        : "python3";
-
-  const result = spawnSync(pythonBin, scriptArgs, {
+  const { cmd, leadArgs } = buildPythonCmd(scriptPath);
+  const result = spawnSync(cmd, [...leadArgs, ...scriptArgs], {
     stdio: "inherit",
     env: process.env,
   });

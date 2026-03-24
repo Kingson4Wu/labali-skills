@@ -3,6 +3,7 @@ name: labali-douyin-download-user-posts
 description: Download all posts from a specific Douyin user profile by using agent-browser automation over Chrome CDP with manual-login session reuse. Use when tasks require opening/reusing a Douyin user page, extracting post text/media links, downloading images/videos locally, and exporting per-post files.
 license: MIT
 compatibility: macOS / Linux; requires Chrome with remote-debugging enabled (default port 9222) and an authenticated Douyin session; Node.js ≥ 18 + tsx; internet access required.
+allowed-tools: "Bash(npx:*), Bash(pnpm:*)"
 metadata:
   pattern: pipeline
 ---
@@ -37,6 +38,12 @@ Treat this skill as a layered system, not a single script.
 - Reuse current opened user homepage tab when it already matches target user.
 - For timeline batch runs, open each post detail in a temporary tab, extract/download, then close tab and return to homepage tab.
 - For each post, keep only one final video file in `videos/` (prefer muxed AV or largest valid AV file).
+
+## NEVER
+
+- Never keep multiple video files per post — select one final file (muxed AV or largest valid AV) and remove the rest.
+- Never download unrelated images for a video post.
+- Never report success without verifying at least one post was extracted.
 
 ## Success Criteria
 
@@ -75,6 +82,9 @@ Use `skill.yaml` as the source of truth for input schema.
 - Publish time guidance:
   - extract from detail JSON `create_time` first,
   - fallback to visible page text parsing.
+
+> If failure handling or extraction decisions are unclear, load `references/architecture.md`.
+> If extraction or media selection strategy is unclear, load `references/plan.md`.
 
 ## Resources
 

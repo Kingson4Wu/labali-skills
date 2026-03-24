@@ -1,5 +1,5 @@
 version: 1
 interface:
   display_name: Labali Subtitle Text Corrector
-  description: Fix subtitle wording using a reference script while keeping original timestamps.
+  description: Fix subtitle file wording (.srt, .vtt) using a reference script while keeping original timestamps intact. Use when subtitle timeline is correct but text content needs correction against a reference document.
   default_prompt: Correct this subtitle file's text using my reference script and output a new corrected subtitle.

@@ -1,8 +1,9 @@
 ---
 name: labali-git-auto-commit-rewrite
-description: Generate a clear, structured conventional commit message from current repository changes, commit all changes locally, and then run scripts/clean_commit.sh to normalize the final commit text. Use when users ask to commit the whole project with high-quality change descriptions.
+description: Generate a clear, structured conventional commit message from current repository changes, commit all changes locally, and then run scripts/clean_commit.sh to normalize the final commit text. Use when users want to commit current git changes with a conventional commit message (type/scope format) and well-structured body.
 license: MIT
 compatibility: macOS / Linux; requires git in PATH; runs in AI agent environment with shell access.
+allowed-tools: "Bash(git:*), Bash(npm:*), Bash(bash:*)"
 metadata:
   pattern: pipeline
 ---
@@ -40,6 +41,13 @@ Use this skill for one-shot local commit workflows with strong commit-message qu
 - If repository is not a Git repo, fail fast with explicit message.
 - If there are no changes to commit, return `No changes to commit.`.
 - Never fabricate commit/test outcomes; report command failures verbatim.
+
+## NEVER
+
+- Never fabricate diff content or invent changes not present in `git diff` output.
+- Never commit without running `npm run skills:validate` and `npm run check:chinese` when any file under `skills/` has changed.
+- Never amend a previous commit — always create a new commit.
+- Never use `--no-verify` to bypass pre-commit hooks.
 
 ## Message Quality Rules
 

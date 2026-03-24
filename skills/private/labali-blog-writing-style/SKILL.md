@@ -31,6 +31,37 @@ The target result is:
 - has clearer structure than many older posts,
 - reads like a finished article rather than scattered notes.
 
+## NEVER
+
+- Never produce fragmented bullet piles as the primary structure — use paragraphs as the default form.
+- Never stack sections without transitions (note-like accumulation of disconnected blocks).
+- Never use weak hierarchy where all headings carry the same visual weight regardless of content importance.
+- Never output AI-style abstraction drift: phrases like "it's important to note that", "in conclusion", or "overall, this demonstrates".
+- Never switch the output language to English unless the user explicitly requests it.
+
+## Mode × Subtype Routing
+
+Use this table to determine which file sections to load in Phase 2.
+
+### Mode → workflow section in `references/workflow.md`
+
+| Mode | Section to load |
+|------|----------------|
+| new draft | `## 1. New Article Workflow` |
+| rewrite | `## 2. Rewrite Existing Article Workflow` |
+| partial refinement | `## 3. Partial Refinement Workflow` |
+| shorten | `## 4. Structure Rules` (no dedicated section — use structure rules as guide) |
+| expand | `## 4. Structure Rules` (no dedicated section — use structure rules as guide) |
+
+### Subtype → skeleton section in `assets/article-structure.md`
+
+| Subtype | Section to load |
+|---------|----------------|
+| technical summary | `## Subtype: Technical Summary` |
+| troubleshooting / postmortem | `## Subtype: Troubleshooting / Postmortem` |
+| workplace reflection | `## Subtype: Workplace Reflection` |
+| reading note / idea note | `## Subtype: Reading Note / Idea Note` |
+
 ## Execution Contract
 
 ### Phase 1 — Inversion (gather before generating)

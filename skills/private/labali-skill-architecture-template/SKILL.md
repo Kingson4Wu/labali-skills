@@ -1,6 +1,6 @@
 ---
 name: labali-skill-architecture-template
-description: Reusable architecture preference template for building robust skills with layered policy-strategy-execution design, semantic interaction priorities, bounded self-healing, and business-state verification.
+description: Reusable architecture preference template for building robust skills with layered policy-strategy-execution design, semantic interaction priorities, bounded self-healing, and business-state verification. Use when creating a new skill, designing skill architecture, or applying consistent layered skill design patterns to a new capability.
 license: MIT
 compatibility: AI agent environment only; no system dependencies.
 metadata:
@@ -79,6 +79,12 @@ When applying this template, always produce:
 - Never define success by action completion only.
 - Return success only after business-state verification passes.
 - Keep recovery bounded: deterministic retry policy, no unbounded exploration loops.
+
+## NEVER
+
+- Never couple the policy layer (`SKILL.md`) to brittle runtime details — keep it semantic and stable across UI or API changes.
+- Never return success before business-state verification passes — action completion is not success.
+- Never use unbounded exploration loops — recovery must be bounded with a deterministic retry policy.
 
 ## Success Criteria
 

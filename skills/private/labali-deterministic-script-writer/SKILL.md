@@ -1,6 +1,6 @@
 ---
 name: labali-deterministic-script-writer
-description: Convert a user task into a deterministic no-reasoning script specification that can be executed directly without repeated runtime reasoning.
+description: Convert a user task into a deterministic no-reasoning script specification that can be executed directly without repeated runtime reasoning. Use when you want to freeze a repeated task into a fixed, replayable script spec — for automation templates, workflow blueprints, or any task where you want deterministic execution without AI re-reasoning on each run.
 license: MIT
 compatibility: AI agent environment only; no system dependencies.
 metadata:
@@ -60,12 +60,12 @@ A response is complete only when:
 3. Assertions and fail-fast conditions are concrete and testable.
 4. Script skeleton can run without requiring additional reasoning loops.
 
-## Hard Rules
+## NEVER
 
-1. Runtime no-reasoning: no model calls, no semantic candidate retries.
-2. No guesswork loops: if required state is missing, fail immediately with explicit error code.
-3. Deterministic first: fixed order, fixed checks, explicit branch conditions only.
-4. Keep it executable: do not output abstract theory without script skeleton.
+- Never make model calls, semantic lookups, or candidate retries during execution — runtime reasoning is forbidden.
+- Never enter guesswork loops — if required state is missing, fail immediately with an explicit error code.
+- Never use non-deterministic ordering or implicit branch conditions — steps must run in fixed order with explicit checks only.
+- Never output abstract theory without an accompanying runnable script skeleton.
 
 ## Resources
 

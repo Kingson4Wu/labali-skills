@@ -1,5 +1,5 @@
 version: 1
 interface:
   display_name: Labali Skill Architecture Template
-  description: Reusable preference template for building robust layered skills with semantic interaction and business-state verification.
+  description: Apply a reusable layered skill architecture template (policy-strategy-execution) with semantic interaction priorities and business-state verification. Use when building a new skill or designing a consistent skill structure.
   default_prompt: Create a new skill using layered policy-strategy-execution architecture, semantic-first interaction, bounded fallback, and strict business-state verification.

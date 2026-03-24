@@ -3,6 +3,7 @@ name: labali-weibo-download-user-posts
 description: Download all posts from a specific Weibo user profile by using agent browser automation over Chrome CDP with manual-login session reuse. Use when tasks require opening a Weibo user page, loading more timeline items by scrolling, extracting post text and media links, downloading images/videos to local folders, and exporting structured metadata files.
 license: MIT
 compatibility: macOS / Linux; requires Chrome with remote-debugging enabled (default port 9222) and an authenticated Weibo session; Node.js ≥ 18 + tsx; internet access required.
+allowed-tools: "Bash(npx:*), Bash(pnpm:*)"
 metadata:
   pattern: pipeline
 ---
@@ -33,6 +34,12 @@ Treat this skill as a layered system, not a single script.
 - Download target user's timeline posts and assets (text, images, optional videos).
 - Export metadata files: `posts.json`, `user.md`, and per-post `post.md`.
 - Keep partial success: keep downloaded files even if some URLs fail.
+
+## NEVER
+
+- Never delete or discard partially downloaded files on URL failure — keep all successfully downloaded content.
+- Never report success unless at least one post was extracted and the output folder was created with `posts.json` and `user.md`.
+- Never report success based on action completion alone — verify the output folder and metadata files exist.
 
 ## Success Criteria
 
@@ -65,6 +72,9 @@ Use `skill.yaml` as the source of truth for input schema.
   - scroll timeline,
   - click visible expansion controls,
   - stop when no more content appears or explicit end markers are present.
+
+> If failure handling or extraction decisions are unclear, load `references/architecture.md`.
+> If extraction strategy for a specific content type is unclear, load `references/plan.md`.
 
 ## Resources
 

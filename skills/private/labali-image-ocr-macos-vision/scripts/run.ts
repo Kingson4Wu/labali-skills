@@ -1,4 +1,8 @@
 import { spawnSync } from "node:child_process";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __skillRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
 type ArgMap = Record<string, string | boolean>;
 
@@ -35,7 +39,22 @@ function optionalString(args: ArgMap, key: string): string | null {
 }
 
 function printUsage(): void {
-  console.log(`Usage:\n  npx tsx skills/private/labali-image-ocr-macos-vision/scripts/run.ts \\\n    --image_path \"/path/to/image.jpg\" \\\n    [--output_text \"/path/to/result.txt\"] \\\n    [--languages \"zh-Hans,zh-Hant,en\"] \\\n    [--recognition_level accurate]`);
+  console.log(`Usage:\n  npx tsx skills/private/labali-image-ocr-macos-vision/scripts/run.ts \\\n    --image_path "/path/to/image.jpg" \\\n    [--output_text "/path/to/result.txt"] \\\n    [--languages "zh-Hans,zh-Hant,en"] \\\n    [--recognition_level accurate]`);
+}
+
+function buildPythonCmd(scriptPath: string): { cmd: string; leadArgs: string[] } {
+  const runner = (process.env.LABALI_PYTHON_RUNNER ?? "uv").trim();
+  if (runner === "system") {
+    return { cmd: "python3", leadArgs: [scriptPath] };
+  }
+  const uvCheck = spawnSync("uv", ["--version"], { stdio: "pipe" });
+  if (uvCheck.error || uvCheck.status !== 0) {
+    console.error("[labali] uv is required but not found.");
+    console.error("  Install: curl -LsSf https://astral.sh/uv/install.sh | sh");
+    console.error("  Or use your existing Python: export LABALI_PYTHON_RUNNER=system");
+    process.exit(1);
+  }
+  return { cmd: "uv", leadArgs: ["run", "--project", __skillRoot, "python", scriptPath] };
 }
 
 async function main(): Promise<void> {
@@ -50,23 +69,15 @@ async function main(): Promise<void> {
   const languages = optionalString(args, "languages");
   const recognitionLevel = optionalString(args, "recognition_level");
 
-  const scriptArgs = [
-    "skills/private/labali-image-ocr-macos-vision/scripts/ocr-image-macos.py",
-    "--image-path",
-    imagePath,
-  ];
+  const scriptPath = `${__skillRoot}/scripts/ocr-image-macos.py`;
+  const scriptArgs = ["--image-path", imagePath];
 
-  if (outputText) {
-    scriptArgs.push("--output-text", outputText);
-  }
-  if (languages) {
-    scriptArgs.push("--languages", languages);
-  }
-  if (recognitionLevel) {
-    scriptArgs.push("--recognition-level", recognitionLevel);
-  }
+  if (outputText) scriptArgs.push("--output-text", outputText);
+  if (languages) scriptArgs.push("--languages", languages);
+  if (recognitionLevel) scriptArgs.push("--recognition-level", recognitionLevel);
 
-  const result = spawnSync("python3", scriptArgs, {
+  const { cmd, leadArgs } = buildPythonCmd(scriptPath);
+  const result = spawnSync(cmd, [...leadArgs, ...scriptArgs], {
     stdio: "inherit",
     env: process.env,
   });

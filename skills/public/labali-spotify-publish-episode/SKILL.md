@@ -1,8 +1,9 @@
 ---
 name: labali-spotify-publish-episode
-description: Publish podcast episodes on Spotify for Creators using browser-only semantic automation with manual-login session reuse.
+description: Publish podcast episodes on Spotify for Creators using browser-only semantic automation with manual-login session reuse. Use when you need to publish, upload, or schedule a new podcast episode on Spotify for Creators via browser automation.
 license: MIT
 compatibility: macOS / Linux; requires agent-browser CLI in PATH, Chrome with remote-debugging enabled (default port 9222), and an authenticated Spotify for Creators session; Node.js ≥ 18 + tsx; internet access required.
+allowed-tools: "Bash(npx:*), Bash(pnpm:*)"
 metadata:
   pattern: pipeline
 ---
@@ -41,6 +42,14 @@ Publish podcast episodes to Spotify for Creators via browser automation:
 - For future `publish_at`: verify in Scheduled list; otherwise Published list
 - Never publish while media processing (wait for readiness indicator)
 - For scheduled: ensure target date/time fully configured before confirming
+
+---
+
+## NEVER
+
+- Never confirm a scheduled publish without verifying the target date and time are fully configured.
+- Never report success until the episode appears in the Published or Scheduled list — presence in Draft means the publish failed.
+- Never return success before business-state verification passes.
 
 ---
 
@@ -90,6 +99,8 @@ Publish episode: audio_file=/path/ep.mp3, title="Ep 19", description="...", show
 **Failure Handling:**
 - Deterministic failure → continue with policy, record for optimization
 - Policy failure → repair and retry until success criteria pass
+
+> If policy executor stage decisions are unclear, load `references/architecture.md` before proceeding.
 
 ---
 

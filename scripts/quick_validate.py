@@ -12,6 +12,7 @@ ALLOWED_FRONTMATTER_KEYS = {
     "license",
     "compatibility",
     "metadata",
+    "allowed-tools",
 }
 
 
@@ -77,6 +78,31 @@ def validate_skill_dir(skill_dir: Path) -> list[str]:
 
     if (skill_dir / "agents" / "openai.yaml").exists() is False:
         errors.append("Missing recommended file: agents/openai.yaml")
+
+    # Dependency isolation checks
+    if (skill_dir / "requirements.txt").exists():
+        if not (skill_dir / "pyproject.toml").exists():
+            errors.append(
+                "Python skill has requirements.txt but missing pyproject.toml"
+                " (required for uv-based isolation)"
+            )
+
+    if (skill_dir / "package.json").exists():
+        pkg_text = (skill_dir / "package.json").read_text(encoding="utf-8")
+        try:
+            import json
+            pkg = json.loads(pkg_text)
+        except Exception:
+            pkg = {}
+        if "engines" not in pkg or "node" not in pkg.get("engines", {}):
+            errors.append(
+                "TypeScript skill package.json missing engines.node field"
+            )
+        if not (skill_dir / "pnpm-lock.yaml").exists():
+            errors.append(
+                "TypeScript skill missing pnpm-lock.yaml"
+                " (run: pnpm install --dir <skill_root> --lockfile-only)"
+            )
 
     return errors
 

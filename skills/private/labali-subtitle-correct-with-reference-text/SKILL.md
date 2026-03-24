@@ -1,8 +1,9 @@
 ---
 name: labali-subtitle-correct-with-reference-text
-description: Correct subtitle wording using a reference script that has accurate text but no timestamps. Use when the existing subtitle file already has correct timeline but wrong words, and a separate text draft is available for textual correction.
+description: Correct subtitle wording using a reference script that has accurate text but no timestamps. Use when the existing subtitle file (.srt, .vtt, or similar) already has correct timestamps but wrong words, and a separate reference text (script, transcript) is available for textual correction.
 license: MIT
 compatibility: macOS / Linux; Node.js ≥ 18 + tsx; AI agent environment with file system access.
+allowed-tools: "Bash(npx:*), Bash(pnpm:*)"
 metadata:
   pattern: pipeline
 ---
@@ -19,6 +20,11 @@ Treat this skill as a deterministic subtitle-correction runner.
 - Preserve subtitle cue count and cue timing boundaries.
 - Output a corrected subtitle file.
 - Do not call external subtitle APIs.
+
+## NEVER
+
+- Never modify, shift, or interpolate cue timestamps — preserve them exactly as read from the input file.
+- Never generate output if either the subtitle file or the reference text file is missing or unreadable.
 
 ## Runtime Inputs
 
