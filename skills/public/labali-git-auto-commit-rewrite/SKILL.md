@@ -31,7 +31,10 @@ Use this skill for one-shot local commit workflows with strong commit-message qu
    - Avoid vague wording like only `update`/`align` when multiple meaningful changes exist.
 5. Stage all changes with `git add -A`.
 6. If there are no staged changes, stop and report `No changes to commit.`.
-7. Commit once with the generated subject and body.
+7. Commit once with the generated subject and body. The commit command MUST be prefixed with `LABALI_SKILL_COMMIT=1` so the repository's pre-commit hook recognizes it as skill-authorized:
+   ```bash
+   LABALI_SKILL_COMMIT=1 git commit -m "..."
+   ```
 8. MUST run `<skill_base_dir>/scripts/clean_commit.sh` immediately after commit (non-optional).
    The skill base directory is provided in the `Base directory for this skill:` line at the top of the invocation header.
 9. Return final commit hash and final subject line.

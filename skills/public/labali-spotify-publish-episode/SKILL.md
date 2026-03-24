@@ -1,6 +1,6 @@
 ---
 name: labali-spotify-publish-episode
-description: Publish podcast episodes on Spotify for Creators using browser-only semantic automation with manual-login session reuse. Use when you need to publish, upload, or schedule a new podcast episode on Spotify for Creators via browser automation.
+description: Publish podcast episodes on Spotify for Creators using browser-only semantic automation with manual-login session reuse. Use when asked to publish, upload, release, or schedule a podcast episode on Spotify for Creators (creators.spotify.com). Trigger phrases: "publish episode", "upload podcast", "release episode", "schedule podcast", "spotify creator".
 license: MIT
 compatibility: macOS / Linux; requires agent-browser CLI in PATH, Chrome with remote-debugging enabled (default port 9222), and an authenticated Spotify for Creators session; Node.js ≥ 18 + tsx; internet access required.
 allowed-tools: "Bash(npx:*), Bash(pnpm:*)"
@@ -10,17 +10,8 @@ metadata:
 
 # labali-spotify-publish-episode
 
-Treat this skill as a layered system, not a single script.
-
-## Layer Contract
-
-| Layer | File | Purpose |
-|-------|------|---------|
-| **Policy** | `SKILL.md` | Goals, constraints, success criteria |
-| **Strategy** | `references/architecture.md` | Execution model, failure handling |
-| **Execution** | `scripts/*.ts` | Concrete implementation (replaceable) |
-
-**Key Principle:** Scripts are replaceable assets. Policy layer remains stable across UI changes.
+This skill follows a three-layer architecture (Policy / Strategy / Execution).
+See `references/architecture.md` for layer boundaries and development constraints.
 
 ---
 
@@ -50,6 +41,8 @@ Publish podcast episodes to Spotify for Creators via browser automation:
 - Never confirm a scheduled publish without verifying the target date and time are fully configured.
 - Never report success until the episode appears in the Published or Scheduled list — presence in Draft means the publish failed.
 - Never return success before business-state verification passes.
+- Never use static coordinates, positional indexes, or DOM structure assumptions for interaction.
+- Never report a stage as complete based on click success alone — always validate by observable state change.
 
 ---
 
@@ -102,14 +95,25 @@ Publish episode: audio_file=/path/ep.mp3, title="Ep 19", description="...", show
 
 > If policy executor stage decisions are unclear, load `references/architecture.md` before proceeding.
 
+> **MANDATORY:** Before executing any UI interaction or workflow stage, load `references/plan.md` completely.
+
 ---
 
 ## Resources
 
+### Reference Loading
+
+| Scenario | Must load | Do NOT load |
+|----------|-----------|-------------|
+| Policy executor stage unclear | `references/architecture.md` | `references/plan.md` |
+| UI interaction / workflow steps | `references/plan.md` | `references/architecture.md` |
+| UI change or selector update | `references/plan.md` | — |
+| Script development / layer boundaries | `references/architecture.md` | `references/plan.md` |
+
+### Scripts
+
 | File | Purpose |
 |------|---------|
-| `references/architecture.md` | Architecture and development guidelines |
-| `references/plan.md` | Workflow map and UI pattern hints |
 | `scripts/auto-executor.ts` | Unified entry point |
 | `scripts/executor.ts` | Policy executor |
 | `scripts/deterministic.ts` | Deterministic cache |
