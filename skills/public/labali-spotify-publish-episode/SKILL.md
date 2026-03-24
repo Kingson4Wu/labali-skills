@@ -96,6 +96,9 @@ Publish episode: audio_file=/path/ep.mp3, title="Ep 19", description="...", show
 | **Default (unified)** | Deterministic cache → policy executor fallback |
 | **Policy-only** | Set `disable_deterministic_cache=true` |
 
+Deterministic cache runs first as the primary fast path. If it fails, policy executor takes over.
+When deterministic fails and policy succeeds, the cache is automatically regenerated in the same run.
+
 **Failure Handling:**
 - Deterministic failure → continue with policy, record for optimization
 - Policy failure → repair and retry until success criteria pass

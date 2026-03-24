@@ -1,5 +1,5 @@
 import { type PublishEpisodeInputs } from "./core";
-import { executeDeterministic } from "./deterministic";
+import { executeDeterministic } from "./cache/deterministic";
 
 type ArgMap = Record<string, string | boolean>;
 

@@ -24,6 +24,7 @@ export const SEARCH_EPISODES_PLACEHOLDER = "Search episode titles";
 // ============================================================================
 
 export type LogFn = (message: string) => void;
+export type PromptFn = (message: string) => Promise<void>;
 
 export interface PublishEpisodeInputs {
   audio_file: string;
@@ -45,7 +46,7 @@ export interface PublishEpisodeInputs {
 
 export interface ExecutorContext {
   logger?: LogFn;
-  prompt?: (message: string) => Promise<void>;
+  prompt?: PromptFn;
 }
 
 export interface AgentBrowserRef {

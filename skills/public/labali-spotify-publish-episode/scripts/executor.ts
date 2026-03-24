@@ -1,4 +1,4 @@
-import { mkdir } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import {
@@ -606,8 +606,35 @@ export async function execute(inputs: PublishEpisodeInputs, context: ExecutorCon
     const topSteps = sorted.slice(0, 6).map(([name, ms]) => `${name}=${(ms / 1000).toFixed(1)}s`);
     log(`[timing] total: ${(totalMs / 1000).toFixed(1)}s`);
     log(`[timing] top-steps: ${topSteps.join(", ")}`);
+
+    const publishMode = shouldVerifyAsScheduled(inputs.publish_at) ? "scheduled" : "immediate";
+    const finalSnapshot = await client.snapshot();
+    const finalRefs = finalSnapshot.data?.refs ?? {};
+    const titleRef = Object.values(finalRefs).find((r) => (r.role ?? "") === "textbox" && (r.name ?? "").toLowerCase().includes("title"));
+    const descRef = Object.values(finalRefs).find((r) => (r.role ?? "") === "textbox" && !(r.name ?? "").toLowerCase().includes("title") && !(r.name ?? "").toLowerCase().includes("search"));
+    const trajectory = {
+      timestamp: new Date().toISOString(),
+      ...(inputs.show_id ? { show_id: inputs.show_id } : inputs.show_name ? { show_name: inputs.show_name } : { show_home_url: inputs.show_home_url }),
+      stages: Object.keys(stepDurations).map((stage) => ({ stage, duration_ms: stepDurations[stage] })),
+      refs_snapshot: {
+        title_ref_role: titleRef?.role ?? "textbox",
+        title_ref_name: titleRef?.name ?? "Title",
+        description_ref_role: descRef?.role ?? "textbox",
+        description_ref_name: descRef?.name ?? "",
+      },
+      fallbacks_used: [],
+      publish_mode: publishMode,
+    };
+    try {
+      const cacheDir = resolve(".cache/spotify-publish");
+      await mkdir(cacheDir, { recursive: true });
+      await writeFile(resolve(cacheDir, "policy-trajectory-latest.json"), JSON.stringify(trajectory, null, 2), "utf8");
+    } catch {
+      // Non-fatal: trajectory logging must not block the successful result
+    }
+
     return {
-      status: shouldVerifyAsScheduled(inputs.publish_at) ? "scheduled" : "published",
+      status: publishMode === "scheduled" ? "scheduled" : "published",
       show: inputs.show_name ?? inputs.show_id ?? "unknown-show",
       url,
     };

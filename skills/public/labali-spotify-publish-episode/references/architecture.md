@@ -51,13 +51,29 @@ These constraints ensure `SKILL.md` remains stable and professional.
 
 ```
 Deterministic Cache → Policy Executor → Repair & Retry
-     (optional)      (mandatory baseline)   (in-loop)
+  (primary fast path)  (adaptive fallback)   (in-loop)
 ```
 
 1. Run deterministic cache as optional fast path
 2. On failure → auto-downgrade to policy executor
 3. On policy failure → repair and retry until success
 4. Record failures for optimization — log deterministic failure context and use policy-success evidence to improve deterministic mode.
+
+---
+
+## Regeneration Protocol
+
+When the deterministic cache is stale (fails) but the policy executor succeeds, the system auto-regenerates `scripts/cache/deterministic.ts` in the same run:
+
+1. Policy executor writes a trajectory log to `.cache/spotify-publish/policy-trajectory-latest.json`
+2. `auto-executor.ts` detects the deterministic failure + policy success condition
+3. AI agent reads the trajectory log and the current `scripts/cache/deterministic.ts`
+4. AI agent rewrites `scripts/cache/deterministic.ts` to incorporate the successful patterns
+5. Next run: deterministic cache succeeds again
+
+**Trigger condition:** deterministic attempted AND failed, policy succeeded.
+**No trigger:** deterministic succeeded (no regeneration needed), or policy also failed.
+**Non-interactive mode:** regeneration is skipped; guidance is logged to stdout.
 
 ---
 
@@ -104,7 +120,7 @@ When Spotify updates their UI:
 | Script | Role |
 |--------|------|
 | `scripts/auto-executor.ts` | Unified entry |
-| `scripts/deterministic.ts` | Deterministic cache |
+| `scripts/cache/deterministic.ts` | Deterministic cache (generated artifact — auto-regenerated when stale) |
 | `scripts/executor.ts` | Policy executor |
 | `scripts/core.ts` | Shared primitives |
 | `scripts/stage-detector.ts` | Stage inference |
