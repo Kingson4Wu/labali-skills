@@ -1,5 +1,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const skillRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 import {
   ACTION_CANDIDATES,
@@ -626,7 +629,7 @@ export async function execute(inputs: PublishEpisodeInputs, context: ExecutorCon
       publish_mode: publishMode,
     };
     try {
-      const cacheDir = resolve(".cache/spotify-publish");
+      const cacheDir = resolve(skillRoot, ".cache/spotify-publish");
       await mkdir(cacheDir, { recursive: true });
       await writeFile(resolve(cacheDir, "policy-trajectory-latest.json"), JSON.stringify(trajectory, null, 2), "utf8");
     } catch {

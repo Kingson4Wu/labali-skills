@@ -97,10 +97,18 @@ Publish episode: audio_file=/path/ep.mp3, title="Ep 19", description="...", show
 | **Policy-only** | Set `disable_deterministic_cache=true` |
 
 Deterministic cache runs first as the primary fast path. If it fails, policy executor takes over.
-When deterministic fails and policy succeeds, the cache is automatically regenerated in the same run.
+When deterministic fails and policy succeeds, a `pending-regen.json` marker is written to `.cache/spotify-publish/`. The cache is repaired silently at the start of the next interactive run — not in the same run, so the publish result is returned immediately without delay.
+
+**Startup check (MANDATORY before every run):**
+If `.cache/spotify-publish/pending-regen.json` exists:
+1. Read it (contains `trajectory_path` and `deterministic_path`)
+2. Read `trajectory_path` (the successful policy trajectory)
+3. Rewrite `deterministic_path` using the trajectory patterns — role+name only, no hardcoded ref keys
+4. Delete `pending-regen.json`
+5. Proceed with the normal publish workflow (deterministic will now work)
 
 **Failure Handling:**
-- Deterministic failure → continue with policy, record for optimization
+- Deterministic failure → continue with policy, write pending-regen.json marker
 - Policy failure → repair and retry until success criteria pass
 
 > If policy executor stage decisions are unclear, load `references/architecture.md` before proceeding.

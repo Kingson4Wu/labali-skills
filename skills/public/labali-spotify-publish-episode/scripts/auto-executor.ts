@@ -1,12 +1,11 @@
-import { appendFile, mkdir } from "node:fs/promises";
+import { appendFile, mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { type ExecutorContext, type PublishEpisodeInputs, type PromptFn } from "./core";
-import { executeDeterministic } from "./cache/deterministic";
-
-const skillRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+import { type ExecutorContext, type PublishEpisodeInputs } from "./core";
 import { execute as executePolicy } from "./executor";
+
+const skillRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 interface AutoExecutorContext extends ExecutorContext {
   preferDeterministic?: boolean;
@@ -24,44 +23,23 @@ interface FallbackRecord {
 }
 
 async function appendFallbackRecord(record: FallbackRecord): Promise<void> {
-  const dir = resolve(".cache/spotify-publish");
+  const dir = resolve(skillRoot, ".cache/spotify-publish");
   await mkdir(dir, { recursive: true });
   const line = `${JSON.stringify(record)}\n`;
   await appendFile(resolve(dir, "deterministic-policy-fallback-history.jsonl"), line, "utf8");
 }
 
-async function autoRegenerateDeterministic(
-  deterministicError: string,
-  skillRootPath: string,
-  prompt: PromptFn | undefined
-): Promise<void> {
-  const trajectoryPath = resolve(skillRootPath, ".cache/spotify-publish/policy-trajectory-latest.json");
-  const deterministicPath = resolve(skillRootPath, "scripts/cache/deterministic.ts");
-
-  if (!prompt) {
-    console.log(`[auto-regen] Deterministic failed: ${deterministicError}`);
-    console.log(`[auto-regen] Policy succeeded. Trajectory saved to: ${trajectoryPath}`);
-    console.log(`[auto-regen] Run interactively to trigger automatic deterministic regeneration.`);
-    return;
-  }
-
-  const message = `Deterministic cache failed with: ${deterministicError}
-
-Policy executor succeeded. The successful execution trajectory has been saved to:
-  ${trajectoryPath}
-
-Please immediately perform the following steps without asking for confirmation:
-1. Read ${trajectoryPath} (the successful policy trajectory)
-2. Read ${deterministicPath} (the current stale deterministic implementation)
-3. Rewrite ${deterministicPath} to fix the failure, incorporating the patterns from the successful policy trajectory
-4. The refs_snapshot in the trajectory is informational only — do NOT hardcode ref keys; use the role+name patterns instead
-5. Ensure the rewritten file preserves the same function signature: export async function executeDeterministic(inputs, context)
-
-Apply the fix now. No confirmation needed.`;
-
-  await prompt(message);
-  // Fire-and-forget: prompt returns void. The AI agent acts on the instruction
-  // asynchronously within the same session. Validation occurs on the next run.
+async function markPendingRegen(deterministicError: string): Promise<void> {
+  const cacheDir = resolve(skillRoot, ".cache/spotify-publish");
+  await mkdir(cacheDir, { recursive: true });
+  const marker = {
+    timestamp: new Date().toISOString(),
+    deterministic_error: deterministicError,
+    trajectory_path: resolve(skillRoot, ".cache/spotify-publish/policy-trajectory-latest.json"),
+    deterministic_path: resolve(skillRoot, "scripts/cache/deterministic.ts"),
+  };
+  await writeFile(resolve(cacheDir, "pending-regen.json"), JSON.stringify(marker, null, 2), "utf8");
+  console.log(`[auto-regen] Deterministic failed. Pending regen marker written — will be applied on next interactive run.`);
 }
 
 export async function execute(
@@ -80,6 +58,7 @@ export async function execute(
     deterministicAttempted = true;
     try {
       log("Deterministic trajectory cache attempt");
+      const { executeDeterministic } = await import("./cache/deterministic");
       const deterministicResult = await executeDeterministic(inputs, {
         logger: (msg) => log(`[deterministic] ${msg}`),
         prompt: context.prompt,
@@ -118,9 +97,9 @@ export async function execute(
     final_url: d2Result.url,
   });
 
-  // If deterministic failed but policy succeeded, auto-regenerate the cache
+  // If deterministic failed but policy succeeded, mark for async regen on next run
   if (deterministicAttempted && !deterministicSuccess && deterministicError) {
-    await autoRegenerateDeterministic(deterministicError, skillRoot, context.prompt);
+    await markPendingRegen(deterministicError).catch(() => { /* non-fatal */ });
   }
 
   return d2Result;
