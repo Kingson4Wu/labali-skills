@@ -57,7 +57,7 @@ Deterministic Cache → Policy Executor → Repair & Retry
 1. Run deterministic cache as optional fast path
 2. On failure → auto-downgrade to policy executor
 3. On policy failure → repair and retry until success
-4. Record failures for optimization
+4. Record failures for optimization — log deterministic failure context and use policy-success evidence to improve deterministic mode.
 
 ---
 
@@ -83,6 +83,13 @@ Deterministic Cache → Policy Executor → Repair & Retry
 
 ## UI Change Protocol
 
+When Spotify updates their UI:
+
+1. Check if semantic goals are still achievable (SKILL.md constraints).
+2. Update `references/plan.md` with new UI pattern hints.
+3. Update `scripts/` with new selectors/matching logic.
+4. Do NOT modify `SKILL.md` unless the fundamental workflow changes.
+
 | Change Type | Update |
 |-------------|--------|
 | Text change | `references/plan.md` only |
@@ -96,10 +103,11 @@ Deterministic Cache → Policy Executor → Repair & Retry
 
 | Script | Role |
 |--------|------|
-| `auto-executor.ts` | Unified entry |
-| `deterministic.ts` | Deterministic cache |
-| `executor.ts` | Policy executor |
-| `core.ts` | Shared primitives |
-| `stage-detector.ts` | Stage inference |
-| `publisher.ts` | Publish actions |
-| `verifier.ts` | Post-publish validation |
+| `scripts/auto-executor.ts` | Unified entry |
+| `scripts/deterministic.ts` | Deterministic cache |
+| `scripts/executor.ts` | Policy executor |
+| `scripts/core.ts` | Shared primitives |
+| `scripts/stage-detector.ts` | Stage inference |
+| `scripts/publisher.ts` | Publish actions |
+| `scripts/verifier.ts` | Post-publish validation |
+| `tests/test_regression.sh` | Regression checks |

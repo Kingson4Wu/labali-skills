@@ -102,32 +102,6 @@ Detect current page state:
 
 ---
 
-## Execution Mode
+> For execution mode configuration, see `references/architecture.md` → Execution Model.
 
-**Unified Runtime Order:**
-1. **Deterministic trajectory cache** (`deterministic.ts`) - optional acceleration
-2. **Auto-downgrade to policy executor** (`executor.ts`) - mandatory baseline
-
-**Configuration:**
-- Set `disable_deterministic_cache=true` to skip deterministic and run policy directly
-- Policy executor remains required baseline; deterministic is optional
-- On policy failure: repair and retry until publish verification passes
-- Log deterministic failure context; use policy-success evidence to improve deterministic mode
-
----
-
-## UI Change Protocol
-
-When Spotify updates their UI:
-
-1. **Check if semantic goals still achievable** (SKILL.md constraints)
-2. **Update this file** with new UI pattern hints
-3. **Update scripts** with new selectors/matching logic
-4. **Do NOT modify SKILL.md** unless the fundamental workflow changes
-
-| Change Type | Update Required |
-|-------------|-----------------|
-| Text change only | This file only |
-| Element reposition | Scripts only |
-| New required field | This file + scripts |
-| Workflow restructure | All layers |
+> For UI change protocol, see `references/architecture.md` → UI Change Protocol.

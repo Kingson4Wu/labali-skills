@@ -1,8 +1,15 @@
 ---
 name: labali-spotify-publish-episode
-description: Publish podcast episodes on Spotify for Creators using browser-only semantic automation with manual-login session reuse. Use when asked to publish, upload, release, or schedule a podcast episode on Spotify for Creators (creators.spotify.com). Trigger phrases: "publish episode", "upload podcast", "release episode", "schedule podcast", "spotify creator".
+description: >
+  Publish podcast episodes on Spotify for Creators using browser-only semantic automation with
+  manual-login session reuse. Use when asked to publish, upload, release, or schedule a podcast
+  episode on Spotify for Creators (creators.spotify.com). Trigger phrases: "publish episode",
+  "upload podcast", "release episode", "schedule podcast", "spotify creator".
 license: MIT
-compatibility: macOS / Linux; requires agent-browser CLI in PATH, Chrome with remote-debugging enabled (default port 9222), and an authenticated Spotify for Creators session; Node.js ≥ 18 + tsx; internet access required.
+compatibility: >
+  macOS / Linux; requires agent-browser CLI in PATH, Chrome with remote-debugging enabled
+  (default port 9222), and an authenticated Spotify for Creators session; Node.js >= 18 + tsx;
+  internet access required.
 allowed-tools: "Bash(npx:*), Bash(pnpm:*)"
 metadata:
   pattern: pipeline
@@ -115,6 +122,5 @@ Publish episode: audio_file=/path/ep.mp3, title="Ep 19", description="...", show
 | File | Purpose |
 |------|---------|
 | `scripts/auto-executor.ts` | Unified entry point |
-| `scripts/executor.ts` | Policy executor |
-| `scripts/deterministic.ts` | Deterministic cache |
-| `tests/test_regression.sh` | Regression checks |
+
+For the full script inventory, see `references/architecture.md` → Script Roles.
