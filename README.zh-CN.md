@@ -17,6 +17,10 @@
 
 将 skill 软链接到 `~/.claude/skills/`，Claude Code 会自动识别并以斜杠命令形式调用：
 
+> 进入 Claude Code 后，输入以下 prompt 并回车，以查看当前用户配置目录的实际位置：
+>
+> `执行 echo "${CLAUDE_CONFIG_DIR:-$HOME/.claude}" 并告诉我输出结果`
+
 ```bash
 mkdir -p ~/.claude/skills
 

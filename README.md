@@ -17,6 +17,10 @@ A skills monorepo for managing reusable skills.
 
 Symlink skills into `~/.claude/skills/` so Claude Code can discover them as slash commands:
 
+> To find the actual location of your user config directory, enter the following prompt in Claude Code and press Enter:
+>
+> `Run echo "${CLAUDE_CONFIG_DIR:-$HOME/.claude}" and tell me the output`
+
 ```bash
 mkdir -p ~/.claude/skills
 

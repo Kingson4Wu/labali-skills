@@ -31,7 +31,8 @@ Use this skill for one-shot local commit workflows with strong commit-message qu
 5. Stage all changes with `git add -A`.
 6. If there are no staged changes, stop and report `No changes to commit.`.
 7. Commit once with the generated subject and body.
-8. MUST run `scripts/clean_commit.sh` immediately after commit (non-optional).
+8. MUST run `<skill_base_dir>/scripts/clean_commit.sh` immediately after commit (non-optional).
+   The skill base directory is provided in the `Base directory for this skill:` line at the top of the invocation header.
 9. Return final commit hash and final subject line.
 
 ## Failure Handling
@@ -50,8 +51,9 @@ Use this skill for one-shot local commit workflows with strong commit-message qu
 
 ## Commit Helper
 
-Post-commit cleanup script:
+Post-commit cleanup script lives at `scripts/clean_commit.sh` inside this skill's own directory.
+Always resolve it via the `Base directory for this skill:` value injected at invocation time:
 
 ```bash
-skills/public/labali-git-auto-commit-rewrite/scripts/clean_commit.sh
+bash <skill_base_dir>/scripts/clean_commit.sh
 ```
