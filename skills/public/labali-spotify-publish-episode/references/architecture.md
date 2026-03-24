@@ -63,17 +63,22 @@ Deterministic Cache → Policy Executor → Repair & Retry
 
 ## Regeneration Protocol
 
-When the deterministic cache is stale (fails) but the policy executor succeeds, the system auto-regenerates `scripts/cache/deterministic.ts` in the same run:
+When the deterministic cache is stale (fails) but the policy executor succeeds:
 
 1. Policy executor writes a trajectory log to `.cache/spotify-publish/policy-trajectory-latest.json`
-2. `auto-executor.ts` detects the deterministic failure + policy success condition
-3. AI agent reads the trajectory log and the current `scripts/cache/deterministic.ts`
-4. AI agent rewrites `scripts/cache/deterministic.ts` to incorporate the successful patterns
-5. Next run: deterministic cache succeeds again
+2. `auto-executor.ts` writes a `.cache/spotify-publish/pending-regen.json` marker (non-blocking)
+3. Publish result is returned immediately — no delay waiting for regeneration
+
+At the **start of the next interactive run**, the startup check fires:
+
+4. AI agent reads `pending-regen.json` (contains `trajectory_path` and `deterministic_path`)
+5. AI agent reads the trajectory log and rewrites `scripts/cache/deterministic.ts`
+   using role+name patterns only — no hardcoded ref keys
+6. `pending-regen.json` is deleted
+7. Normal publish workflow proceeds with repaired deterministic cache
 
 **Trigger condition:** deterministic attempted AND failed, policy succeeded.
 **No trigger:** deterministic succeeded (no regeneration needed), or policy also failed.
-**Non-interactive mode:** regeneration is skipped; guidance is logged to stdout.
 
 ---
 
@@ -126,4 +131,6 @@ When Spotify updates their UI:
 | `scripts/stage-detector.ts` | Stage inference |
 | `scripts/publisher.ts` | Publish actions |
 | `scripts/verifier.ts` | Post-publish validation |
+| `scripts/run.ts` | CLI entry point; parses flags and invokes auto-executor |
+| `scripts/run_deterministic.ts` | Direct entry point for running deterministic cache only (bypasses auto-executor) |
 | `tests/test_regression.sh` | Regression checks |

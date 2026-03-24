@@ -20,14 +20,7 @@ metadata:
 This skill follows a three-layer architecture (Policy / Strategy / Execution).
 See `references/architecture.md` for layer boundaries and development constraints.
 
----
-
-## Goals
-
-Publish podcast episodes to Spotify for Creators via browser automation:
-- Immediate or scheduled publication
-- Metadata management (title, description, season/episode, cover art)
-- Draft cleanup and verification
+> **MANDATORY:** Before executing any UI interaction or workflow stage, load `references/plan.md` completely.
 
 ---
 
@@ -37,19 +30,21 @@ Publish podcast episodes to Spotify for Creators via browser automation:
 - Prefer semantic interactions (role + accessible name > visible text > label/placeholder)
 - Manual login; session reuse supported
 - Validate success by business state, not action success
+- Before advancing any wizard step, ask: what observable state proves this stage completed — not what action should have caused it
 - For future `publish_at`: verify in Scheduled list; otherwise Published list
 - Never publish while media processing (wait for readiness indicator)
 - For scheduled: ensure target date/time fully configured before confirming
+- Before initiating publish: verify all required fields are filled and no validation errors are visible
 
 ---
 
 ## NEVER
 
-- Never confirm a scheduled publish without verifying the target date and time are fully configured.
-- Never report success until the episode appears in the Published or Scheduled list — presence in Draft means the publish failed.
-- Never return success before business-state verification passes.
-- Never use static coordinates, positional indexes, or DOM structure assumptions for interaction.
-- Never report a stage as complete based on click success alone — always validate by observable state change.
+- Never confirm a scheduled publish without verifying the target date and time are fully configured — Spotify's scheduling UI allows clicking Schedule with a malformed or default date, silently publishing at the wrong time.
+- Never report success until the episode appears in the Published or Scheduled list — Spotify renders a success confirmation before list state actually updates; click success is not list presence, and presence in Draft means the publish failed.
+- Never return success before business-state verification passes — the publish action completing and the episode being live are two separate events.
+- Never use static coordinates, positional indexes, or DOM structure assumptions for interaction — Spotify's UI layout shifts between sessions, viewports, and A/B variants.
+- Never report a stage as complete based on click success alone — always validate by observable state change — buttons return success even when the underlying action is queued or rate-limited.
 
 ---
 
@@ -61,7 +56,6 @@ A run succeeds **only** when all conditions hold:
    - **Scheduled**: when `publish_at` is future
    - **Published**: when immediate
 2. Same episode does **not** appear in **Draft**
-3. No unresolved required fields remain
 
 ---
 
@@ -75,29 +69,12 @@ See `skill.yaml` for complete schema.
 
 ---
 
-## Example Usage
-
-**Immediate publish:**
-```text
-Publish episode: audio_file=/path/ep.mp3, title="Ep 18", description="...", show_id=abc123
-```
-
-**Scheduled publish:**
-```text
-Publish episode: audio_file=/path/ep.mp3, title="Ep 19", description="...", show_id=abc123, publish_at=2026-03-20T09:00:00+08:00
-```
-
----
-
 ## Operational Mode
 
 | Mode | Behavior |
 |------|----------|
 | **Default (unified)** | Deterministic cache → policy executor fallback |
 | **Policy-only** | Set `disable_deterministic_cache=true` |
-
-Deterministic cache runs first as the primary fast path. If it fails, policy executor takes over.
-When deterministic fails and policy succeeds, a `pending-regen.json` marker is written to `.cache/spotify-publish/`. The cache is repaired silently at the start of the next interactive run — not in the same run, so the publish result is returned immediately without delay.
 
 **Startup check (MANDATORY before every run):**
 If `.cache/spotify-publish/pending-regen.json` exists:
@@ -109,11 +86,9 @@ If `.cache/spotify-publish/pending-regen.json` exists:
 
 **Failure Handling:**
 - Deterministic failure → continue with policy, write pending-regen.json marker
-- Policy failure → repair and retry until success criteria pass
+- Policy failure → re-snapshot page state → re-detect current stage → retry from last known good stage; max 3 attempts before reporting failure with: current stage name, last observable state, and the action that failed
 
 > If policy executor stage decisions are unclear, load `references/architecture.md` before proceeding.
-
-> **MANDATORY:** Before executing any UI interaction or workflow stage, load `references/plan.md` completely.
 
 ---
 
