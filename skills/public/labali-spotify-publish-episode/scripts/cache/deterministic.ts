@@ -12,8 +12,8 @@ import {
   SPOTIFY_CREATORS_URL,
   validateInputs,
   type LogFn,
-} from "./core";
-import { applyScheduleIfRequested, waitForPreviewReady } from "./publisher";
+} from "../core";
+import { applyScheduleIfRequested, waitForPreviewReady } from "../publisher";
 import {
   ensureDashboardOrShows,
   ensureLoginRoute,
@@ -21,14 +21,14 @@ import {
   isCreatorsUrl,
   isUploadSurfaceVisible,
   isSameShowByUrl,
-} from "./stage-detector";
+} from "../stage-detector";
 import {
   deleteDraftEpisodes,
   shouldVerifyAsScheduled,
   verifyPublishedInList,
   verifyPublishedOnly,
   verifyScheduledInList,
-} from "./verifier";
+} from "../verifier";
 
 async function nativeTypeRef(client: AgentBrowserClient, refKey: string, value: string): Promise<boolean> {
   if (!(await client.clickRef(refKey))) {
