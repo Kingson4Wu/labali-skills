@@ -6,7 +6,7 @@ Conflict priority: user request > `AGENTS.md` > `DEVELOPMENT.md` / `docs/`
 
 ## Repo-Specific Rules
 
-> **CRITICAL: Never commit code automatically.** Only commit when the user explicitly requests it — e.g., says "commit", "提交", or invokes `/labali-git-auto-commit-rewrite`. Finishing a task does NOT imply permission to commit. If in doubt, do not commit — ask instead.
+> **CRITICAL: Never commit code automatically.** Only commit when the user explicitly requests it — e.g., says "commit", or invokes `/labali-git-auto-commit-rewrite`. Finishing a task does NOT imply permission to commit. If in doubt, do not commit — ask instead.
 - Always run `npm run skills:validate` and `npm run check:chinese` after any skill change, and fix all failures before committing.
 - All git commits MUST be made using the `labali-git-auto-commit-rewrite` skill. Direct `git commit` calls are blocked by the Claude Code hook.
   - If the skill is installed, invoke it via the `Skill` tool.

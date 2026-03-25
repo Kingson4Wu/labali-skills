@@ -125,7 +125,7 @@ export async function execute(
 
     const outputDirRaw = inputs.output_dir?.trim()
       ? inputs.output_dir.trim()
-      : await promptWithDefault("请输入本地保存目录 (--output_dir, 默认 ./downloads/douyin-user): ", "./downloads/douyin-user");
+      : await promptWithDefault("请输入本地保存目录 (--output_dir, 默认 ~/Downloads/douyin-user): ", "~/Downloads/douyin-user");
     const outputDir = ensureAbsolutePath(assertRequiredString(outputDirRaw, "output_dir"));
     await ensureDir(outputDir);
     const fixedUserDir = inputs.fixed_user_dir?.trim() ? ensureAbsolutePath(inputs.fixed_user_dir.trim()) : "";

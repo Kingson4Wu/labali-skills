@@ -157,8 +157,8 @@ export async function execute(
     const outputPathInput = inputs.output_path?.trim()
       ? inputs.output_path.trim()
       : await promptWithDefault(
-          "请输入输出文件路径或目录 (--output_path, 默认 ./downloads/xhs-post-links.txt): ",
-          "./downloads/xhs-post-links.txt"
+          "请输入输出文件路径或目录 (--output_path, 默认 ~/Downloads/xhs-post-links.txt): ",
+          "~/Downloads/xhs-post-links.txt"
         );
 
     const outputFile = await resolveOutputFile(outputPathInput, profileUrl);

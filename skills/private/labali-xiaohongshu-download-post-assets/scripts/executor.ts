@@ -144,7 +144,7 @@ export async function execute(inputs: DownloadPostInputs, context?: ExecutorCont
 
     const outputDirRaw = inputs.output_dir?.trim()
       ? inputs.output_dir.trim()
-      : await promptWithDefault("请输入本地保存目录 (--output_dir, 默认 ./downloads/xhs): ", "./downloads/xhs");
+      : await promptWithDefault("请输入本地保存目录 (--output_dir, 默认 ~/Downloads/xhs): ", "~/Downloads/xhs");
     const outputDir = ensureAbsolutePath(assertRequiredString(outputDirRaw, "output_dir"));
     await ensureDir(outputDir);
 
@@ -152,6 +152,13 @@ export async function execute(inputs: DownloadPostInputs, context?: ExecutorCont
     await page.goto(navigationPostUrl, { waitUntil: "domcontentloaded", timeout: timeoutMs });
     await page.waitForLoadState("networkidle", { timeout: timeoutMs }).catch(() => undefined);
     await page.waitForTimeout(1200);
+
+    const currentUrlAfterNav = page.url();
+    if (!currentUrlAfterNav.includes(noteId)) {
+      throw new Error(
+        `Page redirected away from target note. Expected URL to contain note ID "${noteId}", but current URL is: ${currentUrlAfterNav}`
+      );
+    }
 
     let snapshot = await extractPostSnapshot(page, noteId);
     if (await isLoginRequired(page, snapshot)) {
@@ -164,6 +171,12 @@ export async function execute(inputs: DownloadPostInputs, context?: ExecutorCont
       await page.goto(navigationPostUrl, { waitUntil: "domcontentloaded", timeout: timeoutMs });
       await page.waitForLoadState("networkidle", { timeout: timeoutMs }).catch(() => undefined);
       await page.waitForTimeout(1200);
+      const currentUrlAfterLogin = page.url();
+      if (!currentUrlAfterLogin.includes(noteId)) {
+        throw new Error(
+          `After login, page redirected away from target note. Expected URL to contain note ID "${noteId}", but current URL is: ${currentUrlAfterLogin}`
+        );
+      }
       snapshot = await extractPostSnapshot(page, noteId);
     }
 

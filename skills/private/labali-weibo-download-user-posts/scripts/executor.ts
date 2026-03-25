@@ -104,7 +104,7 @@ export async function execute(inputs: DownloadUserWeiboInputs, context?: Executo
 
     const outputDirRaw = inputs.output_dir?.trim()
       ? inputs.output_dir.trim()
-      : await promptWithDefault("请输入本地保存目录 (--output_dir, 默认 ./downloads/weibo-user): ", "./downloads/weibo-user");
+      : await promptWithDefault("请输入本地保存目录 (--output_dir, 默认 ~/Downloads/weibo-user): ", "~/Downloads/weibo-user");
     const outputDir = ensureAbsolutePath(assertRequiredString(outputDirRaw, "output_dir"));
     await ensureDir(outputDir);
 

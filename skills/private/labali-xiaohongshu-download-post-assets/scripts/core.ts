@@ -212,7 +212,8 @@ export function normalizePublishTime(input: string): string {
 }
 
 export function ensureAbsolutePath(pathLike: string): string {
-  return resolve(pathLike);
+  const expanded = pathLike.startsWith("~/") ? `${homedir()}/${pathLike.slice(2)}` : pathLike;
+  return resolve(expanded);
 }
 
 export async function ensureDir(pathLike: string): Promise<void> {
