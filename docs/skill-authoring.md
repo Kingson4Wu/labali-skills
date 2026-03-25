@@ -1,10 +1,10 @@
 # Skill Authoring Guide
 
-Reference this document when creating or modifying a skill.
+Reference this document when creating or modifying a skill. For content design principles, NEVER list guidelines, skill content patterns, and loading trigger techniques, see `docs/skill-reference.md`.
 
-## Skill Types
+## Skill Execution Types
 
-Skill types are **reference models**, not fixed labels. They help determine which layers a skill needs, but a skill is not required to declare its type. Skills evolve — a `cli` skill may grow into `hybrid` as requirements change. Use the closest type as a guide; introduce a new pattern when none fit.
+Execution types describe how a skill operates at runtime. They determine which layers and files a skill needs. Types are **reference models**, not required declarations — a skill is not required to declare its type, and types evolve as requirements change.
 
 | Type | Description |
 |------|-------------|
@@ -13,13 +13,11 @@ Skill types are **reference models**, not fixed labels. They help determine whic
 | `cli` | Wraps command-line tools or scripts (Python, shell, TypeScript) |
 | `hybrid` | AI reasoning combined with script assistance |
 
-## Universal Requirements (all types)
+## Required Files
 
-- `SKILL.md` — policy layer; frontmatter must include `name` (matching folder name) and `description`
-- `agents/openai.yaml` — skill interface manifest for discovery and invocation
-- `README.md` — usage documentation
+Only `SKILL.md` is universally required. All other files are determined by execution type.
 
-## Layer Requirements by Type
+## Layer Requirements by Execution Type
 
 | Layer | Location | `browser` | `policy` | `cli` | `hybrid` |
 |-------|----------|-----------|----------|-------|---------|
@@ -30,18 +28,6 @@ Skill types are **reference models**, not fixed labels. They help determine whic
 ## Optional Files (all types)
 
 `skill.yaml` (input schema), `tests/`, `assets/`
-
-## agents/openai.yaml
-
-Every skill must have this file. It is the skill's public interface manifest:
-
-```yaml
-version: 1
-interface:
-  display_name: Human-readable skill name
-  description: One-sentence description used for skill matching and discovery
-  default_prompt: Default prompt template shown when the skill is invoked
-```
 
 ## Dependency Management
 
@@ -122,8 +108,3 @@ Also keep a `requirements.txt` with a comment noting it is for system-mode refer
 ### Scripts using only built-ins
 
 No dependency file needed.
-
-## Naming Rules
-
-- Folder names: lowercase letters, numbers, hyphens only; max 64 characters.
-- `name` in `SKILL.md` frontmatter must exactly match the folder name.
