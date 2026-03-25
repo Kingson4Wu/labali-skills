@@ -125,7 +125,14 @@ export async function execute(inputs: DownloadPostInputs, context?: ExecutorCont
 
   try {
     const browserContext = browser.contexts()[0] ?? (await browser.newContext());
-    const page = browserContext.pages()[0] ?? (await browserContext.newPage());
+    const existingPages = browserContext.pages();
+    const xhsPage = existingPages.find((p) => p.url().includes("xiaohongshu.com"));
+    if (xhsPage) {
+      log(`reuse existing Xiaohongshu tab: ${xhsPage.url()}`);
+    } else {
+      log(`no existing Xiaohongshu tab found, opening new tab`);
+    }
+    const page = xhsPage ?? (await browserContext.newPage());
 
     let postUrlInput = inputs.post_url?.trim();
     if (!postUrlInput) {

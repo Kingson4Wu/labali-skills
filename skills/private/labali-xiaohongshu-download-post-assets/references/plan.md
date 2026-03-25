@@ -1,11 +1,14 @@
 # Workflow Plan
 
 ## Stage 1: Browser Session
-- Launch or reuse Chrome by:
-  `open -na "Google Chrome" --args --remote-debugging-port=9222 --user-data-dir="$HOME/.chrome-labali"`.
-- Connect through CDP (default `9222`).
-- Open Xiaohongshu home page first (`https://www.xiaohongshu.com`).
-- If login state is detected, guide user to login manually in the opened window.
+- Check if Chrome with remote debugging is already running on the CDP port (`http://127.0.0.1:<port>/json/version`).
+  - If already running: reuse the existing instance — do not launch a new Chrome process.
+  - If not running: launch with `open -na "Google Chrome" --args --remote-debugging-port=<port> --user-data-dir=<profile_dir>`.
+- Connect through CDP.
+- Check existing tabs for any `xiaohongshu.com` page:
+  - If found: reuse that tab — do not navigate away from other open tabs.
+  - If not found: open a new tab.
+- Check login state; if login required, guide user to complete manual login in the current window.
 
 ## Stage 2: Inputs
 - Read `post_url` and `output_dir` from CLI flags.

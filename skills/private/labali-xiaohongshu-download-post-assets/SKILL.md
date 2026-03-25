@@ -73,9 +73,10 @@ Use `skill.yaml` as the source of truth for input schema.
 - Default mode: guided browser flow + semantic extraction + authenticated media download.
 - Optional mode: add semantic comment extraction, comment image download, and write `comments/comments.json` + `comments/comments.md` when `include_comments=true`.
 - Startup guidance:
-  - launch/reuse Chrome by the unified `open -na "Google Chrome"` CDP command,
+  - if Chrome with remote debugging is already running on the CDP port, reuse it — do not launch a new instance,
   - connect via CDP port,
-  - open Xiaohongshu home page first,
+  - if an existing Xiaohongshu tab is found, reuse it — do not open a new tab or navigate away from any other active tab,
+  - if no Xiaohongshu tab exists, open a new tab,
   - check whether login is required,
   - if required, guide user to complete manual login in the same window,
   - if already logged in, skip login wait.
