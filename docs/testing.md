@@ -31,7 +31,7 @@ Verify the skill activates on the right requests:
 - **Should trigger**: direct phrasing, paraphrased requests, synonyms
 - **Should NOT trigger**: clearly unrelated topics
 
-Debug tip: ask Claude "When would you use the [skill name] skill?" — adjust the `description` field based on what it quotes back.
+Debug tip: ask the AI model "When would you use the [skill name] skill?" — adjust the `description` field based on what it quotes back.
 
 ### Functional Tests (all skill types)
 

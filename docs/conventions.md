@@ -29,6 +29,12 @@ Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `improve`.
 - Use `test:` only for pure test changes.
 - Use `improve:` for quality/content improvements that are not new features or bug fixes.
 
+## Documentation Language
+
+**AI model** — the AI executing skills or tasks (Claude, Codex, Gemini, or equivalent). Use "the AI model" in all project documentation when referring to generic AI capability, not a specific product.
+
+Reserve product names (Claude, Claude Code, Codex, Gemini) only when referring to a feature or behavior specific to that product.
+
 ## Naming Rules
 
 - Skill folder names: lowercase letters, numbers, hyphens only; max 64 characters.

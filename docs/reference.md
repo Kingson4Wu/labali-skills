@@ -31,4 +31,4 @@ Responsibility boundary: Agent decides, Skill executes, Prompt constrains, Tools
 - **Semantic action**: interaction anchored by role + accessible name, visible text, or label/placeholder — not brittle DOM selectors or coordinates.
 - **Business-state verification**: success check based on observable product state (e.g., episode in `Published` list), not on action completion or UI confirmation messages.
 - **Startup check**: mandatory check at the beginning of every browser skill run — detects `pending-regen.json` and repairs the deterministic cache before proceeding.
-- **Knowledge delta**: the gap between what a skill provides and what Claude already knows. A skill's value is measured by this delta — only expert-exclusive knowledge earns its token cost.
+- **Knowledge delta**: the gap between what a skill provides and what the AI model already knows. A skill's value is measured by this delta — only expert-exclusive knowledge earns its token cost.

@@ -56,19 +56,19 @@ description: Helps with projects.
 ### The Good Skill Formula
 
 ```
-Good Skill = Expert-exclusive knowledge − What Claude already knows
+Good Skill = Expert-exclusive knowledge − What the AI model already knows
 ```
 
 A Skill is not a tutorial. It is **externalized expert knowledge**: decision frameworks, anti-pattern intuitions, edge-case experience.
-Claude already knows how to write code, debug, handle PDFs, etc. **Do not teach these.**
+The AI model already knows how to write code, debug, handle PDFs, etc. **Do not teach these.**
 
-For every piece of content, ask: Does Claude genuinely not know this? Would removing it affect quality? Is it worth the token cost?
+For every piece of content, ask: Does the AI model genuinely not know this? Would removing it affect quality? Is it worth the token cost?
 
 ### 6 Core Standards
 
 | # | Standard | Key point |
 |---|----------|-----------|
-| 1 | **Token efficiency** | Only include knowledge Claude doesn't already have |
+| 1 | **Token efficiency** | Only include knowledge the AI model doesn't already have |
 | 2 | **Convey mental models, not steps** | Write how an expert *thinks*, not Step 1/2/3 sequences |
 | 3 | **Explicit anti-pattern list** | Must have a NEVER list — defines the quality floor |
 | 4 | **Description must specify trigger conditions** | Description is the only part always in memory; the Agent uses it to decide activation |
@@ -171,12 +171,12 @@ Agents will not load references automatically — embed explicit loading instruc
 
 ## Testing & Iteration
 
-**Core method:** Iterate on a single challenging task until Claude succeeds, then extract the winning approach into a skill.
+**Core method:** Iterate on a single challenging task until the AI model succeeds, then extract the winning approach into a skill.
 
 **Trigger testing:**
 - Should trigger: direct phrasing, paraphrased requests, synonyms
 - Should NOT trigger: unrelated topics
-- Debug tip: ask Claude `"When would you use the [skill name] skill?"` — adjust description based on what it quotes back
+- Debug tip: ask the AI model `"When would you use the [skill name] skill?"` — adjust description based on what it quotes back
 
 **Functional testing:** Run the same task 3–5 times; check for structural consistency and quality stability.
 
@@ -203,7 +203,7 @@ Structure
 [ ] description: includes what + when + triggers, no XML tags, ≤ 1024 chars
 
 Content Quality
-[ ] Does not explain concepts Claude already knows
+[ ] Does not explain concepts the AI model already knows
 [ ] No mechanical Step 1/2/3 (unless operation is genuinely fragile)
 [ ] Has a NEVER list (anti-patterns)
 [ ] Has a decision tree or selection guide when multiple paths exist
@@ -230,4 +230,4 @@ Testing
 1. How does a top expert in this domain **think** through the problem?
 2. What are their core decision-making principles?
 3. What pitfalls have they encountered? What would they **never** do?
-4. What knowledge is **not in Claude's training** but essential for this task?
+4. What knowledge is **not in the AI model's training** but essential for this task?
