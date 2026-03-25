@@ -12,6 +12,8 @@ Run `npm run check:chinese` to verify. This check also runs in CI.
 
 ## Commit Workflow
 
+**Never commit automatically.** Only commit when the user explicitly requests it — e.g., says "commit", "提交", or invokes `/labali-git-auto-commit-rewrite`. Completing a task does not imply permission to commit.
+
 All commits must be made using the `labali-git-auto-commit-rewrite` skill. Do not commit directly without going through the skill.
 
 ## Commit Message Format
