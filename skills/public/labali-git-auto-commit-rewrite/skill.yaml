@@ -1,5 +1,5 @@
 name: labali-git-auto-commit-rewrite
-description: AI-driven skill to generate a conventional commit message from current repository changes, stage all files, commit, and run the post-commit cleanup script.
+description: Generate a conventional commit message from current git changes, stage all files, commit locally, and normalize via clean_commit.sh. Use when users want to commit, stage and commit, auto-commit, or generate a commit message for current changes. Trigger phrases: "commit changes", "git commit", "commit all", "commit message", "conventional commit".
 inputs:
   focus:
     type: string
