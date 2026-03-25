@@ -1,0 +1,116 @@
+---
+name: labali-image-ocr-macos-vision
+description: Run native macOS image OCR through Vision.framework via pyobjc bridge (same engine family used by Preview/Live Text), with Chinese+English recognition defaults and deterministic CLI execution. Use when you need to extract text from local images on macOS — including screenshots, photos, or scanned documents — and want output to stdout or a text file. Also known as image-to-text or read-text-from-image.
+license: MIT
+allowed-tools: "Bash(npx:*), Bash(python3:*), Bash(pip:*)"
+metadata:
+  pattern: pipeline
+  compatibility: "macOS only (10.15 Catalina or later); requires Python 3 + pyobjc-framework-Vision; Vision.framework provided by macOS"
+---
+
+# labali-image-ocr-macos-vision
+
+Deterministic local OCR executor backed by Apple Vision.framework. No network calls, no third-party cloud, no API keys. Recognition runs on-device using the same ML model as Preview and Live Text.
+
+Two implementation details that affect output and are not in Apple's public docs:
+- **Bounding-box coordinate origin is lower-left** (not upper-left like screen coordinates). The script compensates by sorting on `-(y + height)` descending, then `x` ascending to produce correct reading order.
+- **Language correction (`setUsesLanguageCorrection_`) is always enabled** — Vision silently applies a language model to fix likely OCR errors based on the primary recognition language. This improves accuracy but can silently "correct" uncommon proper nouns or technical terms to more common alternatives.
+
+## NEVER
+
+- **NEVER pass a remote URL or HTTP path** — Vision.framework requires a local `file://` URI. Remote paths produce empty output with no error raised.
+- **NEVER treat empty output as success** — Vision returns an empty string (not an exception) when: image resolution is too low, format is unsupported, or text contrast is insufficient. Always check that output is non-empty when text is expected.
+- **NEVER use `fast` mode for Chinese-heavy images** — `fast` drops strokes on dense CJK characters; use `accurate` (default) unless throughput is more important than accuracy.
+- **NEVER assume pyobjc is available system-wide** — it must be installed in the active Python environment. If import fails, the script prints the install command to stderr.
+- **NEVER run on non-macOS** — the script fails fast with an explicit error; do not attempt fallback OCR (tesseract accuracy for Chinese is significantly lower).
+- **NEVER put `zh-Hant` before `zh-Hans` in the languages list for Simplified Chinese documents** — Vision uses the first language as the primary for character disambiguation; wrong ordering causes Simplified characters to be interpreted as Traditional variants, producing incorrect output on ambiguous glyphs.
+
+## Before Running — Expert Pre-flight
+
+Before invoking OCR, ask yourself:
+
+- **Format**: Is this image JPEG/PNG/HEIC/TIFF/BMP/GIF? WebP and SVG must be converted first with `sips`.
+- **Density**: Is the text Chinese-heavy, handwritten, or in a dense layout? If yes → `accurate` is mandatory, not optional.
+- **Path**: Is the path local and absolute (or `~/`-prefixed)? HTTP paths and relative paths without context will silently fail or error.
+- **Environment**: Has `pyobjc-framework-Vision` been installed in the active Python environment? On a fresh machine or new venv, it needs `pip install` first.
+
+## Required Constraints
+
+- Run on macOS only — Vision.framework is not available on Linux or Windows.
+- Default recognition languages: `zh-Hans`, `zh-Hant`, `en`.
+- Default recognition level: `accurate` — required for dense Chinese text; `fast` is ~10× faster but drops strokes on complex CJK layouts.
+- Input must be a local file path — Vision.framework uses a file URL internally.
+
+## Recognition Level Decision
+
+| Scenario | Use |
+|----------|-----|
+| Chinese text, mixed scripts, handwriting, dense layouts | `accurate` (default) |
+| English-only, printed text, speed matters more than accuracy | `fast` |
+
+## Supported Image Formats
+
+Vision.framework accepts: **JPEG, PNG, HEIC/HEIF, TIFF, BMP, GIF (first frame only)**.
+
+Does **NOT** accept: WebP, SVG, raw camera formats.
+
+> If input is WebP or SVG, convert first:
+> ```bash
+> sips -s format png input.webp --out input.png
+> ```
+
+## Runtime Inputs
+
+**Required:** `image_path` — absolute or `~/`-relative path to a local image file.
+**Optional:**
+- `output_text` — path to write OCR result; stdout only if omitted.
+- `languages` — comma-separated BCP-47 codes (default: `zh-Hans,zh-Hant,en`).
+- `recognition_level` — `accurate` (default) or `fast`.
+
+## Execution
+
+```bash
+npx tsx skills/private/labali-image-ocr-macos-vision/scripts/run.ts \
+  --image_path "/path/to/image.jpg" \
+  [--output_text "/path/to/result.txt"] \
+  [--languages "zh-Hans,zh-Hant,en"] \
+  [--recognition_level accurate]
+```
+
+The wrapper delegates to `scripts/ocr-image-macos.py`.
+
+## Failure Modes and Remedies
+
+| Symptom | Likely Cause | Remedy |
+|---------|-------------|--------|
+| Empty output, no error | Image below ~64×64 px, wrong format, low contrast | Upscale or convert; verify format is in supported list |
+| `Missing macOS Vision bridge dependencies` | pyobjc not installed in active env | `pip install pyobjc-framework-Vision pyobjc-framework-Quartz` |
+| `Image file not found` | Path wrong or `~` not expanded | Use absolute path; script calls `expanduser()` automatically |
+| `Vision request execution failed` | Corrupted image file | Verify file opens in Preview; try re-exporting |
+| Garbled or merged lines | Low-DPI scan or rotated image | Increase DPI or rotate to upright before OCR |
+| Script fails before OCR (import error, module not found) | Wrong Python env or venv not activated | Check `which python3`; ensure venv with pyobjc is active; run `pip show pyobjc-framework-Vision` to verify |
+
+## Resources
+
+| File | Purpose |
+|------|---------|
+| `references/architecture.md` | Strategy layer: stage model, fallback order, quality gates, edge cases |
+| `scripts/ocr-image-macos.py` | Core OCR implementation via Vision.framework |
+| `scripts/run.ts` | Execution entry point (input parsing, delegation) |
+
+**MANDATORY — load `references/architecture.md` when:**
+- OCR returns empty output and the cause is unclear
+- Input format is unsupported or needs conversion
+- You need the fallback order, stage model, or known edge case handling (HEIC, GIF, PDF, rotated images)
+
+**Do NOT load** `references/architecture.md` for standard successful runs — the information above is sufficient.
+
+## Success Criteria
+
+A run is successful only when all conditions hold:
+
+1. Script validates runtime is macOS.
+2. Input image exists, is readable, and has a supported format.
+3. Vision request completes without API error.
+4. OCR text is printed to stdout (may be empty if image contains no recognizable text).
+5. If `output_text` is provided, text file is written successfully.
