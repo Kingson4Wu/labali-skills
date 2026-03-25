@@ -38,7 +38,8 @@ Treat this skill as a layered system, not a single script.
 - Treat comment export as best-effort (not a fully reliable/comprehensive feature).
 - Do not generate `manifest.json`.
 - If multiple video segments are downloaded, merge them into one file and delete segment files.
-- Normalize post URL to canonical format: `https://www.xiaohongshu.com/explore/<note_id>`.
+- Preserve all original query parameters (especially `xsec_token`, `xsec_source`, `share_id`) for page navigation — Xiaohongshu uses these tokens to render authenticated content; stripping them causes incomplete page rendering (wrong image count, missing text).
+- Normalize post URL to canonical format (`https://www.xiaohongshu.com/explore/<note_id>`) for output only: folder naming, `post.md` source field, and logs. Do not strip params before navigating.
 
 ## NEVER
 

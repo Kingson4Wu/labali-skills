@@ -15,8 +15,10 @@
 - Resolve persistent profile directory.
 
 ## Stage 3: Post Open
-- Normalize URL to canonical `/explore/<note_id>` form.
-- Open target post URL and wait for page load.
+- Extract `note_id` from the input URL for folder naming and output metadata.
+- Navigate using the **original URL** with all query parameters preserved — `xsec_token` and related share params are required for Xiaohongshu to render authenticated content; a URL without them may produce incomplete image sets and missing text.
+- Canonical form (`/explore/<note_id>` only) is used for output fields (folder name, `post.md` source URL, logs) — not for navigation.
+- Wait for page load.
 
 ## Stage 4: Extraction
 - Extract post publish time.

@@ -141,7 +141,7 @@ export async function execute(inputs: DownloadPostInputs, context?: ExecutorCont
     const outputDir = ensureAbsolutePath(assertRequiredString(outputDirRaw, "output_dir"));
     await ensureDir(outputDir);
 
-    log(`opening post URL: ${canonicalPostUrl}`);
+    log(`opening post URL: ${navigationPostUrl}`);
     await page.goto(navigationPostUrl, { waitUntil: "domcontentloaded", timeout: timeoutMs });
     await page.waitForLoadState("networkidle", { timeout: timeoutMs }).catch(() => undefined);
     await page.waitForTimeout(1200);

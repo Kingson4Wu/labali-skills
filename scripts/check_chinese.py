@@ -25,6 +25,7 @@ SKIP_DIRS = {
     ".venv",
     "dist",
     "coverage",
+    "downloads",
 }
 
 # Only check these file extensions
