@@ -1,28 +1,14 @@
 ---
 name: labali-xiaohongshu-download-post-assets
-description: Download Xiaohongshu post assets to a specified local directory using browser-only automation with manual-login session reuse. Use when tasks require guided flow: open browser, guide login if needed, ask for post URL, normalize URL to /explore/<note_id>, save post images, generate post.md, download video when available, and optionally export post comments.
+description: Download XiaoHongShu (XHS / xiaohongshu) post assets — images, video, text metadata — to a local folder using browser automation with manual-login session reuse. Use when downloading a XHS post, saving post images, exporting post content, or archiving a note. Trigger phrases: "download xhs", "xiaohongshu post", "xhs images", "save post", "xhs note", "xiaohongshu download".
 license: MIT
-compatibility: macOS / Linux; requires Chrome with remote-debugging enabled (default port 9222) and an authenticated Xiaohongshu session; Node.js ≥ 18 + tsx; internet access required.
 allowed-tools: "Bash(npx:*), Bash(pnpm:*)"
 metadata:
   pattern: pipeline
+  compatibility: "macOS / Linux; requires Chrome with remote-debugging enabled (port 9222) and authenticated XiaoHongShu session; Node.js ≥ 18 + tsx"
 ---
 
 # labali-xiaohongshu-download-post-assets
-
-Treat this skill as a layered system, not a single script.
-
-## Layer Contract
-
-1. `SKILL.md` (this file) is the policy layer.
-   - Define goals, constraints, success criteria, and decision boundaries.
-   - Stay semantic and stable across UI changes.
-2. `references/architecture.md` is the strategy layer.
-   - Define execution model, failure handling, and quality standards.
-3. `scripts/*.ts` is the execution layer.
-   - Scripts are execution assets, not the skill definition itself.
-   - Use persistent browser profile for manual-login reuse.
-   - Keep download and extraction logic modular and replaceable.
 
 ## Required Constraints
 
@@ -46,6 +32,9 @@ Treat this skill as a layered system, not a single script.
 - Never leave multiple video segment files in the output folder after a successful run — merge segments and delete the originals.
 - Never report success if `post.md` was not generated.
 - Never report success based on action completion alone — verify output folder structure and required files exist.
+- **Never strip xsec_token or share params before navigating** — XiaoHongShu uses these tokens server-side to render authenticated content; a URL without them silently produces wrong image counts and missing text, with no error.
+- **Never launch a new Chrome instance if CDP is already responding on port 9222** — launching a second instance creates a separate session, loses the authenticated profile, and forces re-login.
+- **Never take over a non-XiaoHongShu browser tab** — if an existing XHS tab is found, reuse it by navigating it to the post URL; if no XHS tab exists, open a new tab. Never hijack tabs belonging to other pages (e.g., Gmail, dev tools). The correct behavior is always: XHS tab → navigate it to post URL; no XHS tab → open new tab.
 
 ## Success Criteria
 
@@ -63,10 +52,6 @@ A run is successful only when all conditions hold:
 
 Comment export quality note:
 - Even when execution succeeds, comment coverage and hierarchy/reply linking can be partial due to page-side rendering and loading variability.
-
-## Runtime Inputs
-
-Use `skill.yaml` as the source of truth for input schema.
 
 ## Operational Mode
 
@@ -91,14 +76,12 @@ Use `skill.yaml` as the source of truth for input schema.
   - keep successfully downloaded files,
   - return result with explicit failure count.
 
-> If failure handling or extraction decisions are unclear, load `references/architecture.md`.
-> If extraction or comment export strategy is unclear, load `references/plan.md`.
-
 ## Resources
 
-- Architecture and standards: `references/architecture.md`
-- Workflow map and extraction plan: `references/plan.md`
-- Shared runtime and downloader helpers: `scripts/core.ts`
-- Main orchestration: `scripts/executor.ts`
-- CLI entry: `scripts/run.ts`
-- Regression checks: `tests/test_regression.sh`
+| When | Must load | Do NOT load |
+|------|-----------|-------------|
+| Always — at skill invocation start | `references/plan.md` | `references/architecture.md` |
+| Extraction returns wrong count or fails | `references/architecture.md` | — |
+| Video merge or comment export unclear | `references/architecture.md` | — |
+
+**MANDATORY — load `references/plan.md` immediately when this skill is invoked**, before any browser or extraction action begins.

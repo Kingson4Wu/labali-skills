@@ -1,45 +1,38 @@
 # Architecture and Standards
 
-## 1) Layered Boundaries
+## 1) Execution Model
 
-### Policy Layer (`SKILL.md`)
-- Scope: intent, constraints, success criteria, boundaries.
-- Keep stable even when page structure changes.
+Scripts: `core.ts` (URL parsing, extraction, file writing), `executor.ts` (full workflow orchestration), `run.ts` (CLI entry).
 
-### Strategy Layer (`references/*.md`)
-- Scope: workflow map, extraction heuristics, fallback rules.
-- Document why decisions are made, not low-level selectors only.
+**Key constraints that are non-obvious and must not be violated:**
 
-### Execution Layer (`scripts/*.ts`)
-- Scope: Chrome CDP startup/reuse, browser connection, post extraction, optional comment export, and authenticated asset downloads.
-- Current decomposition:
-  - `core.ts`: URL parsing, content extraction, media detection, file writing.
-  - `executor.ts`: full workflow orchestration and retry path after manual login.
-  - `run.ts`: CLI argument parsing and execution.
+- **URL navigation**: always use the full original URL with all query params — `xsec_token` and share params are required for XiaoHongShu to render authenticated content server-side. Stripping them silently produces wrong image counts and missing text with no error.
+- **Browser session**: if CDP responds on port 9222, reuse that instance. Launching a second Chrome instance creates a separate unauthenticated session.
+- **Tab selection**: find an existing `xiaohongshu.com` tab and navigate it to the post URL. If no XHS tab exists, open a new tab. Never take over non-XHS tabs.
+- **Extraction order**: attempt state-intercept first; fall back to DOM only when state returns 0 results (see Extraction Decision Guide).
+- **Download context**: use the browser's authenticated request context for all media fetch — not a plain HTTP client.
+- **Video output**: if video is segmented (HLS), merge all segments into `video-merged.mp4` and delete segment files; apply this rule even for single-segment HLS to keep output filename consistent.
 
-## 2) Execution Model
+## 3) Extraction Decision Guide
 
-1. Launch/reuse Chrome with:
-   `open -na "Google Chrome" --args --remote-debugging-port=9222 --user-data-dir="$HOME/.chrome-labali"`.
-2. Connect to Chrome through CDP (`http://127.0.0.1:9222` by default).
-3. Open Xiaohongshu home page first as login warmup.
-4. If home page indicates login-required state, pause and guide manual login in the same browser window.
-5. Resolve `post_url`/`output_dir` from CLI or interactive prompts.
-6. Open canonical target post URL (`/explore/<note_id>` without token query).
-7. Extract post publish time, text, image URLs, and optional video URLs from post state/DOM.
-8. If `include_comments=true`, extract comments (state-first, DOM fallback), write `comments/comments.json` + `comments/comments.md`, and download comment images into `comments/images/`.
-9. If post page is still login-gated, pause and request manual login, then retry extraction.
-10. Download images and optional video via browser-authenticated request context.
-11. If multiple video files are downloaded, merge into one output video and delete segment files.
-12. Write `post.md` in output folder.
-13. Name output folder as `<publish_time>-<note_id>`.
+### State-first vs DOM-fallback
 
-## 3) Extraction Standards
+Prefer network-intercepted state (XHR/fetch responses captured during page load) over DOM scraping:
 
-- Prefer visible content and standard metadata (`og:title`, `description`).
-- Combine DOM and network capture to reduce misses.
-- Deduplicate URLs aggressively before downloading.
-- Keep robust URL filtering to avoid avatars/icons/trackers.
+- XiaoHongShu loads images lazily; DOM may be incomplete at `DOMContentLoaded` — images not yet in view are absent from the DOM but present in the intercepted state.
+- State intercept captures the full image array in a single structured object; DOM scraping requires scrolling to force lazy load and is slower and less complete.
+- Fall back to DOM extraction only when state intercept returns 0 images or fails entirely.
+
+### Login-wall detection heuristics
+
+Signals that indicate a login-gated state (not full content):
+
+- Page URL redirects to `/login` or contains `target=` redirect parameter.
+- DOM contains a login button (`button[data-v*]` with text matching "login" or "sign in").
+- Image count after extraction is 0 when the URL is a known valid post URL.
+- Post text container is empty or contains only placeholder text.
+
+When any login-wall signal is detected, pause extraction and prompt the user to log in before retrying.
 
 ## 4) Download Correctness Standards
 
@@ -48,8 +41,26 @@
 - Keep deterministic file naming (`001.*`, `002.*`, `video-001.*`, ...), and produce `video-merged.mp4` after merge when segmented videos exist.
 - Keep only post assets; exclude APIs, avatars, icons, and non-media responses.
 
-## 5) Logging and Diagnostics
+## 5) Video Handling
+
+### m3u8 vs direct MP4
+
+XiaoHongShu video posts may deliver video as either:
+
+- **Direct MP4**: a single `.mp4` URL captured in the network intercept — download directly.
+- **HLS segments (m3u8)**: a `.m3u8` playlist URL captured in the network intercept — download the segment files listed in the playlist, then merge.
+
+Detection rule: if the intercepted video URL ends with `.m3u8` or contains `/hls/`, treat as HLS. Otherwise treat as direct MP4.
+
+### Merge rule
+
+After downloading all segments:
+
+1. Merge all segment files into `video-merged.mp4` (using `ffmpeg -f concat` or equivalent).
+2. Delete all segment files regardless of count — even a single-segment HLS download should be merged and the original deleted, to produce a consistent output filename.
+3. The output folder must contain `video-merged.mp4`, not raw segment files.
+
+## 6) Logging and Diagnostics
 
 - Log stage transitions: open, extract, login-wait, download, finalize.
 - Emit final counts: discovered, downloaded, failed.
-- Keep failure messages actionable.
