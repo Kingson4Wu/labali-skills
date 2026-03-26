@@ -1380,6 +1380,194 @@ export async function downloadImages(
   return { saved, failed };
 }
 
+// Carousel next-button selectors tried in order
+const CAROUSEL_NEXT_SELECTORS = [
+  ".note-image .right",
+  ".note-image [class*='right']",
+  "[class*='noteImage'] [class*='right']",
+  "[class*='arrow'][class*='right']",
+  ".swiper-button-next",
+  ".slick-next",
+  "[class*='next']",
+];
+
+async function clickCarouselNext(page: Page): Promise<boolean> {
+  for (const selector of CAROUSEL_NEXT_SELECTORS) {
+    try {
+      const el = page.locator(selector).first();
+      const visible = await el.isVisible({ timeout: 400 });
+      if (visible) {
+        await el.click();
+        return true;
+      }
+    } catch {
+      // try next selector
+    }
+  }
+  return false;
+}
+
+function isXhsPostImageResponse(url: string): boolean {
+  const lower = url.toLowerCase();
+  return (
+    lower.includes("xhscdn.com") &&
+    (lower.includes("notes_pre_post") || lower.includes("notes_pre_images") || lower.includes("sns-webpic"))
+  );
+}
+
+/**
+ * Read an image from the browser's HTTP cache via fetch with cache: 'force-cache'.
+ * Returns null if the image is not cached or fetch fails.
+ */
+async function fetchImageFromBrowserCache(page: Page, url: string): Promise<Buffer | null> {
+  try {
+    const base64 = await page.evaluate(async (imageUrl: string) => {
+      const response = await fetch(imageUrl, { cache: "force-cache" });
+      if (!response.ok) return null;
+      const buffer = await response.arrayBuffer();
+      const uint8 = new Uint8Array(buffer);
+      let binary = "";
+      for (let i = 0; i < uint8.length; i++) {
+        binary += String.fromCharCode(uint8[i]);
+      }
+      return btoa(binary);
+    }, url);
+    if (!base64) return null;
+    return Buffer.from(base64, "base64");
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Browse through the image carousel by simulating user click-through,
+ * capturing image data from network responses as each image loads.
+ * Falls back to reading directly from the browser's HTTP cache for already-loaded images.
+ */
+export async function browseAndCaptureImages(
+  page: Page,
+  imageUrls: string[],
+  outputDir: string,
+  overwrite: boolean
+): Promise<{ saved: Array<{ path: string; url: string }>; failed: DownloadFailure[] }> {
+  const filtered = filterPostImageUrls(imageUrls);
+  if (filtered.length === 0) return { saved: [], failed: [] };
+
+  // Map identity → buffer for captured responses
+  const capturedByIdentity = new Map<string, { url: string; buffer: Buffer }>();
+
+  const onResponse = async (response: import("playwright").Response): Promise<void> => {
+    const url = response.url();
+    if (!isXhsPostImageResponse(url)) return;
+    const identity = toUrlIdentity(url);
+    if (capturedByIdentity.has(identity)) return;
+    try {
+      const body = await response.body();
+      if (body.byteLength > 1000) {
+        capturedByIdentity.set(identity, { url, buffer: Buffer.from(body) });
+      }
+    } catch {
+      // body already consumed or connection closed — skip
+    }
+  };
+
+  page.on("response", onResponse);
+
+  try {
+    // Wait for the first carousel image to be visible
+    await page.waitForSelector('img[src*="xhscdn.com"]', { timeout: 8000 }).catch(() => {});
+    await page.waitForTimeout(800 + Math.random() * 400);
+
+    // Click through remaining images one by one with human-like delays
+    for (let i = 1; i < filtered.length; i++) {
+      const clicked = await clickCarouselNext(page);
+      if (!clicked) break;
+      await page.waitForTimeout(700 + Math.random() * 700);
+    }
+
+    // Extra wait to ensure last image response is received
+    await page.waitForTimeout(600);
+  } finally {
+    page.off("response", onResponse);
+  }
+
+  const saved: Array<{ path: string; url: string }> = [];
+  const failed: DownloadFailure[] = [];
+
+  for (let i = 0; i < filtered.length; i++) {
+    const url = filtered[i];
+    const identity = toUrlIdentity(url);
+    const captured = capturedByIdentity.get(identity);
+
+    if (captured) {
+      // Save directly from captured buffer — no extra network request
+      const ext = inferExtensionFromUrl(url) || ".webp";
+      const fileName = `${String(i + 1).padStart(3, "0")}${ext}`;
+      const target = resolve(outputDir, fileName);
+      try {
+        await writeFile(target, captured.buffer);
+        saved.push({ path: target, url });
+      } catch (error) {
+        failed.push({ url, error: String(error) });
+      }
+    } else {
+      // Fallback: image was already in browser cache before our listener was set up.
+      // Read directly from browser HTTP cache — no new network request.
+      const ext = inferExtensionFromUrl(url) || ".webp";
+      const fileName = `${String(i + 1).padStart(3, "0")}${ext}`;
+      const target = resolve(outputDir, fileName);
+      try {
+        const cacheBuffer = await fetchImageFromBrowserCache(page, url);
+        if (cacheBuffer && cacheBuffer.byteLength > 1000) {
+          await writeFile(target, cacheBuffer);
+          saved.push({ path: target, url });
+        } else {
+          failed.push({ url, error: "Image not found in browser cache — browse the post manually first" });
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        failed.push({ url, error: message });
+      }
+    }
+  }
+
+  return { saved, failed };
+}
+
+/**
+ * Simulate user viewing a video post: focus the page, click the video to play,
+ * and wait for it to buffer before any download attempt.
+ */
+export async function simulateVideoPlay(page: Page): Promise<void> {
+  // Focus the page (tab activation)
+  await page.bringToFront();
+  await page.waitForTimeout(500 + Math.random() * 300);
+
+  // Try to click the video element or its play button to start playback
+  const clicked = await page.evaluate(() => {
+    const selectors = [
+      "video",
+      ".play-btn",
+      "[class*='play']",
+      "[class*='video'] button",
+    ];
+    for (const sel of selectors) {
+      const el = document.querySelector(sel) as HTMLElement | null;
+      if (el) {
+        el.focus();
+        el.click();
+        return true;
+      }
+    }
+    return false;
+  });
+
+  if (clicked) {
+    // Wait for the video to buffer — simulates user watching for a few seconds
+    await page.waitForTimeout(3000 + Math.random() * 2000);
+  }
+}
+
 export async function downloadVideos(
   page: Page,
   urls: string[],

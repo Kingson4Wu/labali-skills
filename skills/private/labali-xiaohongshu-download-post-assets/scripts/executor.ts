@@ -7,8 +7,10 @@ import {
   DEFAULT_CDP_PORT,
   DEFAULT_PROFILE_DIR,
   canonicalizePostUrl,
+  browseAndCaptureImages,
   downloadImages,
   downloadVideos,
+  simulateVideoPlay,
   ensureChromeWithRemoteDebugging,
   ensureAbsolutePath,
   ensureDir,
@@ -144,7 +146,7 @@ export async function execute(inputs: DownloadPostInputs, context?: ExecutorCont
     if (/^https?:\/\/xhslink\.com\//i.test(postUrlInput)) {
       log(`resolving xhslink short URL: ${postUrlInput}`);
       await page.goto(postUrlInput, { waitUntil: "domcontentloaded", timeout: timeoutMs });
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(800 + Math.random() * 400);
       postUrlInput = page.url();
       log(`resolved to: ${postUrlInput}`);
     }
@@ -159,10 +161,24 @@ export async function execute(inputs: DownloadPostInputs, context?: ExecutorCont
     const outputDir = ensureAbsolutePath(assertRequiredString(outputDirRaw, "output_dir"));
     await ensureDir(outputDir);
 
-    log(`opening post URL: ${navigationPostUrl}`);
-    await page.goto(navigationPostUrl, { waitUntil: "domcontentloaded", timeout: timeoutMs });
-    await page.waitForLoadState("networkidle", { timeout: timeoutMs }).catch(() => undefined);
-    await page.waitForTimeout(1200);
+    // Skip navigation if the tab is already on the target post — re-navigating an already-open
+    // post is an unnatural user action and an unnecessary anti-bot signal.
+    const alreadyOnPost = page.url().includes(noteId);
+    if (alreadyOnPost) {
+      log(`tab already on target post, skipping navigation`);
+      await page.waitForTimeout(500 + Math.random() * 300);
+    } else {
+      log(`opening post URL: ${navigationPostUrl}`);
+      await page.goto(navigationPostUrl, { waitUntil: "domcontentloaded", timeout: timeoutMs });
+      await page.waitForLoadState("networkidle", { timeout: timeoutMs }).catch(() => undefined);
+      // Randomized settle time — simulates human reading latency after page load
+      await page.waitForTimeout(1000 + Math.random() * 800);
+      // Scroll down to simulate reading the post text, then back up to image area
+      await page.evaluate(() => window.scrollBy(0, 300));
+      await page.waitForTimeout(600 + Math.random() * 600);
+      await page.evaluate(() => window.scrollBy(0, -300));
+      await page.waitForTimeout(400 + Math.random() * 300);
+    }
 
     const currentUrlAfterNav = page.url();
     if (!currentUrlAfterNav.includes(noteId)) {
@@ -207,7 +223,10 @@ export async function execute(inputs: DownloadPostInputs, context?: ExecutorCont
     const noteDir = ensureAbsolutePath(`${outputDir}/${folderName}`);
     await ensureDir(noteDir);
 
-    const imageResult = await downloadImages(page, snapshot.imageUrls, noteDir, overwrite);
+    const imageResult = await browseAndCaptureImages(page, snapshot.imageUrls, noteDir, overwrite);
+    if (snapshot.videoUrls.length > 0) {
+      await simulateVideoPlay(page);
+    }
     const videoResult = await downloadVideos(page, snapshot.videoUrls, noteDir, overwrite);
     const mergedVideoFiles = await mergeVideosAndCleanup(
       noteDir,

@@ -27,6 +27,29 @@ metadata:
 - Preserve all original query parameters (especially `xsec_token`, `xsec_source`, `share_id`) for page navigation — Xiaohongshu uses these tokens to render authenticated content; stripping them causes incomplete page rendering (wrong image count, missing text).
 - Normalize post URL to canonical format (`https://www.xiaohongshu.com/explore/<note_id>`) for output only: folder naming, `post.md` source field, and logs. Do not strip params before navigating.
 
+## Anti-Detection Principles
+
+XiaoHongShu applies behavioral analysis to detect automation. Every interaction must mimic how a real user browses. Violations of these principles have caused account rate-limiting in the past — do not remove or bypass them.
+
+**Navigation:**
+- If the tab is already on the target post URL, skip `page.goto()` entirely — re-navigating an already-open post is an unnatural action and a clear bot signal.
+- All fixed `waitForTimeout` values must be randomized (e.g., `base + Math.random() * range`) — deterministic delays are a bot fingerprint.
+- After navigating to a post, scroll down briefly to simulate reading the text, then scroll back up before interacting with images.
+
+**Image acquisition:**
+- Never issue new HTTP requests for images — the browser has already downloaded them.
+- Capture images via `page.on("response")` during carousel click-through, or read from browser HTTP cache via `fetch(url, {cache: "force-cache"})` inside `page.evaluate()`.
+- If neither path yields the image data, report failure — do not fall back to `page.request.get()` or any out-of-browser HTTP request.
+- Click through carousel images one by one with randomized delays (700–1400ms per image), not batch-extracted from the DOM.
+
+**Video:**
+- Before downloading, simulate user engagement: bring the tab to front, click the video/play button, wait 3–5 seconds for buffering.
+- Video download still uses `page.request.get()` (stream content is not fully cached); the play simulation above is what makes this behaviorally acceptable.
+
+**General:**
+- Always operate within the user's authenticated Chrome session (CDP reuse) — never launch a headless or separate browser.
+- Never read `window.__INITIAL_STATE__` or manipulate the DOM in ways that go beyond what a user's own browser JS would do.
+
 ## NEVER
 
 - Never leave multiple video segment files in the output folder after a successful run — merge segments and delete the originals.
@@ -35,6 +58,8 @@ metadata:
 - **Never strip xsec_token or share params before navigating** — XiaoHongShu uses these tokens server-side to render authenticated content; a URL without them silently produces wrong image counts and missing text, with no error.
 - **Never launch a new Chrome instance if CDP is already responding on port 9222** — launching a second instance creates a separate session, loses the authenticated profile, and forces re-login.
 - **Never take over a non-XiaoHongShu browser tab** — if an existing XHS tab is found, reuse it by navigating it to the post URL; if no XHS tab exists, open a new tab. Never hijack tabs belonging to other pages (e.g., Gmail, dev tools). The correct behavior is always: XHS tab → navigate it to post URL; no XHS tab → open new tab.
+- **Never issue new outbound HTTP requests for post images** — use response interception or browser cache reads only; falling back to `page.request.get()` for images is a bot signal.
+- **Never use fixed (non-randomized) delays** — deterministic timing is a bot fingerprint; all waits must include a random component.
 
 ## Success Criteria
 
