@@ -1,5 +1,7 @@
 # Browser Automation Skills
 
+> For anti-detection behavior principles, also load `docs/browser-anti-detection.md`.
+
 Reference this document when working on a `browser` type skill.
 
 ## Execution Model
