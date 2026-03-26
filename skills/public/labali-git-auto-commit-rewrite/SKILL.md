@@ -1,6 +1,11 @@
 ---
 name: labali-git-auto-commit-rewrite
-description: Generate a clear conventional commit message from current git changes, stage all files, commit locally, and run clean_commit.sh to normalize the result. Use when users want to commit, stage and commit, auto-commit, or generate a commit message for current changes. Trigger phrases: "commit changes", "git commit", "commit all", "commit message", "conventional commit".
+description: >-
+  Generate a clear conventional commit message from current git changes, stage
+  all files, commit locally, and run clean_commit.sh to normalize the result.
+  Use when users want to commit, stage and commit, auto-commit, or generate a
+  commit message for current changes. Trigger phrases: "commit changes", "git
+  commit", "commit all", "commit message", "conventional commit".
 license: MIT
 allowed-tools: "Bash(git:*), Bash(npm:*), Bash(bash:*)"
 metadata:

@@ -41,7 +41,7 @@ metadata:
 A run is successful only when all conditions hold:
 
 1. A post output folder is created under the specified local directory.
-2. Folder naming format is `<publish_time>-<note_id>`.
+2. Folder naming format is `<download_date>-<sanitized_title>-<note_id>` (title omitted when empty); `<download_date>` is today's date (YYYYMMDD), not the post's publish time.
 3. `post.md` is generated in the folder.
 4. Post image files are saved in the folder.
 5. Post video files are saved when the post contains video.

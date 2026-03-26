@@ -19,6 +19,7 @@ import {
   mediaUrlIdentity,
   normalizePublishTime,
   parseNoteId,
+  sanitizeTitle,
   waitForManualLogin,
   writeCommentsJson,
   writeCommentsMarkdown,
@@ -138,6 +139,16 @@ export async function execute(inputs: DownloadPostInputs, context?: ExecutorCont
     if (!postUrlInput) {
       postUrlInput = await promptRequired("请输入小红书帖子链接 (--post_url): ");
     }
+
+    // Resolve xhslink.com short URLs by navigating and capturing the redirect destination
+    if (/^https?:\/\/xhslink\.com\//i.test(postUrlInput)) {
+      log(`resolving xhslink short URL: ${postUrlInput}`);
+      await page.goto(postUrlInput, { waitUntil: "domcontentloaded", timeout: timeoutMs });
+      await page.waitForTimeout(500);
+      postUrlInput = page.url();
+      log(`resolved to: ${postUrlInput}`);
+    }
+
     const navigationPostUrl = postUrlInput;
     const canonicalPostUrl = canonicalizePostUrl(postUrlInput);
     const noteId = parseNoteId(canonicalPostUrl);
@@ -187,7 +198,13 @@ export async function execute(inputs: DownloadPostInputs, context?: ExecutorCont
     }
 
     const publishTime = normalizePublishTime(snapshot.publishedAt || "");
-    const noteDir = ensureAbsolutePath(`${outputDir}/${publishTime}-${noteId}`);
+    const today = new Date();
+    const downloadDate = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
+    const sanitized = sanitizeTitle(snapshot.title || "");
+    const folderName = sanitized
+      ? `${downloadDate}-${sanitized}-${noteId}`
+      : `${downloadDate}-${noteId}`;
+    const noteDir = ensureAbsolutePath(`${outputDir}/${folderName}`);
     await ensureDir(noteDir);
 
     const imageResult = await downloadImages(page, snapshot.imageUrls, noteDir, overwrite);

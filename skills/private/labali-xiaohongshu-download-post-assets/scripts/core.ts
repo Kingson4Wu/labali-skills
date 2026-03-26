@@ -211,6 +211,13 @@ export function normalizePublishTime(input: string): string {
   return `${y}${m}${d}-${hh}${mm}${ss}`;
 }
 
+export function sanitizeTitle(title: string): string {
+  return title
+    .replace(/[^A-Za-z0-9\u4E00-\u9FFF\u3400-\u4DBF]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 export function ensureAbsolutePath(pathLike: string): string {
   const expanded = pathLike.startsWith("~/") ? `${homedir()}/${pathLike.slice(2)}` : pathLike;
   return resolve(expanded);
