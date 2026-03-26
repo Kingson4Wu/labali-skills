@@ -1,7 +1,5 @@
 # Browser Anti-Detection Principles
 
-> Load this document alongside `docs/browser-automation.md` when writing or modifying any browser automation skill.
-> `browser-automation.md` defines HOW scripts run (execution model, file structure, semantic interaction).
 > This document defines HOW scripts must behave to avoid triggering risk-control systems.
 > Apply clusters proportional to the target platform's known risk-control intensity — see Skill Type table below.
 
@@ -139,7 +137,7 @@ Add the following row to your SKILL.md `Resources` table:
 | Always — when writing or modifying automation scripts | `docs/browser-anti-detection.md` | — |
 ```
 
-The loading trigger is **mandatory**, not situational. Load both this file and `docs/browser-automation.md` at script-writing time.
+Load this document when anti-detection behavior is relevant to the skill being built or modified.
 
 ---
 

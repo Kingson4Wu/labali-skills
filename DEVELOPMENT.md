@@ -24,7 +24,7 @@ This document is the overall guide and source of truth for this repository. Deta
 | Document | When to load |
 |----------|-------------|
 | `docs/skill-authoring.md` | Creating or modifying any skill |
-| `docs/browser-automation.md` | Working on a `browser` type skill |
+| `docs/browser-automation-architecture.md` | Working on a `browser` type skill |
 | `docs/conventions.md` | Language policy, commit format, naming rules |
 | `docs/workflow.md` | Installation, local commands, dev flow, CI |
 | `docs/testing.md` | Writing or running skill tests |

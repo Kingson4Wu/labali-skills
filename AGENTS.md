@@ -34,7 +34,7 @@ When a reusable project convention is established during a task — through a bu
 |----------------|-------------|
 | AI model behavior constraints (commit, brevity, detail level) | `CLAUDE.md` or `AGENTS.md` |
 | Skill-specific bug patterns or operational rules | Skill's `SKILL.md` + `references/plan.md` |
-| Cross-skill patterns (browser automation, etc.) | `docs/browser-automation.md` or relevant `docs/` file |
+| Cross-skill patterns (browser automation, etc.) | `docs/browser-automation-architecture.md` or relevant `docs/` file |
 | Naming, language, format rules | `docs/conventions.md` |
 | Dependency setup, dev workflow | `docs/skill-authoring.md` or `docs/workflow.md` |
 | Architecture terminology | `docs/reference.md` |
@@ -44,7 +44,7 @@ When a reusable project convention is established during a task — through a bu
 | Task | Load |
 |------|------|
 | Creating or modifying a skill | `docs/skill-authoring.md` |
-| Working on a browser automation skill | `docs/browser-automation.md` |
+| Working on a browser automation skill | `docs/browser-automation-architecture.md` |
 | Committing code, language/naming rules | `docs/conventions.md` |
 | Setting up environment or dev workflow | `docs/workflow.md` |
 | Writing or running tests | `docs/testing.md` |
