@@ -10,6 +10,8 @@ metadata:
 
 # labali-xiaohongshu-download-post-assets
 
+> **MANDATORY — load `references/plan.md` before any browser or extraction action begins.**
+
 ## Required Constraints
 
 - Use browser automation only.
@@ -21,7 +23,7 @@ metadata:
 - Generate `post.md` for extracted text metadata.
 - Export comments only when `include_comments=true`, and write `comments/comments.json` + `comments/comments.md`.
 - Download comment images into `comments/images/`.
-- Treat comment export as best-effort (not a fully reliable/comprehensive feature).
+- Comment export is not guaranteed to be complete — if extraction yields zero comments on a post known to have them, retain all image/video downloads, set `comments_count=0`, and report the partial result without throwing.
 - Do not generate `manifest.json`.
 - If multiple video segments are downloaded, merge them into one file and delete segment files.
 - Preserve all original query parameters (especially `xsec_token`, `xsec_source`, `share_id`) for page navigation — Xiaohongshu uses these tokens to render authenticated content; stripping them causes incomplete page rendering (wrong image count, missing text).
@@ -29,7 +31,11 @@ metadata:
 
 ## Anti-Detection Principles
 
-XiaoHongShu applies behavioral analysis to detect automation. Every interaction must mimic how a real user browses. Violations of these principles have caused account rate-limiting in the past — do not remove or bypass them.
+XiaoHongShu applies behavioral analysis to detect automation. Violations of these principles have caused account rate-limiting in the past — do not remove or bypass them.
+
+**Core test — apply before every browser action:**
+> "Would a real user do this, from this state, at this moment?"
+> If no → skip it or slow it down. Re-navigating an already-open post, batch-extracting DOM nodes, issuing fresh HTTP requests for images the browser just loaded, using fixed delays — all fail this test.
 
 **Navigation:**
 - If the tab is already on the target post URL, skip `page.goto()` entirely — re-navigating an already-open post is an unnatural action and a clear bot signal.
@@ -60,6 +66,7 @@ XiaoHongShu applies behavioral analysis to detect automation. Every interaction 
 - **Never take over a non-XiaoHongShu browser tab** — if an existing XHS tab is found, reuse it by navigating it to the post URL; if no XHS tab exists, open a new tab. Never hijack tabs belonging to other pages (e.g., Gmail, dev tools). The correct behavior is always: XHS tab → navigate it to post URL; no XHS tab → open new tab.
 - **Never issue new outbound HTTP requests for post images** — use response interception or browser cache reads only; falling back to `page.request.get()` for images is a bot signal.
 - **Never use fixed (non-randomized) delays** — deterministic timing is a bot fingerprint; all waits must include a random component.
+- **Never retry automatically after a hard risk signal** (CAPTCHA, rate-limit message, account anomaly) — stop immediately, preserve all downloaded files, log the signal type and last successfully processed item, and surface the error to the user for manual intervention.
 
 ## Success Criteria
 
@@ -75,8 +82,8 @@ A run is successful only when all conditions hold:
 8. When comment images exist, they are downloaded under `comments/images/`.
 9. URL output and logs use canonical `/explore/<note_id>` form without token query.
 
-Comment export quality note:
-- Even when execution succeeds, comment coverage and hierarchy/reply linking can be partial due to page-side rendering and loading variability.
+Comment export failure behavior:
+- If extraction yields zero comments on a post known to have them: retain all downloaded files, return `comments_count=0`, do not throw. Partial coverage of hierarchy/reply linking is acceptable and expected.
 
 ## Operational Mode
 
@@ -109,4 +116,4 @@ Comment export quality note:
 | Extraction returns wrong count or fails | `references/architecture.md` | — |
 | Video merge or comment export unclear | `references/architecture.md` | — |
 
-**MANDATORY — load `references/plan.md` immediately when this skill is invoked**, before any browser or extraction action begins.
+See Resources table above for conditional loads.

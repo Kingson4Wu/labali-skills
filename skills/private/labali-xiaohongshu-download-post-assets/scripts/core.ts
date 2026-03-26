@@ -665,7 +665,7 @@ async function expandCommentsAndPaginate(page: Page): Promise<void> {
       unchangedRounds = 0;
       previousMetric = combinedMetric;
     }
-    await page.waitForTimeout(700);
+    await page.waitForTimeout(700 + Math.random() * 400);
     if (seenEndMarker && unchangedRounds >= 3) {
       break;
     }
@@ -1165,6 +1165,36 @@ export async function isLoginRequired(page: Page, snapshot: PostSnapshot): Promi
   return includesAny(bodyText, LOGIN_HINTS);
 }
 
+const RATE_LIMIT_HINTS = ["操作过于频繁", "请稍后再试", "too many requests", "频繁操作", "访问受限"];
+const CAPTCHA_HINTS = ["滑块验证", "验证码", "人机验证", "captcha", "robot", "安全验证"];
+const ACCOUNT_ANOMALY_HINTS = ["账号异常", "账号被限制", "安全提醒", "suspicious activity"];
+
+/**
+ * Check the current page for hard risk signals (CAPTCHA, rate-limit, account anomaly).
+ * Throws with a descriptive message if a signal is detected — caller must not retry.
+ * Call this after navigation and after each major interaction.
+ */
+export async function checkForRiskSignals(page: Page): Promise<void> {
+  const url = page.url();
+  const bodyText = await page.evaluate(() => document.body?.innerText?.slice(0, 3000) ?? "");
+
+  if (includesAny(bodyText, CAPTCHA_HINTS) || /captcha|verify/i.test(url)) {
+    throw new Error(
+      "[HARD SIGNAL] CAPTCHA or verification challenge detected. Complete it manually in the browser, then retry."
+    );
+  }
+  if (includesAny(bodyText, RATE_LIMIT_HINTS)) {
+    throw new Error(
+      "[HARD SIGNAL] Rate-limit detected. Wait before retrying — do not retry in the current session."
+    );
+  }
+  if (includesAny(bodyText, ACCOUNT_ANOMALY_HINTS)) {
+    throw new Error(
+      "[HARD SIGNAL] Account anomaly or security warning detected. Check the browser manually before retrying."
+    );
+  }
+}
+
 export async function waitForManualLogin(promptText: string): Promise<void> {
   if (!process.stdin.isTTY) {
     throw new Error("Login is required but current session is not interactive.");
@@ -1301,6 +1331,21 @@ async function downloadOne(
       });
   }
 
+  // For images: prefer browser HTTP cache over a new outbound request.
+  // Comment images are typically already loaded during comment scroll; reading from cache
+  // avoids duplicate traffic that risk-control systems can identify as non-human.
+  if (kind === "image") {
+    const cacheBuffer = await fetchImageFromBrowserCache(page, url);
+    if (cacheBuffer && cacheBuffer.byteLength > 1000) {
+      const ext = inferExtensionFromUrl(url) || ".webp";
+      const adjustedTarget =
+        ext === extFromUrl ? target : resolve(outputDir, `${String(index).padStart(3, "0")}${ext}`);
+      await writeFile(adjustedTarget, cacheBuffer);
+      return { path: adjustedTarget, url };
+    }
+    // Cache miss — fall through to page.request.get() as last resort
+  }
+
   const maxAttempts = 3;
   let lastError: unknown;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
@@ -1350,7 +1395,7 @@ async function downloadOne(
       if (!isRetryable || attempt >= maxAttempts) {
         throw error;
       }
-      await new Promise((resolveSleep) => setTimeout(resolveSleep, 700 * attempt));
+      await new Promise((resolveSleep) => setTimeout(resolveSleep, 700 * attempt + Math.random() * 300));
     }
   }
   throw lastError instanceof Error ? lastError : new Error(String(lastError));
@@ -1486,7 +1531,7 @@ export async function browseAndCaptureImages(
     }
 
     // Extra wait to ensure last image response is received
-    await page.waitForTimeout(600);
+    await page.waitForTimeout(600 + Math.random() * 400);
   } finally {
     page.off("response", onResponse);
   }

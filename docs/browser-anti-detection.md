@@ -114,7 +114,7 @@ Do not retry in the current session. Prompt user for manual intervention.
 
 - CAPTCHA or verification challenge appears
 - Page redirects to login (`/login` in URL, or login form present)
-- Explicit rate-limit message ("操作过于频繁", "请稍后再试", "too many requests")
+- Explicit rate-limit message (e.g., "too many requests", "operation too frequent", "please try again later")
 - Account anomaly or security warning
 
 ### Soft signals — one recovery attempt
@@ -129,15 +129,13 @@ Do not retry in the current session. Prompt user for manual intervention.
 
 ---
 
-## How Skills Reference This File
+## How to Apply This Document When Writing a Skill
 
-Add the following row to your SKILL.md `Resources` table:
+Do **not** reference this file from a skill's `SKILL.md` — skills are distributed artifacts and users won't have this repo document.
 
-```
-| Always — when writing or modifying automation scripts | `docs/browser-anti-detection.md` | — |
-```
+Instead, embed the relevant principles directly into the skill's `SKILL.md` under an "Anti-Detection Principles" section. The principles here are the source of truth for authoring; the embedded section in `SKILL.md` is what the executing agent actually reads.
 
-Load this document when anti-detection behavior is relevant to the skill being built or modified.
+Load this document when reviewing or authoring a browser skill, to verify the embedded principles are complete and correct.
 
 ---
 

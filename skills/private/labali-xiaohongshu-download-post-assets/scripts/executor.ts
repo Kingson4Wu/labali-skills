@@ -8,6 +8,7 @@ import {
   DEFAULT_PROFILE_DIR,
   canonicalizePostUrl,
   browseAndCaptureImages,
+  checkForRiskSignals,
   downloadImages,
   downloadVideos,
   simulateVideoPlay,
@@ -187,6 +188,8 @@ export async function execute(inputs: DownloadPostInputs, context?: ExecutorCont
       );
     }
 
+    await checkForRiskSignals(page);
+
     let snapshot = await extractPostSnapshot(page, noteId);
     if (await isLoginRequired(page, snapshot)) {
       log("login appears required, waiting for manual login in current browser window");
@@ -197,7 +200,8 @@ export async function execute(inputs: DownloadPostInputs, context?: ExecutorCont
       }
       await page.goto(navigationPostUrl, { waitUntil: "domcontentloaded", timeout: timeoutMs });
       await page.waitForLoadState("networkidle", { timeout: timeoutMs }).catch(() => undefined);
-      await page.waitForTimeout(1200);
+      await page.waitForTimeout(1000 + Math.random() * 500);
+      await checkForRiskSignals(page);
       const currentUrlAfterLogin = page.url();
       if (!currentUrlAfterLogin.includes(noteId)) {
         throw new Error(
