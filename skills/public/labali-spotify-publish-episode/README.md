@@ -29,8 +29,10 @@ npx skills add github.com/Kingson4Wu/labali-skills --skill labali-spotify-publis
 | `publish_at` | Scheduled publish time (ISO-8601) |
 | `confirm_publish` | Execute final publish (`true`/`false`, default `true`) |
 | `disable_deterministic_cache` | Skip deterministic cache (`true`/`false`, default `false`) |
-| `profile_dir` | Chrome user data directory (default `~/.chrome-spotify`) |
+| `profile_dir` | Chrome user data directory (default `~/.chrome-labali`) |
 | `cdp_port` | Chrome DevTools port (default `9222`) |
+| `proxy_mode` | Chrome proxy mode for auto-launch (`system`, `none`, or `custom`) |
+| `proxy_server` | Proxy server string used when `proxy_mode=custom` |
 | `headed` | Run headed browser (default `true`) |
 
 ---
@@ -74,7 +76,7 @@ episode_number=19
 publish_at=2026-03-15T10:30:00+08:00
 confirm_publish=true
 disable_deterministic_cache=false
-profile_dir=~/.chrome-spotify
+profile_dir=~/.chrome-labali
 cdp_port=9222
 headed=true
 

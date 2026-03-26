@@ -41,6 +41,12 @@ Reserve product names (Claude, Claude Code, Codex, Gemini) only when referring t
 - `name` in `SKILL.md` frontmatter must exactly match the folder name.
 - Do not use `claude` or `anthropic` in skill names.
 
+## Browser Profile Defaults
+
+- Browser skills using the shared no-proxy session must default to `~/.chrome-labali-no-proxy` on CDP port `9223`, and the auto-launch command must include `--no-proxy-server`.
+- Browser skills using the shared proxy-enabled session must default to `~/.chrome-labali` on CDP port `9222`.
+- If a browser skill supports proxy overrides, expose them as runtime inputs rather than hardcoding a different startup path per task.
+
 ## Pre-commit Checklist
 
 - `npm run skills:validate` passed

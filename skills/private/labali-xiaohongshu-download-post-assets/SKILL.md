@@ -1,11 +1,17 @@
 ---
 name: labali-xiaohongshu-download-post-assets
-description: Download XiaoHongShu (XHS / xiaohongshu) post assets — images, video, text metadata — to a local folder using browser automation with manual-login session reuse. Use when downloading a XHS post, saving post images, exporting post content, or archiving a note. Trigger phrases: "download xhs", "xiaohongshu post", "xhs images", "save post", "xhs note", "xiaohongshu download".
+description: >-
+  Download XiaoHongShu (XHS / xiaohongshu) post assets — images, video, text
+  metadata — to a local folder using browser automation with manual-login
+  session reuse. Use when downloading a XHS post, saving post images, exporting
+  post content, or archiving a note. Trigger phrases: "download xhs",
+  "xiaohongshu post", "xhs images", "save post", "xhs note",
+  "xiaohongshu download".
 license: MIT
 allowed-tools: "Bash(npx:*), Bash(pnpm:*)"
 metadata:
   pattern: pipeline
-  compatibility: "macOS / Linux; requires Chrome with remote-debugging enabled (port 9222) and authenticated XiaoHongShu session; Node.js ≥ 18 + tsx"
+  compatibility: "macOS / Linux; requires Chrome with remote-debugging enabled (port 9223), profile ~/.chrome-labali-no-proxy, and authenticated XiaoHongShu session; Node.js ≥ 18 + tsx"
 ---
 
 # labali-xiaohongshu-download-post-assets
@@ -17,7 +23,7 @@ metadata:
 - Use browser automation only.
 - Do not use Xiaohongshu private APIs.
 - Reuse manual-login session via unified Chrome CDP startup:
-  `open -na "Google Chrome" --args --remote-debugging-port=9222 --user-data-dir="$HOME/.chrome-labali"`.
+  `open -na "Google Chrome" --args --remote-debugging-port=9223 --user-data-dir="$HOME/.chrome-labali-no-proxy" --no-proxy-server`.
 - Prefer semantic extraction from visible page state and loaded resources.
 - Download only target post assets: images plus optional post video.
 - Generate `post.md` for extracted text metadata.
@@ -62,7 +68,7 @@ XiaoHongShu applies behavioral analysis to detect automation. Violations of thes
 - Never report success if `post.md` was not generated.
 - Never report success based on action completion alone — verify output folder structure and required files exist.
 - **Never strip xsec_token or share params before navigating** — XiaoHongShu uses these tokens server-side to render authenticated content; a URL without them silently produces wrong image counts and missing text, with no error.
-- **Never launch a new Chrome instance if CDP is already responding on port 9222** — launching a second instance creates a separate session, loses the authenticated profile, and forces re-login.
+- **Never launch a new Chrome instance if CDP is already responding on port 9223** — launching a second instance creates a separate session, loses the authenticated profile, and forces re-login.
 - **Never take over a non-XiaoHongShu browser tab** — if an existing XHS tab is found, reuse it by navigating it to the post URL; if no XHS tab exists, open a new tab. Never hijack tabs belonging to other pages (e.g., Gmail, dev tools). The correct behavior is always: XHS tab → navigate it to post URL; no XHS tab → open new tab.
 - **Never issue new outbound HTTP requests for post images** — use response interception or browser cache reads only; falling back to `page.request.get()` for images is a bot signal.
 - **Never use fixed (non-randomized) delays** — deterministic timing is a bot fingerprint; all waits must include a random component.

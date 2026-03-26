@@ -108,7 +108,7 @@ export async function execute(
   const maxPosts = toMaxPosts(inputs.max_posts);
 
   await ensureDir(profileDir);
-  await ensureChromeWithRemoteDebugging(cdpPort, profileDir, log);
+  await ensureChromeWithRemoteDebugging(cdpPort, profileDir, log, inputs.proxy_mode, inputs.proxy_server);
 
   log(`connecting over CDP on :${cdpPort}`);
   const browser = await chromium.connectOverCDP(`http://127.0.0.1:${cdpPort}`);

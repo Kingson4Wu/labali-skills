@@ -23,7 +23,7 @@ printf "Running regression checks for %s\n" "$ROOT_DIR"
 
 rg -n "Layer Contract|Success Criteria|Operational Mode" "$SKILL_MD" >/dev/null
 rg -n "Layered Boundaries|Execution Model|Download Correctness Standards" "$ARCH" >/dev/null
-rg -n "manual login|remote-debugging-port=9222|chrome-labali|posts.json|user.md|post.md|scroll|CDP" "$PLAN" "$SKILL_MD" "$EXECUTOR" "$CORE" >/dev/null
+rg -n "manual login|remote-debugging-port=9223|chrome-labali-no-proxy|no-proxy-server|posts.json|user.md|post.md|scroll|CDP" "$PLAN" "$SKILL_MD" "$EXECUTOR" "$CORE" >/dev/null
 
 rg -n -- "--user_url|--output_dir|--profile_dir|--cdp_port|--timeout_ms|--overwrite|--max_posts|--include_videos" "$RUNNER" >/dev/null
 rg -n "请输入微博用户主页链接|请输入本地保存目录" "$EXECUTOR" >/dev/null

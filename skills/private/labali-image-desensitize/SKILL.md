@@ -1,6 +1,13 @@
 ---
 name: labali-image-desensitize
-description: Sanitize and desensitize local images by physically regenerating them with ImageMagick re-encode flow (resize 99% -> 101%, strip metadata, recompress), then print before/after size, dimensions, EXIF count, SHA256, EXIF diff, and a post-sanitize hidden-metadata sensitive-info scan. Use when you want to strip, clean, or verify hidden metadata (EXIF, GPS, tracking info) from local images, with before/after diagnostics and a post-sanitize scan. Input: image path + output path.
+description: >-
+  Sanitize and desensitize local images by physically regenerating them with
+  ImageMagick re-encode flow (resize 99% -> 101%, strip metadata, recompress),
+  then print before/after size, dimensions, EXIF count, SHA256, EXIF diff, and
+  a post-sanitize hidden-metadata sensitive-info scan. Use when you want to
+  strip, clean, or verify hidden metadata (EXIF, GPS, tracking info) from local
+  images, with before/after diagnostics and a post-sanitize scan. Input: image
+  path + output path.
 license: MIT
 compatibility: macOS / Linux; requires ImageMagick (convert) and exiftool in PATH.
 allowed-tools: "Bash(convert:*), Bash(exiftool:*), Bash(bash:*)"

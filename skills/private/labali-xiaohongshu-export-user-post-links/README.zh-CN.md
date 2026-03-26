@@ -44,8 +44,10 @@ npx tsx skills/private/labali-xiaohongshu-export-user-post-links/scripts/run.ts 
 - `--include_publish_time true|false`（默认 `false`）
 - `--exclude_sticky true|false`（默认 `false`）
 - `--limit 2`
-- `--profile_dir ~/.chrome-labali`
-- `--cdp_port 9222`
+- `--profile_dir ~/.chrome-labali-no-proxy`
+- `--cdp_port 9223`
+- `--proxy_mode none|system|custom`
+- `--proxy_server http://127.0.0.1:7890`
 - `--timeout_ms 90000`
 - `--max_scroll_rounds 80`
 
@@ -53,7 +55,7 @@ npx tsx skills/private/labali-xiaohongshu-export-user-post-links/scripts/run.ts 
 
 ## 3) 执行流程
 
-1. 通过 CDP 启动/复用 Chrome（`open -na "Google Chrome" --args --remote-debugging-port=9222 --user-data-dir=...`）。
+1. 通过 CDP 启动/复用 Chrome（`open -na "Google Chrome" --args --remote-debugging-port=9223 --user-data-dir=... --no-proxy-server`）。
 2. 通过 CDP 建立连接。
 3. 打开小红书首页并检查登录状态。
 4. 如未登录，暂停等待手动登录。

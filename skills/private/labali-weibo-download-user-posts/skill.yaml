@@ -14,13 +14,22 @@ inputs:
   profile_dir:
     type: string
     required: false
-    default: ~/.chrome-labali
+    default: ~/.chrome-labali-no-proxy
     description: Chrome user-data-dir used by unified open -na Google Chrome startup command.
   cdp_port:
     type: string
     required: false
-    default: "9222"
+    default: "9223"
     description: Chrome DevTools remote-debugging port.
+  proxy_mode:
+    type: string
+    required: false
+    default: none
+    description: Chrome proxy mode for auto-launched Chrome. Use none to pass --no-proxy-server, system to inherit the system proxy, or custom with proxy_server.
+  proxy_server:
+    type: string
+    required: false
+    description: Proxy server passed to Chrome as --proxy-server when proxy_mode=custom.
   timeout_ms:
     type: string
     required: false

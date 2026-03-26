@@ -21,8 +21,10 @@ npx tsx skills/private/labali-douyin-download-user-posts/scripts/run.ts \
 ```
 
 Optional flags:
-- `--profile_dir ~/.chrome-labali`
-- `--cdp_port 9222`
+- `--profile_dir ~/.chrome-labali-no-proxy`
+- `--cdp_port 9223`
+- `--proxy_mode none|system|custom`
+- `--proxy_server http://127.0.0.1:7890`
 - `--timeout_ms 180000`
 - `--overwrite true|false`
 - `--max_posts 50` (0 = no cap)
@@ -34,7 +36,7 @@ If `user_url` or `output_dir` is omitted, the script prompts interactively.
 
 ## 3) Runtime Flow
 
-1. Launch/reuse Chrome with CDP (`open -na "Google Chrome" --args --remote-debugging-port=9222 --user-data-dir=~/.chrome-labali`).
+1. Launch/reuse Chrome with CDP (`open -na "Google Chrome" --args --remote-debugging-port=9223 --user-data-dir=~/.chrome-labali-no-proxy --no-proxy-server`).
 2. Connect via CDP.
 3. Open target user profile page.
 4. Check login state; if required, pause and wait for manual login.
@@ -67,7 +69,7 @@ Links-only mode (`--collect_links_only true`): collect detail links only into `p
 - Node.js with `tsx`
 - Playwright (`npm install playwright`)
 - Google Chrome installed
-- Logged-in Douyin session in `~/.chrome-labali`
+- Logged-in Douyin session in `~/.chrome-labali-no-proxy`
 
 ## 6) Limitations
 

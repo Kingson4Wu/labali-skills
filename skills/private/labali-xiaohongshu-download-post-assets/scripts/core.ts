@@ -9,8 +9,9 @@ import type { Page } from "playwright";
 
 const execFileAsync = promisify(execFile);
 
-export const DEFAULT_PROFILE_DIR = resolve(homedir(), ".chrome-labali");
-export const DEFAULT_CDP_PORT = "9222";
+export const DEFAULT_PROFILE_DIR = resolve(homedir(), ".chrome-labali-no-proxy");
+export const DEFAULT_CDP_PORT = "9223";
+export const DEFAULT_PROXY_MODE = "none";
 
 const LOGIN_HINTS = ["登录", "扫码登录", "Sign in", "Login", "手机号登录", "验证码登录"];
 const IMAGE_EXT_HINTS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".heic", ".avif"];
@@ -21,9 +22,29 @@ export interface DownloadPostInputs {
   output_dir?: string;
   profile_dir?: string;
   cdp_port?: string;
+  proxy_mode?: string;
+  proxy_server?: string;
   timeout_ms?: number;
   overwrite?: boolean;
   include_comments?: boolean;
+}
+
+function getChromeProxyArgs(proxyModeRaw: string | undefined, proxyServerRaw: string | undefined): string[] {
+  const proxyMode = (proxyModeRaw || DEFAULT_PROXY_MODE).trim().toLowerCase();
+  if (proxyMode === "none") {
+    return ["--no-proxy-server"];
+  }
+  if (proxyMode === "system") {
+    return [];
+  }
+  if (proxyMode === "custom") {
+    const proxyServer = (proxyServerRaw || "").trim();
+    if (!proxyServer) {
+      throw new Error("proxy_server is required when proxy_mode=custom");
+    }
+    return [`--proxy-server=${proxyServer}`];
+  }
+  throw new Error(`Unsupported proxy_mode: ${proxyMode}. Expected one of: none, system, custom`);
 }
 
 export interface DownloadFailure {
@@ -1246,7 +1267,9 @@ async function waitForCdpEndpoint(port: string, timeoutMs: number): Promise<bool
 export async function ensureChromeWithRemoteDebugging(
   port: string,
   userDataDir: string,
-  log: (message: string) => void
+  log: (message: string) => void,
+  proxyMode?: string,
+  proxyServer?: string
 ): Promise<void> {
   if (await isCdpEndpointReady(port)) {
     log(`Reuse Chrome remote debugging session on :${port}`);
@@ -1259,6 +1282,7 @@ export async function ensureChromeWithRemoteDebugging(
     "--args",
     `--remote-debugging-port=${port}`,
     `--user-data-dir=${userDataDir}`,
+    ...getChromeProxyArgs(proxyMode, proxyServer),
   ];
   log(`Launch Chrome remote debugging session: open ${chromeArgs.join(" ")}`);
   await execFileAsync("open", chromeArgs, {

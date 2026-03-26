@@ -1,6 +1,13 @@
 ---
 name: labali-blog-writing-style
-description: Create, rewrite, or refine personal blog posts in Kingson Wu's established voice for Chinese technical essays, workplace reflections, and reading notes. Use when the task is to draft a new article, revise an existing post, or make AI-written content sound like the author's earlier blog voice while preserving core meaning and improving structure, hierarchy, and readability. Trigger phrases: "write a blog post", "blog writing", "rewrite article", "refine post", "写博客", "改文章", "写文章".
+description: >-
+  Create, rewrite, or refine personal blog posts in Kingson Wu's established
+  voice for Chinese technical essays, workplace reflections, and reading notes.
+  Use when the task is to draft a new article, revise an existing post, or make
+  AI-written content sound like the author's earlier blog voice while
+  preserving core meaning and improving structure, hierarchy, and readability.
+  Trigger phrases: "write a blog post", "blog writing", "rewrite article",
+  "refine post", "写博客", "改文章", "写文章".
 license: MIT
 ---
 

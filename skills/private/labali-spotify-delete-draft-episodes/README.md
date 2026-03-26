@@ -19,8 +19,10 @@ Optional information:
 - `show_home_url`: direct show home page URL (if omitted, derived from `show_id`)
 - `show_name`: show name fallback only
 - `disable_deterministic_cache`: `true` to skip deterministic cache and run policy executor directly
-- `profile_dir`: Chrome user data directory for session reuse (default `~/.chrome-spotify`)
+- `profile_dir`: Chrome user data directory for session reuse (default `~/.chrome-labali`)
 - `cdp_port`: Chrome DevTools port (default `9222`)
+- `proxy_mode`: Chrome proxy mode for auto-launch (`system`, `none`, or `custom`)
+- `proxy_server`: Proxy server string used when `proxy_mode=custom`
 - `headed`: run browser in headed mode (default `true`)
 
 Behavior by mode:

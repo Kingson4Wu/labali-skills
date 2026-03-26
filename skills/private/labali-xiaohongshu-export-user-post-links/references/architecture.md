@@ -20,7 +20,7 @@
 ## 2) Execution Model
 
 1. Launch/reuse Chrome:
-   `open -na "Google Chrome" --args --remote-debugging-port=9222 --user-data-dir="$HOME/.chrome-labali"`.
+   `open -na "Google Chrome" --args --remote-debugging-port=9223 --user-data-dir="$HOME/.chrome-labali-no-proxy" --no-proxy-server`.
 2. Connect through CDP.
 3. Open Xiaohongshu home page and check login state.
 4. Open target profile URL.

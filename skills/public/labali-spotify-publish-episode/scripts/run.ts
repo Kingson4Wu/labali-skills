@@ -93,8 +93,10 @@ function printUsage(): void {
     [--show_home_url https://creators.spotify.com/pod/show/<id>/home] \\
     [--confirm_publish true|false] \\
     [--disable_deterministic_cache true|false] \\
-    [--profile_dir ~/.chrome-spotify] \\
+    [--profile_dir ~/.chrome-labali] \\
     [--cdp_port 9222] \\
+    [--proxy_mode none|system|custom] \\
+    [--proxy_server http://127.0.0.1:7890] \\
     [--headed true]`);
 }
 
@@ -125,6 +127,8 @@ async function main(): Promise<void> {
     show_home_url: optionalString(args, "show_home_url"),
     profile_dir: optionalString(args, "profile_dir"),
     cdp_port: optionalString(args, "cdp_port"),
+    proxy_mode: optionalString(args, "proxy_mode"),
+    proxy_server: optionalString(args, "proxy_server"),
     headed: parseBoolean(args.headed, true),
   };
 

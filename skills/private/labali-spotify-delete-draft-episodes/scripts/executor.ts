@@ -37,7 +37,9 @@ export async function execute(
     profileDir,
     inputs.headed ?? true,
     inputs.cdp_port,
-    log
+    log,
+    inputs.proxy_mode,
+    inputs.proxy_server
   );
 
   try {

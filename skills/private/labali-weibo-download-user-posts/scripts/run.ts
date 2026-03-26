@@ -25,6 +25,7 @@ function ensureDeps(): void {
 const HELP_TEXT = `
 Usage:
   npx tsx scripts/run.ts --user_url <url> [--output_dir <dir>] [--profile_dir <dir>] [--cdp_port <port>]
+                         [--proxy_mode none|system|custom] [--proxy_server <url>]
                          [--timeout_ms <ms>] [--overwrite true|false] [--max_posts <n>] [--include_videos true|false]
 `;
 
@@ -87,6 +88,8 @@ async function main(): Promise<void> {
     output_dir: args.output_dir,
     profile_dir: args.profile_dir,
     cdp_port: args.cdp_port,
+    proxy_mode: args.proxy_mode,
+    proxy_server: args.proxy_server,
     timeout_ms: parseNumber(args.timeout_ms),
     overwrite: parseBoolean(args.overwrite),
     max_posts: parseNumber(args.max_posts),

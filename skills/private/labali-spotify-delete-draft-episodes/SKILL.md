@@ -1,8 +1,13 @@
 ---
 name: labali-spotify-delete-draft-episodes
-description: Delete Draft-status podcast episodes for a specified Spotify show_id on creators.spotify.com using browser-only semantic automation with manual-login session reuse. Use when tasks need Draft cleanup or draft removal without APIs: default behavior deletes only the first Draft episode, and optional full-cleanup mode deletes all Draft episodes.
+description: >-
+  Delete Draft-status podcast episodes for a specified Spotify show_id on
+  creators.spotify.com using browser-only semantic automation with manual-login
+  session reuse. Use when tasks need Draft cleanup or draft removal without
+  APIs: default behavior deletes only the first Draft episode, and optional
+  full-cleanup mode deletes all Draft episodes.
 license: MIT
-compatibility: macOS / Linux; requires agent-browser CLI in PATH, Chrome with remote-debugging enabled (default port 9222), and an authenticated Spotify for Creators session; Node.js ≥ 18 + tsx; internet access required.
+compatibility: macOS / Linux; requires agent-browser CLI in PATH, Chrome with remote-debugging enabled (default port 9222), profile `~/.chrome-labali`, and an authenticated Spotify for Creators session; Node.js ≥ 18 + tsx; internet access required.
 allowed-tools: "Bash(npx:*), Bash(pnpm:*)"
 metadata:
   pattern: pipeline

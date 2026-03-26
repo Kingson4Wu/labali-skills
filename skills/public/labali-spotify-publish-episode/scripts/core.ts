@@ -14,9 +14,9 @@ const execFileAsync = promisify(execFile);
 // ============================================================================
 
 export const SPOTIFY_CREATORS_URL = "https://creators.spotify.com";
-export const DEFAULT_PROFILE_DIR = ".cache/agent-browser/spotify-creators";
+export const DEFAULT_PROFILE_DIR = resolve(homedir(), ".chrome-labali");
 export const DEFAULT_CHROME_CDP_PORT = "9222";
-export const DEFAULT_CHROME_USER_DATA_DIR = resolve(homedir(), ".chrome-spotify");
+export const DEFAULT_PROXY_MODE = "system";
 export const SEARCH_EPISODES_PLACEHOLDER = "Search episode titles";
 
 // ============================================================================
@@ -41,7 +41,27 @@ export interface PublishEpisodeInputs {
   profile_dir?: string;
   headed?: boolean;
   cdp_port?: string;
+  proxy_mode?: string;
+  proxy_server?: string;
   show_home_url?: string;
+}
+
+function getChromeProxyArgs(proxyModeRaw: string | undefined, proxyServerRaw: string | undefined): string[] {
+  const proxyMode = (proxyModeRaw || DEFAULT_PROXY_MODE).trim().toLowerCase();
+  if (proxyMode === "none") {
+    return ["--no-proxy-server"];
+  }
+  if (proxyMode === "system") {
+    return [];
+  }
+  if (proxyMode === "custom") {
+    const proxyServer = (proxyServerRaw || "").trim();
+    if (!proxyServer) {
+      throw new Error("proxy_server is required when proxy_mode=custom");
+    }
+    return [`--proxy-server=${proxyServer}`];
+  }
+  throw new Error(`Unsupported proxy_mode: ${proxyMode}. Expected one of: none, system, custom`);
 }
 
 export interface ExecutorContext {
@@ -99,13 +119,15 @@ export class AgentBrowserClient {
     profileDir: string,
     headed: boolean,
     cdpPort: string | undefined,
-    log: LogFn
+    log: LogFn,
+    proxyMode?: string,
+    proxyServer?: string
   ): Promise<AgentBrowserClient> {
     if (cdpPort) {
       return new AgentBrowserClient(profileDir, headed, cdpPort, log);
     }
     const resolvedCdpPort = DEFAULT_CHROME_CDP_PORT;
-    await ensureChromeWithRemoteDebugging(resolvedCdpPort, log);
+    await ensureChromeWithRemoteDebugging(resolvedCdpPort, profileDir, log, proxyMode, proxyServer);
     return new AgentBrowserClient(profileDir, headed, resolvedCdpPort, log);
   }
 
@@ -394,7 +416,13 @@ async function waitForCdpEndpoint(port: string, timeoutMs: number): Promise<bool
   return false;
 }
 
-async function ensureChromeWithRemoteDebugging(port: string, log: LogFn): Promise<void> {
+async function ensureChromeWithRemoteDebugging(
+  port: string,
+  userDataDir: string,
+  log: LogFn,
+  proxyMode?: string,
+  proxyServer?: string
+): Promise<void> {
   if (await isCdpEndpointReady(port)) {
     log(`Reuse Chrome remote debugging session on :${port}`);
     return;
@@ -405,7 +433,8 @@ async function ensureChromeWithRemoteDebugging(port: string, log: LogFn): Promis
     "Google Chrome",
     "--args",
     `--remote-debugging-port=${port}`,
-    `--user-data-dir=${DEFAULT_CHROME_USER_DATA_DIR}`,
+    `--user-data-dir=${userDataDir}`,
+    ...getChromeProxyArgs(proxyMode, proxyServer),
   ];
   log(
     `Launch Chrome remote debugging session: open ${chromeArgs.join(" ")}`

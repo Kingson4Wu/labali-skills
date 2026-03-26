@@ -8,7 +8,7 @@ description: >
 license: MIT
 compatibility: >
   macOS / Linux; requires agent-browser CLI in PATH, Chrome with remote-debugging enabled
-  (default port 9222), and an authenticated Spotify for Creators session; Node.js >= 18 + tsx;
+  (default port 9222), profile `~/.chrome-labali`, and an authenticated Spotify for Creators session; Node.js >= 18 + tsx;
   internet access required.
 allowed-tools: "Bash(npx:*), Bash(pnpm:*)"
 metadata:
@@ -65,7 +65,7 @@ See `skill.yaml` for complete schema.
 
 **Required:** `audio_file`, `title`, `description`, and one of (`show_id` | `show_home_url` | `show_name`)
 
-**Optional:** `season_number`, `episode_number`, `cover_image`, `publish_at`, `confirm_publish`, `disable_deterministic_cache`, `profile_dir`, `cdp_port`, `headed`
+**Optional:** `season_number`, `episode_number`, `cover_image`, `publish_at`, `confirm_publish`, `disable_deterministic_cache`, `profile_dir`, `cdp_port`, `proxy_mode`, `proxy_server`, `headed`
 
 ---
 

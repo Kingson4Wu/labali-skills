@@ -6,7 +6,7 @@ When a failure or ambiguous situation is encountered, use this table to decide t
 
 | Situation | Action |
 |-----------|--------|
-| CDP not responding on port 9222 | Launch Chrome with exact startup command; wait 3s; retry once |
+| CDP not responding on port 9223 | Launch Chrome with exact startup command, including `--no-proxy-server`; wait 3s; retry once |
 | Login wall detected before post open | Prompt user to log in; do not proceed until confirmed |
 | Login wall detected after post open | Pause extraction; prompt user; retry in the same session |
 | Image count 0 after extraction | Check if xsec_token was preserved in navigation URL; reload with full URL |

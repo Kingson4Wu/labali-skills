@@ -64,13 +64,22 @@ inputs:
   profile_dir:
     type: string
     required: false
-    default: ~/.chrome-spotify
+    default: ~/.chrome-labali
     description: Chrome user data dir for login-session reuse.
   cdp_port:
     type: string
     required: false
     default: "9222"
     description: Chrome DevTools Protocol port.
+  proxy_mode:
+    type: string
+    required: false
+    default: system
+    description: Chrome proxy mode for auto-launched Chrome. Use none to pass --no-proxy-server, system to inherit the system proxy, or custom with proxy_server.
+  proxy_server:
+    type: string
+    required: false
+    description: Proxy server passed to Chrome as --proxy-server when proxy_mode=custom.
   headed:
     type: boolean
     required: false

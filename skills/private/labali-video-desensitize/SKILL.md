@@ -1,6 +1,13 @@
 ---
 name: labali-video-desensitize
-description: Sanitize local video files by mandatory two-pass local FFmpeg re-encode with metadata/chapter removal, bitexact flags, audio re-encode, MP4 container hardening, and default watermark-resistance transforms (higher CRF + mild scale perturbation), then print before/after diagnostics, metadata diffs, and post-sanitize hidden-metadata sensitive-info scan. Use when you need to strip metadata, remove tracking watermarks, or sanitize local video files with deterministic FFmpeg re-encode. Input: video path + output path.
+description: >-
+  Sanitize local video files by mandatory two-pass local FFmpeg re-encode with
+  metadata/chapter removal, bitexact flags, audio re-encode, MP4 container
+  hardening, and default watermark-resistance transforms (higher CRF + mild
+  scale perturbation), then print before/after diagnostics, metadata diffs, and
+  post-sanitize hidden-metadata sensitive-info scan. Use when you need to strip
+  metadata, remove tracking watermarks, or sanitize local video files with
+  deterministic FFmpeg re-encode. Input: video path + output path.
 license: MIT
 compatibility: macOS / Linux; requires ffmpeg and exiftool in PATH; sufficient disk space for two-pass re-encode.
 allowed-tools: "Bash(ffmpeg:*), Bash(exiftool:*), Bash(bash:*)"

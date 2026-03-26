@@ -29,8 +29,10 @@ npx skills add github.com/Kingson4Wu/labali-skills --skill labali-spotify-publis
 | `publish_at` | 定时发布时间（ISO-8601） |
 | `confirm_publish` | 是否执行最终发布（`true`/`false`，默认 `true`） |
 | `disable_deterministic_cache` | 跳过 deterministic cache（`true`/`false`，默认 `false`） |
-| `profile_dir` | Chrome 用户数据目录（默认 `~/.chrome-spotify`） |
+| `profile_dir` | Chrome 用户数据目录（默认 `~/.chrome-labali`） |
 | `cdp_port` | Chrome DevTools 端口（默认 `9222`） |
+| `proxy_mode` | 自动启动 Chrome 时的代理模式（`system`、`none`、`custom`） |
+| `proxy_server` | 当 `proxy_mode=custom` 时传给 Chrome 的代理地址 |
 | `headed` | 是否可视化浏览器（默认 `true`） |
 
 ---
@@ -74,7 +76,7 @@ episode_number=19
 publish_at=2026-03-15T10:30:00+08:00
 confirm_publish=true
 disable_deterministic_cache=false
-profile_dir=~/.chrome-spotify
+profile_dir=~/.chrome-labali
 cdp_port=9222
 headed=true
 

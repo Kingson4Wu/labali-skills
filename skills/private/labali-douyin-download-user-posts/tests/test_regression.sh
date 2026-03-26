@@ -25,7 +25,7 @@ printf "Running regression checks for %s\n" "$ROOT_DIR"
 
 rg -n "Layer Contract|Success Criteria|Operational Mode" "$SKILL_MD" >/dev/null
 rg -n "Layered Boundaries|Execution Model|Download Correctness Standards" "$ARCH" >/dev/null
-rg -n "agent-browser|CDP|manual login|remote-debugging-port=9222|chrome-labali|posts.json|user.md|post.md|scroll|Douyin|抖音" "$PLAN" "$SKILL_MD" "$EXECUTOR" "$CORE" >/dev/null
+rg -n "agent-browser|CDP|manual login|remote-debugging-port=9223|chrome-labali-no-proxy|no-proxy-server|posts.json|user.md|post.md|scroll|Douyin|抖音" "$PLAN" "$SKILL_MD" "$EXECUTOR" "$CORE" >/dev/null
 
 rg -n -- "--user_url|--output_dir|--fixed_user_dir|--profile_dir|--cdp_port|--timeout_ms|--overwrite|--max_posts|--include_videos|--collect_links_only" "$RUNNER" >/dev/null
 rg -n "请输入抖音用户主页链接|请输入本地保存目录" "$EXECUTOR" >/dev/null

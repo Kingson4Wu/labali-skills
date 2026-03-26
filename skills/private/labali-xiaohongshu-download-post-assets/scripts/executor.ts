@@ -123,7 +123,7 @@ export async function execute(inputs: DownloadPostInputs, context?: ExecutorCont
   const includeComments = inputs.include_comments ?? false;
   await ensureDir(profileDir);
 
-  await ensureChromeWithRemoteDebugging(cdpPort, profileDir, log);
+  await ensureChromeWithRemoteDebugging(cdpPort, profileDir, log, inputs.proxy_mode, inputs.proxy_server);
   log(`connecting over CDP on :${cdpPort}`);
   const browser = await chromium.connectOverCDP(`http://127.0.0.1:${cdpPort}`);
 

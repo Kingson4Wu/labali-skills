@@ -16,7 +16,138 @@ ALLOWED_FRONTMATTER_KEYS = {
 }
 
 
-def parse_frontmatter(text: str) -> dict[str, str]:
+class FrontmatterError(ValueError):
+    pass
+
+
+def _strip_quotes(value: str) -> str:
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+        return value[1:-1]
+    return value
+
+
+def _parse_scalar(value: str) -> object:
+    text = value.strip()
+    if text == "":
+        return ""
+    if text in {"null", "~"}:
+        return None
+    if text == "true":
+        return True
+    if text == "false":
+        return False
+    if re.fullmatch(r"-?\d+", text):
+        try:
+            return int(text)
+        except ValueError:
+            pass
+    return _strip_quotes(text)
+
+
+def _parse_block_scalar(
+    lines: list[str], start: int, parent_indent: int, style: str
+) -> tuple[str, int]:
+    i = start
+    chunks: list[str] = []
+    min_content_indent: int | None = None
+
+    while i < len(lines):
+        line = lines[i]
+        if line.strip() == "":
+            chunks.append("")
+            i += 1
+            continue
+
+        indent = len(line) - len(line.lstrip(" "))
+        if indent <= parent_indent:
+            break
+
+        if min_content_indent is None:
+            min_content_indent = indent
+
+        content_indent = min(indent, min_content_indent)
+        chunks.append(line[content_indent:])
+        i += 1
+
+    if min_content_indent is None:
+        return "", i
+
+    raw = "\n".join(chunks)
+    keep_final_newline = style in {"|", ">"}
+    if style.startswith("|"):
+        return raw + ("\n" if keep_final_newline else ""), i
+
+    paragraphs: list[str] = []
+    current: list[str] = []
+    for chunk in chunks:
+        if chunk == "":
+            if current:
+                paragraphs.append(" ".join(part.strip() for part in current))
+                current = []
+            paragraphs.append("")
+            continue
+        current.append(chunk)
+
+    if current:
+        paragraphs.append(" ".join(part.strip() for part in current))
+
+    folded = "\n".join(paragraphs)
+    if keep_final_newline:
+        folded += "\n"
+    return folded, i
+
+
+def _parse_mapping(
+    lines: list[str], start: int = 0, base_indent: int = 0
+) -> tuple[dict[str, object], int]:
+    data: dict[str, object] = {}
+    i = start
+
+    while i < len(lines):
+        line = lines[i]
+        if line.strip() == "":
+            i += 1
+            continue
+
+        indent = len(line) - len(line.lstrip(" "))
+        if indent < base_indent:
+            break
+        if indent > base_indent:
+            raise FrontmatterError(f"Unexpected indentation: {line!r}")
+
+        stripped = line[base_indent:]
+        if ":" not in stripped:
+            raise FrontmatterError(f"Invalid frontmatter line: {line!r}")
+
+        key, raw_value = stripped.split(":", 1)
+        key = key.strip()
+        if not key:
+            raise FrontmatterError("Frontmatter keys must be strings")
+        if key in data:
+            raise FrontmatterError(f"Duplicate frontmatter field: {key}")
+
+        value_text = raw_value.lstrip(" ")
+        if value_text == "":
+            nested, next_i = _parse_mapping(lines, i + 1, base_indent + 2)
+            data[key] = nested
+            i = next_i
+            continue
+
+        if value_text in {"|", "|-", ">", ">-"}:
+            block_value, next_i = _parse_block_scalar(
+                lines, i + 1, base_indent, value_text
+            )
+            data[key] = block_value
+            i = next_i
+            continue
+
+        data[key] = _parse_scalar(value_text)
+        i += 1
+
+    return data, i
+
+
+def parse_frontmatter(text: str) -> dict[str, object]:
     if not text.startswith("---\n"):
         raise ValueError("SKILL.md must start with YAML frontmatter")
 
@@ -24,20 +155,18 @@ def parse_frontmatter(text: str) -> dict[str, str]:
     if end == -1:
         raise ValueError("Unclosed frontmatter in SKILL.md")
 
-    raw = text[4:end].strip().splitlines()
-    data: dict[str, str] = {}
-    for line in raw:
-        # skip indented lines (nested YAML values under a block key)
-        if line and line[0] == " ":
-            continue
-        if ":" not in line:
-            continue
-        key, value = line.split(":", 1)
-        clean_key = key.strip()
-        if clean_key in data:
-            raise ValueError(f"Duplicate frontmatter field: {clean_key}")
-        data[clean_key] = value.strip()
-    return data
+    raw = text[4:end].strip()
+    try:
+        data, _ = _parse_mapping(raw.splitlines())
+    except FrontmatterError as exc:
+        raise ValueError(f"Invalid YAML frontmatter: {exc}") from exc
+
+    normalized: dict[str, object] = {}
+    for key, value in data.items():
+        if key in normalized:
+            raise ValueError(f"Duplicate frontmatter field: {key}")
+        normalized[key] = value
+    return normalized
 
 
 def validate_skill_dir(skill_dir: Path) -> list[str]:
@@ -70,7 +199,9 @@ def validate_skill_dir(skill_dir: Path) -> list[str]:
         errors.append(
             "Frontmatter contains unsupported fields: "
             + ", ".join(unknown)
-            + " (only name, description are allowed)"
+            + " (allowed: "
+            + ", ".join(sorted(ALLOWED_FRONTMATTER_KEYS))
+            + ")"
         )
 
     if fm.get("name") and fm["name"] != skill_dir.name:

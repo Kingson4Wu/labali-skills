@@ -44,8 +44,10 @@ Optional flags:
 - `--include_publish_time true|false` (default `false`)
 - `--exclude_sticky true|false` (default `false`)
 - `--limit 2`
-- `--profile_dir ~/.chrome-labali`
-- `--cdp_port 9222`
+- `--profile_dir ~/.chrome-labali-no-proxy`
+- `--cdp_port 9223`
+- `--proxy_mode none|system|custom`
+- `--proxy_server http://127.0.0.1:7890`
 - `--timeout_ms 90000`
 - `--max_scroll_rounds 80`
 
@@ -53,7 +55,7 @@ If `profile_url` or `output_path` is omitted, the script prompts interactively.
 
 ## 3) Runtime Flow
 
-1. Launch/reuse Chrome with CDP (`open -na "Google Chrome" --args --remote-debugging-port=9222 --user-data-dir=...`).
+1. Launch/reuse Chrome with CDP (`open -na "Google Chrome" --args --remote-debugging-port=9223 --user-data-dir=... --no-proxy-server`).
 2. Connect via CDP.
 3. Open Xiaohongshu home and check login state.
 4. If login is required, pause and wait for manual login.

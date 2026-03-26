@@ -2,7 +2,7 @@
 name: labali-douyin-download-user-posts
 description: Download all posts from a specific Douyin user profile by using agent-browser automation over Chrome CDP with manual-login session reuse. Use when tasks require opening/reusing a Douyin user page, extracting post text/media links, downloading images/videos locally, and exporting per-post files.
 license: MIT
-compatibility: macOS / Linux; requires Chrome with remote-debugging enabled (default port 9222) and an authenticated Douyin session; Node.js ≥ 18 + tsx; internet access required.
+compatibility: macOS / Linux; requires Chrome with remote-debugging enabled (default port 9223), profile `~/.chrome-labali-no-proxy`, and an authenticated Douyin session; Node.js ≥ 18 + tsx; internet access required.
 allowed-tools: "Bash(npx:*), Bash(pnpm:*)"
 metadata:
   pattern: pipeline
@@ -29,7 +29,7 @@ Treat this skill as a layered system, not a single script.
 - Use browser automation only.
 - Do not call private/undocumented Douyin APIs directly.
 - Reuse manual-login session via unified Chrome CDP startup:
-  `open -na "Google Chrome" --args --remote-debugging-port=9222 --user-data-dir="$HOME/.chrome-labali"`.
+  `open -na "Google Chrome" --args --remote-debugging-port=9223 --user-data-dir="$HOME/.chrome-labali-no-proxy" --no-proxy-server`.
 - Prefer semantic extraction from visible page state and loaded resources.
 - Download target user's timeline posts and assets (text, images, optional videos).
 - Export per-post `post.md` and media files.

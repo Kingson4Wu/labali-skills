@@ -19,8 +19,10 @@
 - `show_home_url`：节目主页 URL（不填时由 `show_id` 推导）
 - `show_name`：节目名兜底
 - `disable_deterministic_cache`：`true` 表示跳过 deterministic cache，直接走 policy executor
-- `profile_dir`：Chrome 用户数据目录（默认 `~/.chrome-spotify`）
+- `profile_dir`：Chrome 用户数据目录（默认 `~/.chrome-labali`）
 - `cdp_port`：Chrome DevTools 端口（默认 `9222`）
+- `proxy_mode`：自动启动 Chrome 时的代理模式（`system`、`none`、`custom`）
+- `proxy_server`：当 `proxy_mode=custom` 时传给 Chrome 的代理地址
 - `headed`：是否可视化浏览器（默认 `true`）
 
 模式说明：

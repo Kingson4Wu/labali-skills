@@ -90,8 +90,10 @@ function printUsage(): void {
     [--include_publish_time true|false] \\
     [--exclude_sticky true|false] \\
     [--limit 2] \\
-    [--profile_dir ~/.chrome-labali] \\
-    [--cdp_port 9222] \\
+    [--profile_dir ~/.chrome-labali-no-proxy] \\
+    [--cdp_port 9223] \\
+    [--proxy_mode none|system|custom] \\
+    [--proxy_server http://127.0.0.1:7890] \\
     [--timeout_ms 90000] \\
     [--max_scroll_rounds 80]`);
 }
@@ -115,6 +117,8 @@ async function main(): Promise<void> {
     limit: optionalNumber(args, "limit"),
     profile_dir: optionalString(args, "profile_dir"),
     cdp_port: optionalString(args, "cdp_port"),
+    proxy_mode: optionalString(args, "proxy_mode"),
+    proxy_server: optionalString(args, "proxy_server"),
     timeout_ms: optionalNumber(args, "timeout_ms"),
     max_scroll_rounds: optionalNumber(args, "max_scroll_rounds"),
   };

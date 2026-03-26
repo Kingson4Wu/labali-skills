@@ -2,7 +2,7 @@
 
 ## Guided Runtime Steps
 
-1. Start or reuse Chrome with `remote-debugging-port=9222` and profile `~/.chrome-labali`.
+1. Start or reuse Chrome with `remote-debugging-port=9223`, profile `~/.chrome-labali-no-proxy`, and `--no-proxy-server`.
 2. Connect over CDP.
 3. Open user home page from `user_url`.
 4. If login prompts appear, pause for manual login.

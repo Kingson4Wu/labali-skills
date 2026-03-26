@@ -1,7 +1,7 @@
 # Workflow Plan
 
 1. Start or reuse Chrome with CDP:
-   - `open -na "Google Chrome" --args --remote-debugging-port=9222 --user-data-dir="$HOME/.chrome-labali"`
+   - `open -na "Google Chrome" --args --remote-debugging-port=9223 --user-data-dir="$HOME/.chrome-labali-no-proxy" --no-proxy-server`
 2. Connect browser via CDP.
 3. Open Douyin user URL, or reuse already-open target user homepage tab, then wait for stabilization.
 4. If login is required, pause and wait for manual login in same session.

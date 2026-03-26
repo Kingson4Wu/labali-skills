@@ -61,8 +61,10 @@ function printUsage(): void {
     --show_id "<spotify_show_id>" \\
     [--delete_all_drafts true|false] \\
     [--max_delete 200] \\
-    [--profile_dir ~/.chrome-spotify] \\
+    [--profile_dir ~/.chrome-labali] \\
     [--cdp_port 9222] \\
+    [--proxy_mode none|system|custom] \\
+    [--proxy_server http://127.0.0.1:7890] \\
     [--headed true]`);
 }
 
@@ -79,6 +81,8 @@ async function main(): Promise<void> {
     max_delete: optionalString(args, "max_delete"),
     profile_dir: optionalString(args, "profile_dir"),
     cdp_port: optionalString(args, "cdp_port"),
+    proxy_mode: optionalString(args, "proxy_mode"),
+    proxy_server: optionalString(args, "proxy_server"),
     headed: parseBoolean(args.headed, true),
   };
 

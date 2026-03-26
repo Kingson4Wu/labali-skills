@@ -86,8 +86,10 @@ function printUsage(): void {
   npx tsx skills/private/labali-xiaohongshu-download-post-assets/scripts/run.ts \\
     --post_url "https://www.xiaohongshu.com/explore/<note_id>" \\
     --output_dir "/absolute/or/relative/output/path" \\
-    [--profile_dir ~/.chrome-labali] \\
-    [--cdp_port 9222] \\
+    [--profile_dir ~/.chrome-labali-no-proxy] \\
+    [--cdp_port 9223] \\
+    [--proxy_mode none|system|custom] \\
+    [--proxy_server http://127.0.0.1:7890] \\
     [--timeout_ms 90000] \\
     [--overwrite true|false] \\
     [--include_comments true|false]`);
@@ -108,6 +110,8 @@ async function main(): Promise<void> {
     output_dir: optionalString(args, "output_dir"),
     profile_dir: optionalString(args, "profile_dir"),
     cdp_port: optionalString(args, "cdp_port"),
+    proxy_mode: optionalString(args, "proxy_mode"),
+    proxy_server: optionalString(args, "proxy_server"),
     timeout_ms: optionalNumber(args, "timeout_ms"),
     overwrite: parseBoolean(args.overwrite, false),
     include_comments: parseBoolean(args.include_comments, false),

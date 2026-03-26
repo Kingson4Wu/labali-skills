@@ -393,7 +393,9 @@ export async function execute(inputs: PublishEpisodeInputs, context: ExecutorCon
     profileDir,
     inputs.headed ?? true,
     inputs.cdp_port,
-    log
+    log,
+    inputs.proxy_mode,
+    inputs.proxy_server
   );
   const runStartedAt = Date.now();
   const stepDurations: Record<string, number> = {};
