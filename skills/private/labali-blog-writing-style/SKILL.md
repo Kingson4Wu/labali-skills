@@ -1,12 +1,7 @@
 ---
 name: labali-blog-writing-style
-description: Create, rewrite, or refine personal blog posts in Kingson Wu's established voice for Chinese technical essays, workplace reflections, and reading notes. Use when the task is to draft a new article, revise an existing post, or make AI-written content sound like the author's earlier blog voice while preserving core meaning and improving structure, hierarchy, and readability.
+description: Create, rewrite, or refine personal blog posts in Kingson Wu's established voice for Chinese technical essays, workplace reflections, and reading notes. Use when the task is to draft a new article, revise an existing post, or make AI-written content sound like the author's earlier blog voice while preserving core meaning and improving structure, hierarchy, and readability. Trigger phrases: "write a blog post", "blog writing", "rewrite article", "refine post", "写博客", "改文章", "写文章".
 license: MIT
-compatibility: AI agent environment only; no system dependencies.
-metadata:
-  pattern: inversion+generator
-  interaction: multi-turn
-  output-format: markdown
 ---
 
 # labali-blog-writing-style
@@ -84,21 +79,23 @@ Execute in fixed order:
 1. Load `references/style-profile.md` — establish voice and stable trait rules.
 2. Load `references/workflow.md` — apply the matching workflow for the current mode.
 3. Load `assets/article-structure.md` — use the skeleton for the identified subtype as structural scaffolding.
-4. Apply the author's stable traits:
+4. Load `examples/anti-pattern.md` — cross-check the draft against known failure patterns before writing.
+5. Load `examples/good.md` — use as voice calibration reference to align tone and structure.
+6. Apply the author's stable traits:
    - pragmatic judgment,
    - direct but reasoned tone,
    - engineering tradeoff awareness,
    - mild personal sharpness without empty emotional venting.
-5. Avoid copying weaknesses from older posts:
+7. Avoid copying weaknesses from older posts:
    - no fragmented bullet piles,
    - no weak hierarchy,
    - no note-like stacking without transitions,
    - no loose section boundaries.
-6. Prefer article-shaped prose; use lists only for inherently list-shaped content.
-7. Preserve core facts and intent unless the user asks for substantive changes.
-8. When revising: improve structure first, then wording.
-9. Keep final text in Chinese unless the user explicitly requests another language.
-10. Output the complete article.
+8. Prefer article-shaped prose; use lists only for inherently list-shaped content.
+9. Preserve core facts and intent unless the user asks for substantive changes.
+10. When revising: improve structure first, then wording.
+11. Keep final text in Chinese unless the user explicitly requests another language.
+12. Output the complete article.
 
 ## Output Rules
 
@@ -122,3 +119,5 @@ Apply these priorities in order:
 
 - Voice and style profile: `references/style-profile.md`
 - Writing and revision workflow: `references/workflow.md`
+- Good writing examples: `examples/good.md`
+- Anti-patterns to avoid: `examples/anti-pattern.md`
