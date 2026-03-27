@@ -1,0 +1,5 @@
+version: 1
+interface:
+  display_name: Labali Prompt Helper
+  description: Personal prompt library assistant. Outputs reusable prompts (ready-to-use and fill-in-the-blank template) for use in any AI tool. Use when you need a prompt for a task rather than doing the task directly.
+  default_prompt: Give me a prompt for the task I'm about to describe.
