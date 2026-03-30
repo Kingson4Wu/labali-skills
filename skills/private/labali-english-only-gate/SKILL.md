@@ -1,20 +1,5 @@
 ---
-name: labali-english-only-gate
-description: >-
-  AI-driven policy gate to enforce English-only or English-dominant interaction.
-  No script executor — gate logic runs through AI policy with an optional detector
-  script for hard-boundary cases. Use when the user asks to reject non-English
-  prompts, enforce a Chinese-only or language gate policy, require English-first
-  interaction, or request a fixed refusal message instead of answering. Trigger
-  phrases: "reject non-English", "Chinese-only", "language gate", "English first",
-  "accept English prompts only", "reject Chinese-first".
-license: MIT
-compatibility: AI agent environment only; no system dependencies.
-allowed-tools: "Bash(python3:*), Bash(uv:*)"
-metadata:
-  type: policy-only
-  pattern: inversion+policy
-  interaction: single-turn
+# Frontmatter (name/metadata) lives in skill.yaml — do not duplicate here.
 ---
 
 # Labali English Only Gate
@@ -70,14 +55,10 @@ Prompt arrives
   └─ otherwise ──→ ALLOW
 ```
 
-**Config resolution (most specific wins):**
-1. Explicit `--config /path/to/custom.json`
-2. `policy.override.json` in skill root (user customization)
-3. `references/default-policy.json` (defaults)
-
 **Usage:**
 - Run `python3 scripts/detect_language_policy.py --text "..." --json` for borderline cases
 - Run `python3 scripts/detect_language_policy.py --text "..." --debug` for step-by-step trace
+- If the detector is unavailable or returns an error: apply the decision tree manually — if the first meaningful clause starts with non-English text AND the prompt appears non-English-dominant, output the rejection message; otherwise proceed
 - Detector emits `ALLOW`, `WARNING`, or `REJECT` — treat WARNING as proceed-with-caution, not rejection
 
 ## Output Contract
@@ -92,19 +73,9 @@ Please ask your question in English only.
 
 ## Configuration
 
-The configurable keys are:
+The 7 configurable keys are documented in `references/detector-guide.md`.
 
-- `mode`
-- `max_non_english_ratio`
-- `allow_mixed_input`
-- `allow_cjk_in_code_or_paths`
-- `prefer_english_leading_narrative`
-- `ignore_short_cjk_fragments_under`
-- `rejection_message`
-
-Use `references/default-policy.json` as the default config template.
-Users who install the skill can customize behavior by creating or editing `policy.override.json` in the installed skill directory.
-See `references/detector-guide.md` for the full config key reference table.
+Users can customize behavior by creating `policy.override.json` in the skill root. Resolution order (most specific wins): explicit `--config` path → `policy.override.json` → `references/default-policy.json`.
 
 ## Resources
 
