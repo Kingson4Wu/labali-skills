@@ -1,0 +1,86 @@
+[
+  {
+    "name": "markdown_heading_cjk_then_english",
+    "text": "# 关于重构\nPlease refactor this function.",
+    "expected_status": "ALLOW"
+  },
+  {
+    "name": "inline_code_cjk_label",
+    "text": "Click `确定` to confirm.",
+    "expected_status": "ALLOW"
+  },
+  {
+    "name": "emoji_cjk_mixed",
+    "text": "👍👍 好！\nCan you help?",
+    "expected_status": "ALLOW"
+  },
+  {
+    "name": "arabic_script",
+    "text": "Please translate: مرحبا",
+    "expected_status": "REJECT"
+  },
+  {
+    "name": "cyrillic_script",
+    "text": "Fix bug: Привет мир",
+    "expected_status": "REJECT"
+  },
+  {
+    "name": "hangul_mixed",
+    "text": "안녕하세요, help me fix this",
+    "expected_status": "REJECT"
+  },
+  {
+    "name": "borderline_ratio_warning",
+    "text": "aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa 这是中文这是中文这是中文这是中文中",
+    "expected_status": "WARNING"
+  },
+  {
+    "name": "markdown_link_cjk_text",
+    "text": "[关于系统说明](https://example.com/zh)\nPlease summarize.",
+    "expected_status": "ALLOW"
+  },
+  {
+    "name": "strict_mode_rejects_narrative_cjk",
+    "text": "Please refactor. 中文。",
+    "config": {
+      "mode": "strict-english",
+      "max_non_english_ratio": 0.02,
+      "allow_mixed_input": true,
+      "allow_cjk_in_code_or_paths": true,
+      "prefer_english_leading_narrative": true,
+      "ignore_short_cjk_fragments_under": 0,
+      "rejection_message": "Please ask your question in English only."
+    },
+    "expected_status": "REJECT"
+  },
+  {
+    "name": "empty_narrative_cjk_path_only",
+    "text": "/tmp/中文目录/demo.py",
+    "expected_status": "ALLOW"
+  },
+  {
+    "name": "devanagari_script",
+    "text": "Fix this: कृपया help",
+    "expected_status": "REJECT"
+  },
+  {
+    "name": "thai_script",
+    "text": "Review: สวัสดี please help",
+    "expected_status": "REJECT"
+  },
+  {
+    "name": "latin_extended_reject",
+    "text": "Fix this: café and naïve usage",
+    "expected_status": "ALLOW"
+  },
+  {
+    "name": "cjk_in_markdown_table",
+    "text": "| label |\n|------|\n| 首页 |\nPlease translate labels.",
+    "expected_status": "ALLOW"
+  },
+  {
+    "name": "path_with_non_cjk_script",
+    "text": "Please edit /tmp/каталог/demo.py and keep all comments in English.",
+    "expected_status": "ALLOW"
+  }
+]

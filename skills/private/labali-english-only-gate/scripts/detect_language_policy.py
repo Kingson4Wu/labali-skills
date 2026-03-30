@@ -18,9 +18,49 @@ PATH_TOKEN_RE = re.compile(
     r"(?:(?:[A-Za-z]:)?[/~][^\s]+|(?:\.\.?/)[^\s]+|[^\s]+\.[A-Za-z0-9]{1,8})"
 )
 URL_RE = re.compile(r"https?://[^\s]+")
+MARKDOWN_LINK_RE = re.compile(r"\[([^\]]*)\]\([^\)]*\)")
+MARKDOWN_HEADING_RE = re.compile(r"^#{1,6}\s+.*$", re.MULTILINE)
 CJK_RE = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]")
+# Script-specific non-English character classes
+HANGUL_RE = re.compile(r"[\uac00-\ud7af]")          # Korean Hangul
+ARABIC_RE = re.compile(r"[\u0600-\u06ff]")           # Arabic
+DEVANAGARI_RE = re.compile(r"[\u0900-\u097f]")        # Hindi, Sanskrit
+CYRILLIC_RE = re.compile(r"[\u0400-\u04ff]")          # Russian, Ukrainian
+THAI_RE = re.compile(r"[\u0e00-\u0e7f]")              # Thai
+LATIN_EXTENDED_RE = re.compile(r"[\u00c0-\u024f]")     # French/Polish/Czech accents
 ENGLISH_RE = re.compile(r"[A-Za-z]")
 CLAUSE_SPLIT_RE = re.compile(r"[\n\r.!?;:。！？；：]+")
+
+
+def debug_trace(
+    original: str,
+    sanitized: str,
+    english_count: int,
+    script_breakdown: dict[str, int],
+    counted_letters: int,
+    non_english_count: int,
+    ratio: float,
+    status: str,
+    reason: str,
+    config: dict[str, object],
+) -> None:
+    print("=== DEBUG TRACE ===", file=sys.stderr)
+    print(f"[1] ORIGINAL TEXT ({len(original)} chars):", file=sys.stderr)
+    print(f"    {repr(original[:200])}", file=sys.stderr)
+    print(f"[2] AFTER SANITIZATION ({len(sanitized)} chars):", file=sys.stderr)
+    print(f"    {repr(sanitized[:200])}", file=sys.stderr)
+    print(f"[3] ENGLISH LETTERS: {english_count}", file=sys.stderr)
+    print(f"[4] NON-ENGLISH LETTERS (by script):", file=sys.stderr)
+    for script, count in sorted(script_breakdown.items()):
+        if count > 0:
+            print(f"    {script}: {count}", file=sys.stderr)
+    print(f"[5] COUNTED LETTERS: {counted_letters}", file=sys.stderr)
+    print(f"[6] RATIO: {non_english_count}/{counted_letters} = {ratio:.4f}", file=sys.stderr)
+    max_ratio = config.get("max_non_english_ratio", config.get("max_ratio", "unknown"))
+    print(f"[7] MAX RATIO (from config): {max_ratio}", file=sys.stderr)
+    print(f"[8] STATUS: {status}", file=sys.stderr)
+    print(f"    REASON: {reason}", file=sys.stderr)
+    print("===================", file=sys.stderr)
 
 
 def parse_args() -> argparse.Namespace:
@@ -41,6 +81,11 @@ def parse_args() -> argparse.Namespace:
         "--json",
         action="store_true",
         help="Print machine-readable JSON instead of key=value lines",
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Print step-by-step sanitization and counting trace",
     )
     return parser.parse_args()
 
@@ -79,30 +124,61 @@ def read_text(args: argparse.Namespace) -> str:
 
 
 def strip_narrative_exemptions(text: str, allow_cjk_in_code_or_paths: bool) -> str:
-    sanitized = CODE_BLOCK_RE.sub(" ", text)
-    sanitized = INLINE_CODE_RE.sub(" ", sanitized)
+    # Step 1: Replace fenced code blocks with marker tokens (preserves surrounding whitespace)
+    sanitized = CODE_BLOCK_RE.sub(" [CODE_BLOCK] ", text)
+    # Step 2: Replace inline code spans with marker tokens
+    sanitized = INLINE_CODE_RE.sub(" [CODE] ", sanitized)
+    # Step 3: Strip markdown link text but keep URL context neutral
+    sanitized = MARKDOWN_LINK_RE.sub(" [LINK] ", sanitized)
+    # Step 4: Strip markdown headings entirely (the heading text is not narrative)
+    sanitized = MARKDOWN_HEADING_RE.sub(" ", sanitized)
     if allow_cjk_in_code_or_paths:
         sanitized = URL_RE.sub(" ", sanitized)
         sanitized = PATH_TOKEN_RE.sub(" ", sanitized)
     return sanitized
 
 
-def count_non_english_letters(text: str) -> int:
-    count = 0
+def count_non_english_letters(text: str) -> tuple[int, dict[str, int]]:
+    breakdown: dict[str, int] = {
+        "cjk": 0,
+        "hangul": 0,
+        "arabic": 0,
+        "devanagari": 0,
+        "cyrillic": 0,
+        "thai": 0,
+        "latin_extended": 0,
+        "other": 0,
+    }
+    total = 0
     for char in text:
         if ENGLISH_RE.fullmatch(char):
             continue
-        if CJK_RE.fullmatch(char):
-            count += 1
-            continue
-        if char.isalpha() and ord(char) > 127:
-            count += 1
-    return count
+        matched = False
+        for name, regex in (
+            ("cjk", CJK_RE),
+            ("hangul", HANGUL_RE),
+            ("arabic", ARABIC_RE),
+            ("devanagari", DEVANAGARI_RE),
+            ("cyrillic", CYRILLIC_RE),
+            ("thai", THAI_RE),
+            ("latin_extended", LATIN_EXTENDED_RE),
+        ):
+            if regex.fullmatch(char):
+                breakdown[name] += 1
+                matched = True
+                break
+        if not matched:
+            if char.isalpha() and ord(char) > 127:
+                breakdown["other"] += 1
+                matched = True
+        if matched:
+            total += 1
+    return total, breakdown
 
 
 def clause_language(clause: str) -> str:
     english_count = len(ENGLISH_RE.findall(clause))
-    non_english_count = count_non_english_letters(clause)
+    non_english_count, _ = count_non_english_letters(clause)
     if english_count == 0 and non_english_count == 0:
         return "empty"
     if english_count > 0 and non_english_count == 0:
@@ -138,7 +214,8 @@ def first_meaningful_clause(text: str) -> tuple[str, str]:
 
 def adjusted_non_english_count(text: str, fragment_threshold: int) -> int:
     if fragment_threshold <= 0:
-        return count_non_english_letters(text)
+        total, _ = count_non_english_letters(text)
+        return total
 
     total = 0
     for raw_clause in CLAUSE_SPLIT_RE.split(text):
@@ -146,10 +223,14 @@ def adjusted_non_english_count(text: str, fragment_threshold: int) -> int:
         if not clause:
             continue
         english_count = len(ENGLISH_RE.findall(clause))
-        non_english_count = count_non_english_letters(clause)
+        non_english_count, breakdown = count_non_english_letters(clause)
+        # Only skip pure-CJK short fragments; non-CJK non-English chars always count
+        cjk_count = breakdown["cjk"]
+        non_cjk_non_english = non_english_count - cjk_count
         if (
             english_count > 0
-            and 0 < non_english_count < fragment_threshold
+            and non_cjk_non_english == 0
+            and 0 < cjk_count < fragment_threshold
         ):
             continue
         total += non_english_count
@@ -173,6 +254,7 @@ def decide(text: str, config: dict[str, object]) -> dict[str, object]:
     prefer_english_leading = bool(config["prefer_english_leading_narrative"])
     first_clause, first_clause_language_value = first_meaningful_clause(sanitized)
     first_clause_leading = clause_leading_script(first_clause)
+    _, script_breakdown = count_non_english_letters(sanitized)
 
     if counted_letters == 0:
         status = "ALLOW"
@@ -203,11 +285,18 @@ def decide(text: str, config: dict[str, object]) -> dict[str, object]:
         status = "REJECT"
         reason = "Non-English narrative text exceeds the configured ratio."
     else:
-        status = "ALLOW"
-        if cjk_count > 0:
-            reason = "English remains dominant and the non-English narrative ratio is within policy."
+        if ratio >= (max_ratio - 0.03):
+            status = "WARNING"
+            reason = (
+                f"English is dominant but non-English ratio ({ratio:.2f}) "
+                f"is within 0.03 of the {max_ratio} threshold. Proceed with caution."
+            )
         else:
-            reason = "English-only or effectively English-dominant narrative text."
+            status = "ALLOW"
+            if cjk_count > 0:
+                reason = "English remains dominant and the non-English narrative ratio is within policy."
+            else:
+                reason = "English-only or effectively English-dominant narrative text."
 
     return {
         "status": status,
@@ -220,6 +309,7 @@ def decide(text: str, config: dict[str, object]) -> dict[str, object]:
         "first_clause": first_clause,
         "first_clause_language": first_clause_language_value,
         "first_clause_leading": first_clause_leading,
+        "script_breakdown": script_breakdown,
         "reason": reason,
         "rejection_message": str(config["rejection_message"]),
     }
@@ -230,6 +320,23 @@ def main() -> int:
     config = load_config(args.config)
     text = read_text(args)
     result = decide(text, config)
+
+    sanitized = strip_narrative_exemptions(
+        text, bool(config["allow_cjk_in_code_or_paths"])
+    )
+    if args.debug:
+        debug_trace(
+            original=text,
+            sanitized=sanitized,
+            english_count=result["english_count"],
+            script_breakdown=result.get("script_breakdown", {}),
+            counted_letters=result["counted_letters"],
+            non_english_count=result["non_english_count"],
+            ratio=result["non_english_ratio"],
+            status=result["status"],
+            reason=result["reason"],
+            config=config,
+        )
 
     if args.json:
         print(json.dumps(result, ensure_ascii=False, indent=2))

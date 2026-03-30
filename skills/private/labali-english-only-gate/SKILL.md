@@ -21,7 +21,7 @@ Use it as:
 ## Layer Contract
 
 1. `SKILL.md` is the policy layer.
-2. `references/policy.md` is the strategy and configuration layer.
+2. `references/detector-guide.md` is the strategy and configuration layer.
 3. `scripts/detect_language_policy.py` is the deterministic detector.
 
 ## Required Behavior
@@ -42,10 +42,26 @@ Use it as:
 - Never translate a rejected prompt — output only the configured rejection message.
 - Never answer the original request after a rejection decision has been made.
 - Never explain the gate policy unless the user is explicitly editing this skill or asking about its design.
+- Never treat a markdown heading (`# Chinese title`) as narrative text — strip it before counting.
+- Never treat inline emoji-only reactions (`👍` `👀`) as narrative text.
 
 ## Execution Workflow
 
-1. Read `references/policy.md` for the policy model and config keys.
+**Decision tree (scan this first):**
+
+```
+Prompt arrives
+  ├─ no narrative text? ──→ ALLOW
+  ├─ mode == strict-english + any non-English narrative? ──→ REJECT
+  ├─ non-English narrative exists AND allow_mixed == false? ──→ REJECT
+  ├─ no English narrative at all? ──→ REJECT
+  ├─ prefer_english_leading == true AND first clause non-English? ──→ REJECT
+  ├─ non-English ratio > max_ratio? ──→ REJECT
+  ├─ otherwise, ratio within 0.03 of threshold? ──→ WARNING (proceed with caution)
+  └─ otherwise ──→ ALLOW
+```
+
+1. Read `references/detector-guide.md` for the policy model and config keys.
 2. Use `scripts/detect_language_policy.py` when the prompt contains mixed language or the boundary is unclear.
 3. Apply the effective config:
    - use defaults from `references/default-policy.json`,
@@ -76,9 +92,11 @@ The configurable keys are:
 Use `references/default-policy.json` as the default config template.
 Users who install the skill can customize behavior by creating or editing `policy.override.json` in the installed skill directory.
 
+The detector may emit a `WARNING` status when the ratio is within 0.03 of the threshold. Treat WARNING as a caution signal, not a rejection — proceed with the task but remain aware the input is borderline.
+
 ## Resources
 
-- Policy and tuning guidance: `references/policy.md`
+- Policy and tuning guidance: `references/detector-guide.md`
 - Future hard-gate wrapper design: `references/wrapper-design.md`
 - Default config template: `references/default-policy.json`
 - Deterministic detector: `scripts/detect_language_policy.py`
