@@ -2,6 +2,8 @@
 
 This skill sanitizes local images by physically regenerating them with ImageMagick (resize + strip + recompress), then prints before/after diagnostics and runs a hidden-metadata sensitive-info scan with in-agent model judgment.
 
+Scope is metadata-only. It removes and reviews hidden metadata, but does not inspect, understand, blur, or mask visible pixel content.
+
 ## 1) Install and Update
 
 Install from GitHub:
@@ -33,6 +35,13 @@ Optional flag:
 6. Prints `Sensitive info review: PASS|REVIEW_REQUIRED`.
 7. Agent reads `MODEL_REVIEW_JSON` payload and produces a final `PASS|REVIEW_REQUIRED|BLOCK` verdict with reasoning.
 
+## 3.1) What It Does Not Do
+
+1. It does not perform OCR on visible text inside the image.
+2. It does not review UI content, account names, buttons, or other visible screenshot elements.
+3. It does not blur, mosaic, crop, or otherwise redact pixel content.
+4. A `PASS` verdict means hidden metadata scan passed, not that visible content is safe to share.
+
 ## 4) Prerequisites
 
 - `magick` (ImageMagick 7+): `brew install imagemagick`
@@ -43,7 +52,8 @@ Optional flag:
 
 1. **Practical-risk reduction, not forensic erasure** — physical regeneration disrupts most embedded metadata but cannot guarantee complete removal of all tracking signals.
 2. **Model judgment is in-agent** — no external API call is made; the agent reads script output and applies semantic judgment inline.
-3. **Input format support** — depends on ImageMagick codec support for the given file format (JPEG, PNG, WebP widely supported).
+3. **Metadata-only scope** — this skill is not a visible-content redaction tool and should not be described as screenshot masking or content desensitization.
+4. **Input format support** — depends on ImageMagick codec support for the given file format (JPEG, PNG, WebP widely supported).
 
 ## 6) Troubleshooting
 

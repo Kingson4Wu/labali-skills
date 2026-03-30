@@ -2,7 +2,7 @@
 name: labali-image-ocr-macos-vision
 description: Run native macOS image OCR through Vision.framework via pyobjc bridge (same engine family used by Preview/Live Text), with Chinese+English recognition defaults and deterministic CLI execution. Use when you need to extract text from local images on macOS — including screenshots, photos, or scanned documents — and want output to stdout or a text file. Also known as image-to-text or read-text-from-image.
 license: MIT
-allowed-tools: "Bash(npx:*), Bash(python3:*), Bash(pip:*)"
+allowed-tools: "Bash(npx:*), Bash(python3:*), Bash(pip:*), Bash(uv:*)"
 metadata:
   pattern: pipeline
   compatibility: "macOS only (10.15 Catalina or later); requires Python 3 + pyobjc-framework-Vision; Vision.framework provided by macOS"

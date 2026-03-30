@@ -1,13 +1,13 @@
 ---
 name: labali-image-desensitize
 description: >-
-  Sanitize and desensitize local images by physically regenerating them with
-  ImageMagick re-encode flow (resize 99% -> 101%, strip metadata, recompress),
-  then print before/after size, dimensions, EXIF count, SHA256, EXIF diff, and
-  a post-sanitize hidden-metadata sensitive-info scan. Use when you want to
-  strip, clean, or verify hidden metadata (EXIF, GPS, tracking info) from local
-  images, with before/after diagnostics and a post-sanitize scan. Input: image
-  path + output path.
+  Sanitize local images by physically regenerating them with ImageMagick
+  re-encode flow (resize 99% -> 101%, strip metadata, recompress), then print
+  before/after size, dimensions, EXIF count, SHA256, EXIF diff, and a
+  post-sanitize hidden-metadata sensitive-info scan. Metadata-only skill: use
+  when you want to strip, clean, or verify hidden metadata (EXIF, GPS,
+  tracking info) from local images. It does not inspect or redact visible pixel
+  content. Input: image path + output path.
 license: MIT
 compatibility: macOS / Linux; requires ImageMagick (convert) and exiftool in PATH.
 allowed-tools: "Bash(convert:*), Bash(exiftool:*), Bash(bash:*)"
@@ -31,6 +31,7 @@ Treat this skill as a layered system.
 - Never overwrite the input file — always write to a separate output path.
 - Never report PASS on the sensitive-info scan without completing Step 4.
 - Never skip Step 3 diagnostics — before/after comparison is required output regardless of result.
+- Never describe this skill as OCR, visible-content review, screenshot redaction, or pixel-level masking.
 
 ## Pipeline Steps
 
@@ -59,6 +60,9 @@ Execute in fixed order:
 **Step 4 — Reviewer: sensitive metadata scan**
 - Run post-sanitize hidden metadata scan on output image via `scripts/check-sensitive-info.sh`.
 - Check EXIF/XMP/IPTC metadata for sensitive key/value patterns.
+- Treat the scan as metadata-only:
+  - do not infer anything from visible UI text, buttons, usernames, or other pixels,
+  - do not present this skill as a substitute for blur, mosaic, crop, or mask workflows.
 - Load `references/model-review.md` for review rubric.
 - Print `Sensitive info review: PASS|REVIEW_REQUIRED`.
 - Print `MODEL_REVIEW_SUMMARY` + `MODEL_REVIEW_JSON` payload.
@@ -92,6 +96,7 @@ Use `skill.yaml` as input schema source of truth.
 - Deterministic local shell execution only.
 - No browser, no network, no API.
 - Keep output reproducible and script-driven.
+- Metadata-only scope: no OCR, no visible-content analysis, no pixel redaction.
 
 ## Resources
 

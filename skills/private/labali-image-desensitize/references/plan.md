@@ -30,6 +30,9 @@
 
 - Run `scripts/check-sensitive-info.sh <output>`.
 - Scan output metadata for sensitive key/value patterns.
+- Keep scope metadata-only:
+  - do not inspect visible text or pixels,
+  - do not treat the result as screenshot masking or content redaction.
 - Print final review status: `PASS` or `REVIEW_REQUIRED`.
 
 ## Stage 7: In-Agent Model Judgment (No API Key)

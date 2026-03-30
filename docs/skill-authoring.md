@@ -69,10 +69,12 @@ function ensureDeps(): void {
 ### Python skills (`cli`, `hybrid` with `.py` scripts)
 
 - Add `pyproject.toml` at the **skill root** with `requires-python` and version-pinned `dependencies`.
-- Run `uv lock` in the skill root to generate `uv.lock`.
-- In `scripts/run.ts`, use `buildPythonCmd()` (see template below) to invoke the Python script via `uv run`. `uv` auto-creates an isolated `.venv` at the skill root on first run.
+- Run `uv sync --project <skill_root>` to generate `uv.lock` and create the isolated `.venv` at the skill root.
+- In `scripts/run.ts`, use `buildPythonCmd()` (see template below) to invoke the Python script via `uv run`.
 - `uv` uses a global cache (`~/.cache/uv`) with hardlinks — disk space is not duplicated across skills sharing the same package version.
+- `SKILL.md`'s `allowed-tools` must include `Bash(uv:*)`.
 - Users can opt out of uv isolation by setting `LABALI_PYTHON_RUNNER=system`, which falls back to `python3` from PATH.
+- **Do NOT create `requirements.txt`** — all dependency info lives in `pyproject.toml`.
 
 ```typescript
 function buildPythonCmd(scriptPath: string): { cmd: string; leadArgs: string[] } {
@@ -103,8 +105,6 @@ dependencies = [
 ]
 ```
 
-Also keep a `requirements.txt` with a comment noting it is for system-mode reference only.
-
 ### Scripts using only built-ins
 
-No dependency file needed.
+`pyproject.toml` with an empty `dependencies = []` is still required to establish the isolated `.venv` via `uv sync --project <skill_root>`.

@@ -1,4 +1,8 @@
 import { spawnSync } from "node:child_process";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __skillRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
 type ArgMap = Record<string, string | boolean>;
 
@@ -34,6 +38,22 @@ function optionalString(args: ArgMap, key: string): string | null {
   return trimmed ? trimmed : null;
 }
 
+function buildPythonCmd(scriptPath: string): { cmd: string; leadArgs: string[] } {
+  const runner = (process.env.LABALI_PYTHON_RUNNER ?? "uv").trim();
+  if (runner === "system") {
+    const pythonBin = process.env.PYTHON_BIN?.trim() || "python3";
+    return { cmd: pythonBin, leadArgs: [scriptPath] };
+  }
+  const uvCheck = spawnSync("uv", ["--version"], { stdio: "pipe" });
+  if (uvCheck.error || uvCheck.status !== 0) {
+    console.error("[labali] uv is required but not found.");
+    console.error("  Install: curl -LsSf https://astral.sh/uv/install.sh | sh");
+    console.error("  Or use your existing Python: export LABALI_PYTHON_RUNNER=system");
+    process.exit(1);
+  }
+  return { cmd: "uv", leadArgs: ["run", "--project", __skillRoot, "python", scriptPath] };
+}
+
 function printUsage(): void {
   console.log(`Usage:\n  npx tsx skills/private/labali-subtitle-correct-with-reference-text/scripts/run.ts \\\n    --subtitle_path \"/path/to/input.srt\" \\\n    --reference_path \"/path/to/reference.txt\" \\\n    [--output_path \"/path/to/output.srt\"]`);
 }
@@ -49,8 +69,8 @@ async function main(): Promise<void> {
   const referencePath = requiredString(args, "reference_path");
   const outputPath = optionalString(args, "output_path");
 
+  const scriptPath = `${__skillRoot}/scripts/fix-subtitle-with-reference.py`;
   const scriptArgs = [
-    "skills/private/labali-subtitle-correct-with-reference-text/scripts/fix-subtitle-with-reference.py",
     "--subtitle_path",
     subtitlePath,
     "--reference_path",
@@ -61,7 +81,8 @@ async function main(): Promise<void> {
     scriptArgs.push("--output_path", outputPath);
   }
 
-  const result = spawnSync("python3", scriptArgs, {
+  const { cmd, leadArgs } = buildPythonCmd(scriptPath);
+  const result = spawnSync(cmd, [...leadArgs, ...scriptArgs], {
     stdio: "inherit",
     env: process.env,
   });

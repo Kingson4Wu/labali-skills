@@ -1,4 +1,0 @@
-# system mode reference only (LABALI_PYTHON_RUNNER=system)
-# primary dependency declaration is in pyproject.toml
-pyobjc-framework-Vision
-pyobjc-framework-Cocoa

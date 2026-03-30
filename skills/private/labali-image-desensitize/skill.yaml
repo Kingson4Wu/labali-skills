@@ -1,5 +1,5 @@
 name: labali-image-desensitize
-description: Desensitize local images by physical re-encode and metadata stripping, then run post-sanitize hidden metadata sensitive-info scan and in-agent model judgment from metadata payload, with optional strict non-zero gate.
+description: Metadata-only image sanitization via physical re-encode and metadata stripping, then run post-sanitize hidden metadata sensitive-info scan and in-agent model judgment from metadata payload, with optional strict non-zero gate. Does not inspect or redact visible pixel content.
 executor: scripts/run.ts
 inputs:
   input_image:

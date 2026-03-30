@@ -3,7 +3,7 @@ name: labali-subtitle-correct-with-reference-text
 description: Correct subtitle wording using a reference script that has accurate text but no timestamps. Use when the existing subtitle file (.srt, .vtt, or similar) already has correct timestamps but wrong words, and a separate reference text (script, transcript) is available for textual correction.
 license: MIT
 compatibility: macOS / Linux; Node.js ≥ 18 + tsx; AI agent environment with file system access.
-allowed-tools: "Bash(npx:*), Bash(pnpm:*)"
+allowed-tools: "Bash(npx:*), Bash(pnpm:*), Bash(python3:*), Bash(uv:*)"
 metadata:
   pattern: pipeline
 ---
