@@ -1,11 +1,20 @@
 ---
 name: labali-english-only-gate
-description: Enforce an English-only or English-dominant interaction gate for Codex tasks. Use when the user asks to accept English prompts only, reject Chinese-first or clearly non-English input, allow English-majority mixed input with small Chinese fragments, or require a fixed refusal message instead of answering the request. Trigger for Chinese characters, mixed Chinese-English prompts, multilingual prompts, language gate policies, or requests to require English-first interaction.
+description: >-
+  AI-driven policy gate to enforce English-only or English-dominant interaction.
+  No script executor — gate logic runs through AI policy with an optional detector
+  script for hard-boundary cases. Use when the user asks to reject non-English
+  prompts, enforce a Chinese-only or language gate policy, require English-first
+  interaction, or request a fixed refusal message instead of answering. Trigger
+  phrases: "reject non-English", "Chinese-only", "language gate", "English first",
+  "accept English prompts only", "reject Chinese-first".
 license: MIT
 compatibility: AI agent environment only; no system dependencies.
 allowed-tools: "Bash(python3:*), Bash(uv:*)"
 metadata:
-  pattern: reviewer
+  type: policy-only
+  pattern: inversion+policy
+  interaction: single-turn
 ---
 
 # Labali English Only Gate
@@ -45,7 +54,7 @@ Use it as:
 - Never treat a markdown heading (`# Chinese title`) as narrative text — strip it before counting.
 - Never treat inline emoji-only reactions (`👍` `👀`) as narrative text.
 
-## Execution Workflow
+## How It Works
 
 **Decision tree (scan this first):**
 
@@ -61,21 +70,25 @@ Prompt arrives
   └─ otherwise ──→ ALLOW
 ```
 
-1. Read `references/detector-guide.md` for the policy model and config keys.
-2. Use `scripts/detect_language_policy.py` when the prompt contains mixed language or the boundary is unclear.
-3. Apply the effective config:
-   - use defaults from `references/default-policy.json`,
-   - automatically prefer `policy.override.json` in the skill root when it exists,
-   - optionally use an explicit `--config` path when a caller wants a different override file.
-4. If detector result is `REJECT`, output the configured rejection message exactly.
-5. If detector result is `ALLOW`, continue with the normal task.
+**Config resolution (most specific wins):**
+1. Explicit `--config /path/to/custom.json`
+2. `policy.override.json` in skill root (user customization)
+3. `references/default-policy.json` (defaults)
+
+**Usage:**
+- Run `python3 scripts/detect_language_policy.py --text "..." --json` for borderline cases
+- Run `python3 scripts/detect_language_policy.py --text "..." --debug` for step-by-step trace
+- Detector emits `ALLOW`, `WARNING`, or `REJECT` — treat WARNING as proceed-with-caution, not rejection
 
 ## Output Contract
 
-- Rejected prompt:
-  - output only the configured rejection message.
-- Allowed prompt:
-  - do nothing special and continue normally.
+**REJECT:** output only the configured `rejection_message`. No translation, no explanation, no partial answer.
+
+```
+Please ask your question in English only.
+```
+
+**ALLOW / WARNING:** proceed with the task normally. No gate message needed.
 
 ## Configuration
 
@@ -91,8 +104,7 @@ The configurable keys are:
 
 Use `references/default-policy.json` as the default config template.
 Users who install the skill can customize behavior by creating or editing `policy.override.json` in the installed skill directory.
-
-The detector may emit a `WARNING` status when the ratio is within 0.03 of the threshold. Treat WARNING as a caution signal, not a rejection — proceed with the task but remain aware the input is borderline.
+See `references/detector-guide.md` for the full config key reference table.
 
 ## Resources
 
