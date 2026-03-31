@@ -87,3 +87,9 @@ Please ask your question in English only.
 The 7 keys (`mode`, `max_non_english_ratio`, `allow_mixed_input`, `allow_cjk_in_code_or_paths`, `prefer_english_leading_narrative`, `ignore_short_cjk_fragments_under`, `rejection_message`) are documented there.
 
 Users can customize by creating `policy.override.json` in the skill root. Resolution order (most specific wins): explicit `--config` path → `policy.override.json` → `references/default-policy.json`.
+
+## Resources
+
+- Config keys + narrative rules: `references/detector-guide.md`
+- Hard-gate wrapper design: `references/wrapper-design.md`
+- Regression tests: `tests/test_regression.sh`
