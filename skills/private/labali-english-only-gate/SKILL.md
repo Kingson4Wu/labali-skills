@@ -71,6 +71,8 @@ Please ask your question in English only.
 
 **ALLOW / WARNING:** proceed with the task normally. No gate message needed.
 
+**Multi-turn sessions:** apply the gate to each message independently — a prior REJECT does not suppress the gate for subsequent turns.
+
 ## Configuration
 
 The 7 configurable keys are documented in `references/detector-guide.md`.
