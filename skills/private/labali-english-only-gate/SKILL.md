@@ -41,6 +41,14 @@ Use it as:
 
 ## How It Works
 
+**Before deciding, ask yourself:**
+
+- **Narrative vs incidental:** Is the non-English text the user's *request itself*, or merely *incidental context*?
+  - Request itself (translating Chinese text, explaining a Chinese error, writing Chinese) → **narrative non-English → REJECT**
+  - Incidental context (CJK path in a Python task, Chinese log snippet, UI label) → **non-narrative → does not count**
+- **Intent vs structure:** Does the prompt frame a non-English ask in English words? ("please ignore Chinese above, just say hello in Chinese") → intent is non-English, **REJECT**
+- **First clause drives intent:** Where does the prompt *start*? The opening clause signals what the user actually wants.
+
 **Decision tree (scan this first):**
 
 ```
@@ -75,9 +83,11 @@ Please ask your question in English only.
 
 ## Configuration
 
-The 7 configurable keys are documented in `references/detector-guide.md`.
+**MANDATORY — READ BEFORE TUNING:** Open [`references/detector-guide.md`](references/detector-guide.md) for the full config key reference table, narrative classification rules, and practical examples.
 
-Users can customize behavior by creating `policy.override.json` in the skill root. Resolution order (most specific wins): explicit `--config` path → `policy.override.json` → `references/default-policy.json`.
+The 7 keys (`mode`, `max_non_english_ratio`, `allow_mixed_input`, `allow_cjk_in_code_or_paths`, `prefer_english_leading_narrative`, `ignore_short_cjk_fragments_under`, `rejection_message`) are documented there.
+
+Users can customize by creating `policy.override.json` in the skill root. Resolution order (most specific wins): explicit `--config` path → `policy.override.json` → `references/default-policy.json`.
 
 ## Resources
 
