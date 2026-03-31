@@ -4,7 +4,7 @@
 
 # English Gate
 
-This skill is a **policy gate**, not a firewall. It enforces English-first interaction by policy — a separate wrapper/router is needed for hard enforcement.
+This skill follows the **Inversion + Policy pattern**: it runs BEFORE the AI answers, inverting the normal flow to enforce a gate first. It is a policy gate, not a firewall — a separate wrapper/router is needed for hard enforcement.
 
 ## Core Principle
 
@@ -65,8 +65,16 @@ Prompt arrives
 **Usage:**
 - Run `python3 scripts/detect_language_policy.py --text "..." --json` for borderline cases
 - Run `python3 scripts/detect_language_policy.py --text "..." --debug` for step-by-step trace
-- If the detector is unavailable or returns an error: apply the decision tree manually
 - Detector emits `ALLOW`, `WARNING`, or `REJECT` — treat WARNING as proceed-with-caution, not rejection
+
+**Fallback (detector unavailable or error):** apply the decision tree manually. If the first meaningful clause starts non-English AND the prompt appears non-English-dominant → REJECT; otherwise proceed.
+
+**Boundary cases (detector unavailable):**
+- Ratio exactly at 0.20: treat as WARNING — proceed with caution
+- Prompt has multiple non-English scripts (e.g., French accents + CJK): apply each as non-English; if the dominant language is non-English → REJECT
+- Unknown/invalid detector output: apply manual decision tree rather than defaulting to ALLOW
+
+**Do NOT Load** `references/wrapper-design.md` during gate evaluation — it is a future architecture note, not runtime guidance. Load only `references/detector-guide.md` when tuning config.
 
 ## Output Contract
 
