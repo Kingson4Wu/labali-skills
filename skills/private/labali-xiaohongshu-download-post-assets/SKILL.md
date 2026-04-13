@@ -18,6 +18,19 @@ metadata:
 
 > **MANDATORY — load `references/plan.md` before any browser or extraction action begins.**
 
+## ⚠️ NEVER WRITE YOUR OWN SCRIPT
+
+**The download logic is fully implemented. Always invoke the existing script — do NOT write a new one.**
+
+```bash
+cd /Users/kingsonwu/programming/kingson4wu/labali-skills
+npx tsx skills/private/labali-xiaohongshu-download-post-assets/scripts/run.ts \
+  --post_url "<url>" \
+  --output_dir "$HOME/Downloads/xhs"
+```
+
+The sections below (carousel logic, DOM extraction, anti-detection) are **implementation documentation for the script itself**, not instructions for you to re-implement. If the script doesn't exist or can't run, report the error — never substitute with hand-written Playwright code.
+
 ## Required Constraints
 
 - Use browser automation only.
@@ -50,9 +63,18 @@ XiaoHongShu applies behavioral analysis to detect automation. Violations of thes
 
 **Image acquisition:**
 - Never issue new HTTP requests for images — the browser has already downloaded them.
-- Capture images via `page.on("response")` during carousel click-through, or read from browser HTTP cache via `fetch(url, {cache: "force-cache"})` inside `page.evaluate()`.
-- If neither path yields the image data, report failure — do not fall back to `page.request.get()` or any out-of-browser HTTP request.
-- Click through carousel images one by one with randomized delays (700–1400ms per image), not batch-extracted from the DOM.
+- **Register `page.on("response")` BEFORE calling `page.goto()`** — images load during navigation; a listener registered after `goto()` misses the first batch entirely.
+- **Primary image source: DOM-scoped extraction from `.note-slider`**, NOT whole-page response interception. XHS pages load 10–40× more feed/recommendation images than the post itself; intercepting all xhscdn responses produces the wrong count. Correct flow:
+  1. After page settles, press `ArrowLeft` repeatedly (up to 20×) until no new image appears — this resets the carousel to slide 1 regardless of prior state.
+  2. Read the **currently visible** slide image URL from `.note-slider img` (the active/largest `src`, not all preloaded imgs) and append it to an ordered list.
+  3. Press `ArrowRight` once, wait, then read the new current slide URL. Repeat until the URL is the same as the first URL (carousel wrapped) or no change after 2 consecutive presses.
+  4. This ordered list is the authoritative image sequence — file names (`image_01`, `image_02`, …) must match this order.
+  5. Fetch each URL via `fetch(url, {cache: 'force-cache'})` in `page.evaluate()`.
+  - **Do NOT do a bulk upfront query of all `.note-slider img` elements** — XHS preloads all slides into the DOM simultaneously, so a single querySelectorAll returns them in DOM order (which is not carousel order), causing the naming to be scrambled.
+- Response listener (`page.on("response")`) may still run as a supplemental net, but DOM extraction is the authoritative source.
+- If neither path yields images, report failure — do not fall back to `page.request.get()`.
+- **Deduplicate by image hash, not just by URL** — XHS CDN URLs for the same image at different quality levels share the same hash prefix before `!` (e.g. `sns-webpic-qc.xhscdn.com/.../HASH!nd_dft_wlteh_webp_3` and `...HASH!nd_dft_wlteh_webp_1` are the same image). Extract the hash segment and keep only the URL whose downloaded file is largest. Alternatively, after all downloads complete, remove any file whose size is less than 40% of the median file size — these are preloaded thumbnails, not content images.
+- Carousel navigation: `page.keyboard.press('ArrowRight')` first (most reliable); DOM selectors (`.note-slider .right-arrow`, `[class*="rightArrow"]`, `.swiper-button-next`) as fallback.
 
 **Video:**
 - Before downloading, simulate user engagement: bring the tab to front, click the video/play button, wait 3–5 seconds for buffering.
@@ -64,6 +86,7 @@ XiaoHongShu applies behavioral analysis to detect automation. Violations of thes
 
 ## NEVER
 
+- **Never write a custom Playwright/Node.js script to perform the download** — the existing `scripts/run.ts` already handles all carousel navigation, image extraction, deduplication, and metadata. Writing a new script bypasses all tested logic and produces incomplete results (e.g. only 1 image instead of all slides).
 - Never leave multiple video segment files in the output folder after a successful run — merge segments and delete the originals.
 - Never report success if `post.md` was not generated.
 - Never report success based on action completion alone — verify output folder structure and required files exist.
@@ -96,6 +119,10 @@ Comment export failure behavior:
 - Default mode: guided browser flow + semantic extraction + authenticated media download.
 - Optional mode: add semantic comment extraction, comment image download, and write `comments/comments.json` + `comments/comments.md` when `include_comments=true`.
 - Startup guidance:
+  - check if CDP is responding: `curl -s http://localhost:9223/json/version`
+  - if CDP is NOT responding → **auto-launch Chrome immediately** (no user prompt needed):
+    `open -na "Google Chrome" --args --remote-debugging-port=9223 --user-data-dir="$HOME/.chrome-labali-no-proxy" --no-proxy-server`
+    then wait 3 seconds and verify CDP responds before proceeding.
   - if Chrome with remote debugging is already running on the CDP port, reuse it — do not launch a new instance,
   - connect via CDP port,
   - if an existing Xiaohongshu tab is found, reuse it — do not open a new tab or navigate away from any other active tab,

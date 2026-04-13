@@ -43,6 +43,7 @@ ALLOWED_REL_PATHS = {
 # Use for skills or assets where Chinese text is intentional and necessary.
 ALLOWED_DIR_PREFIXES = {
     "skills/private/labali-blog-writing-style",  # examples and assets are intentionally in Chinese
+    "skills/private/labali-english-only-gate",    # policy examples must show Chinese text to demonstrate detection behavior
 }
 
 # CJK Unicode ranges covering Chinese characters

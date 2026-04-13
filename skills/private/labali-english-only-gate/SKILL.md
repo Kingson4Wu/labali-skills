@@ -1,5 +1,6 @@
 ---
-# Frontmatter (name/metadata) lives in skill.yaml — do not duplicate here.
+name: labali-english-only-gate
+description: "AI-driven policy gate to enforce English-only or English-dominant interaction. No script executor — gate logic runs through AI policy with optional detector script."
 ---
 
 # English Gate

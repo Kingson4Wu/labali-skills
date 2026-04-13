@@ -248,6 +248,73 @@ export async function ensureDir(pathLike: string): Promise<void> {
   await mkdir(pathLike, { recursive: true });
 }
 
+/**
+ * Navigate the carousel step-by-step to collect image URLs in display order.
+ * Presses ArrowLeft to reset to slide 1, then ArrowRight to walk through.
+ * Returns an ordered array where index 0 is the first slide.
+ */
+async function extractImageUrlsByCarouselNavigation(page: Page): Promise<string[]> {
+  const getActiveSlideUrl = () =>
+    page.evaluate(() => {
+      // Prefer Swiper's active-slide class
+      for (const sel of [
+        ".note-slider .swiper-slide-active img",
+        ".note-slider [class*='active'] img",
+        ".note-slider .slide-active img",
+      ]) {
+        const el = document.querySelector(sel) as HTMLImageElement | null;
+        if (el) {
+          const src = (el.currentSrc || el.src || "").split("?")[0];
+          if (src && src.includes("xhscdn.com") && !src.includes("avatar")) return src;
+        }
+      }
+      // Fallback: largest img in .note-slider by naturalWidth * naturalHeight
+      const all = Array.from(document.querySelectorAll(".note-slider img")) as HTMLImageElement[];
+      let best: HTMLImageElement | null = null;
+      let bestArea = 0;
+      for (const img of all) {
+        const area = (img.naturalWidth || 0) * (img.naturalHeight || 0);
+        const src = (img.currentSrc || img.src || "").split("?")[0];
+        if (area > bestArea && src.includes("xhscdn.com") && !src.includes("avatar")) {
+          bestArea = area;
+          best = img;
+        }
+      }
+      return best ? (best.currentSrc || best.src || "").split("?")[0] : "";
+    });
+
+  // Reset to slide 1 — press ArrowLeft until the URL stops changing
+  let prevUrl = await getActiveSlideUrl();
+  for (let i = 0; i < 20; i++) {
+    await page.keyboard.press("ArrowLeft");
+    await page.waitForTimeout(300 + Math.random() * 150);
+    const cur = await getActiveSlideUrl();
+    if (cur === prevUrl) break;
+    prevUrl = cur;
+  }
+
+  const ordered: string[] = [];
+  let noChangeCount = 0;
+
+  for (let i = 0; i < 30; i++) {
+    const url = await getActiveSlideUrl();
+    if (!url) break;
+    // Wrap-around detected: back to slide 1
+    if (ordered.length > 0 && url === ordered[0]) break;
+    if (url === ordered[ordered.length - 1]) {
+      noChangeCount++;
+      if (noChangeCount >= 2) break;
+    } else {
+      ordered.push(url);
+      noChangeCount = 0;
+    }
+    await page.keyboard.press("ArrowRight");
+    await page.waitForTimeout(400 + Math.random() * 300);
+  }
+
+  return ordered;
+}
+
 export async function extractPostSnapshot(page: Page, noteId: string): Promise<PostSnapshot> {
   const snapshot = await page.evaluate((targetNoteId) => {
     const initialState = (window as { __INITIAL_STATE__?: unknown }).__INITIAL_STATE__ as
@@ -377,38 +444,14 @@ export async function extractPostSnapshot(page: Page, noteId: string): Promise<P
       }
     }
 
-    const rootCandidates = [
-      document.querySelector("#detail-container"),
-      document.querySelector(".note-content"),
-      document.querySelector("main"),
-      document.body,
-    ].filter(Boolean) as Element[];
-
-    const imageSet = new Set<string>();
-    for (const root of rootCandidates) {
-      const imgs = Array.from(root.querySelectorAll("img"));
-      for (const img of imgs) {
-        const element = img as HTMLImageElement;
-        const src = (element.currentSrc || element.src || "").trim();
-        const width = element.naturalWidth || element.width || 0;
-        const height = element.naturalHeight || element.height || 0;
-        if (!src) {
-          continue;
-        }
-        if (width > 200 && height > 200) {
-          imageSet.add(src);
-        }
-      }
-      if (imageSet.size >= 1) {
-        break;
-      }
-    }
-
+    // Image URLs are NOT extracted here — bulk DOM querySelectorAll returns images
+    // in DOM/preload order, not carousel order. extractPostSnapshot() will call
+    // extractImageUrlsByCarouselNavigation() after this evaluate returns.
     const fallback = {
       title,
       text: textBlocks.join("\n\n").trim(),
       publishedAt,
-      imageUrls: Array.from(imageSet),
+      imageUrls: [] as string[],
       videoUrls: Array.from(document.querySelectorAll("video, video source"))
         .map((video) => {
           const element = video as HTMLVideoElement;
@@ -419,11 +462,19 @@ export async function extractPostSnapshot(page: Page, noteId: string): Promise<P
     return fallback;
   }, noteId);
 
+  // If __INITIAL_STATE__ provided ordered image URLs, use them directly.
+  // Otherwise fall back to step-by-step carousel navigation which preserves display order.
+  let imageUrls = filterPostImageUrls(snapshot.imageUrls);
+  if (imageUrls.length === 0) {
+    const carouselUrls = await extractImageUrlsByCarouselNavigation(page);
+    imageUrls = filterPostImageUrls(carouselUrls);
+  }
+
   return {
     title: normalizeWhitespace(snapshot.title || ""),
     text: normalizeWhitespace(snapshot.text || ""),
     publishedAt: normalizeWhitespace(snapshot.publishedAt || ""),
-    imageUrls: filterPostImageUrls(snapshot.imageUrls),
+    imageUrls,
     videoUrls: filterPostVideoUrls(snapshot.videoUrls || []),
   };
 }

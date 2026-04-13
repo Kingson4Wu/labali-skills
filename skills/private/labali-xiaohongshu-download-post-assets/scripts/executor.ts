@@ -1,6 +1,6 @@
 import { chromium } from "playwright";
 import { createInterface } from "node:readline/promises";
-import { readFile, unlink } from "node:fs/promises";
+import { readFile, stat, unlink } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import {
   collectCommentImageUrls,
@@ -62,6 +62,45 @@ async function dedupeSavedFilesByContent(
   }
 
   return { uniqueSaved, aliasByIdentity };
+}
+
+/**
+ * Remove preloaded thumbnail duplicates from saved post images.
+ * XHS preloads carousel slides at multiple resolutions; the same image can appear
+ * as both a full-res version and a low-res thumbnail with a different CDN URL,
+ * so SHA-256 dedup misses them. Any file whose size is < 40% of the median is a thumbnail.
+ */
+async function removeThumbnailDuplicates(
+  saved: Array<{ path: string; url: string }>,
+  log: (message: string) => void
+): Promise<Array<{ path: string; url: string }>> {
+  if (saved.length <= 1) return saved;
+
+  const sizes = await Promise.all(
+    saved.map((item) =>
+      stat(item.path)
+        .then((s) => s.size)
+        .catch(() => 0)
+    )
+  );
+
+  const nonZeroSizes = sizes.filter((s) => s > 0).sort((a, b) => a - b);
+  if (nonZeroSizes.length === 0) return saved;
+
+  const median = nonZeroSizes[Math.floor(nonZeroSizes.length / 2)];
+  const threshold = median * 0.4;
+
+  const kept: Array<{ path: string; url: string }> = [];
+  for (let i = 0; i < saved.length; i++) {
+    const size = sizes[i];
+    if (size > 0 && size < threshold) {
+      log(`[dedup] removing thumbnail ${saved[i].path} (${size}B < threshold ${Math.round(threshold)}B, median ${median}B)`);
+      await unlink(saved[i].path).catch(() => undefined);
+    } else {
+      kept.push(saved[i]);
+    }
+  }
+  return kept;
 }
 
 function toTimeout(value: number | undefined): number {
@@ -228,6 +267,7 @@ export async function execute(inputs: DownloadPostInputs, context?: ExecutorCont
     await ensureDir(noteDir);
 
     const imageResult = await browseAndCaptureImages(page, snapshot.imageUrls, noteDir, overwrite);
+    imageResult.saved = await removeThumbnailDuplicates(imageResult.saved, log);
     if (snapshot.videoUrls.length > 0) {
       await simulateVideoPlay(page);
     }

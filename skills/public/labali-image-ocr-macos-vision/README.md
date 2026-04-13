@@ -14,11 +14,17 @@ Update to latest version: run the install command again.
 
 ## 2) Prerequisites
 
-macOS only. Install Python dependencies before first run:
+macOS only. Dependencies are managed via uv — **no manual pip install needed.**
+
+The skill ships a `pyproject.toml` and `.venv`. The `scripts/run.ts` wrapper automatically invokes `uv run --project <skillRoot>`, which activates the skill's own venv with pyobjc pre-installed.
+
+If you see `Missing macOS Vision bridge dependencies`, restore the venv with:
 
 ```bash
-pip install pyobjc-framework-Vision pyobjc-framework-Quartz
+uv sync --project ~/.claude-stella/skills/labali-image-ocr-macos-vision
 ```
+
+Do **not** run `pip install pyobjc-*` system-wide — it installs into the wrong Python and won't be picked up by `run.ts`.
 
 ## 3) Quick Start
 
@@ -48,6 +54,6 @@ Optional flags:
 
 ## 6) Troubleshooting
 
-- `ModuleNotFoundError: pyobjc-framework-Vision`: run `pip install pyobjc-framework-Vision pyobjc-framework-Quartz`.
+- `Missing macOS Vision bridge dependencies`: run `uv sync --project ~/.claude-stella/skills/labali-image-ocr-macos-vision`. Do NOT use pip install.
 - Empty output: check that the image contains visible text and is not corrupted.
 - Poor accuracy: try switching to `--recognition_level accurate` (default) or adjusting `--languages` to match the dominant script.

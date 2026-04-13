@@ -21,7 +21,8 @@ Two implementation details that affect output and are not in Apple's public docs
 - **NEVER pass a remote URL or HTTP path** — Vision.framework requires a local `file://` URI. Remote paths produce empty output with no error raised.
 - **NEVER treat empty output as success** — Vision returns an empty string (not an exception) when: image resolution is too low, format is unsupported, or text contrast is insufficient. Always check that output is non-empty when text is expected.
 - **NEVER use `fast` mode for Chinese-heavy images** — `fast` drops strokes on dense CJK characters; use `accurate` (default) unless throughput is more important than accuracy.
-- **NEVER assume pyobjc is available system-wide** — it must be installed in the active Python environment. If import fails, the script prints the install command to stderr.
+- **NEVER assume pyobjc is available system-wide** — this skill ships its own `.venv` via uv. The execution wrapper (`run.ts`) uses `uv run --project <skillRoot>` to activate the correct environment automatically. Never call `ocr-image-macos.py` directly with `python3`; always invoke via `npx tsx scripts/run.ts`.
+- **NEVER run `pip install pyobjc-*` system-wide** — if pyobjc is missing from the skill's venv, run `uv sync --project <skillRoot>` to restore it. System-level `pip install` targets the wrong Python and won't be used by `run.ts`.
 - **NEVER run on non-macOS** — the script fails fast with an explicit error; do not attempt fallback OCR (tesseract accuracy for Chinese is significantly lower).
 - **NEVER put `zh-Hant` before `zh-Hans` in the languages list for Simplified Chinese documents** — Vision uses the first language as the primary for character disambiguation; wrong ordering causes Simplified characters to be interpreted as Traditional variants, producing incorrect output on ambiguous glyphs.
 
@@ -32,7 +33,7 @@ Before invoking OCR, ask yourself:
 - **Format**: Is this image JPEG/PNG/HEIC/TIFF/BMP/GIF? WebP and SVG must be converted first with `sips`.
 - **Density**: Is the text Chinese-heavy, handwritten, or in a dense layout? If yes → `accurate` is mandatory, not optional.
 - **Path**: Is the path local and absolute (or `~/`-prefixed)? HTTP paths and relative paths without context will silently fail or error.
-- **Environment**: Has `pyobjc-framework-Vision` been installed in the active Python environment? On a fresh machine or new venv, it needs `pip install` first.
+- **Environment**: The skill manages its own uv venv at `<skillRoot>/.venv`. No manual pip install needed — `run.ts` invokes `uv run --project <skillRoot>` which auto-resolves dependencies. If the venv is missing or stale, run `uv sync --project <skillRoot>` once.
 
 ## Required Constraints
 
@@ -77,18 +78,24 @@ npx tsx skills/private/labali-image-ocr-macos-vision/scripts/run.ts \
   [--recognition_level accurate]
 ```
 
-The wrapper delegates to `scripts/ocr-image-macos.py`.
+The wrapper invokes `uv run --project <skillRoot> python scripts/ocr-image-macos.py` internally — the skill's own `.venv` (with pyobjc pre-installed) is used automatically. **Never call `ocr-image-macos.py` directly.**
+
+To use the full skill root path:
+```bash
+SKILL=/Users/kingsonwu/.claude-stella/skills/labali-image-ocr-macos-vision
+npx tsx "$SKILL/scripts/run.ts" --image_path "/path/to/image.jpg"
+```
 
 ## Failure Modes and Remedies
 
 | Symptom | Likely Cause | Remedy |
 |---------|-------------|--------|
 | Empty output, no error | Image below ~64×64 px, wrong format, low contrast | Upscale or convert; verify format is in supported list |
-| `Missing macOS Vision bridge dependencies` | pyobjc not installed in active env | `pip install pyobjc-framework-Vision pyobjc-framework-Quartz` |
+| `Missing macOS Vision bridge dependencies` | skill venv missing or stale | Run `uv sync --project <skillRoot>` — **never** `pip install` system-wide |
 | `Image file not found` | Path wrong or `~` not expanded | Use absolute path; script calls `expanduser()` automatically |
 | `Vision request execution failed` | Corrupted image file | Verify file opens in Preview; try re-exporting |
 | Garbled or merged lines | Low-DPI scan or rotated image | Increase DPI or rotate to upright before OCR |
-| Script fails before OCR (import error, module not found) | Wrong Python env or venv not activated | Check `which python3`; ensure venv with pyobjc is active; run `pip show pyobjc-framework-Vision` to verify |
+| Script fails before OCR (import error, module not found) | Called `python3` directly instead of via `run.ts` | Always use `npx tsx <skillRoot>/scripts/run.ts`; or `uv sync --project <skillRoot>` if venv is missing |
 
 ## Resources
 
