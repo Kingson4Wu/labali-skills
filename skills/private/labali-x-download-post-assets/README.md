@@ -1,0 +1,49 @@
+# labali-x-download-post-assets
+
+Browser-automation skill to download X (Twitter) post assets — text, images, and video — to a local folder.
+
+## Quick Start
+
+```bash
+npx tsx scripts/run.ts \
+  --post_url "https://x.com/<user>/status/<tweet_id>" \
+  --output_dir "~/Downloads/x"
+```
+
+## Features
+
+- **Text**: Extracts author, timestamp, and full tweet text into `post.md`; t.co shortlinks are automatically expanded to full URLs
+- **Images**: Downloads all post images with deduplication
+- **Video**: Downloads post video when present
+- **Browser reuse**: Uses your existing authenticated Chrome session via CDP
+
+## Options
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--post_url` | prompt | Full x.com post URL |
+| `--output_dir` | `~/Downloads/x` | Target folder |
+| `--profile_dir` | `~/.chrome-labali` | Chrome profile |
+| `--cdp_port` | `9222` | Chrome DevTools port |
+| `--timeout_ms` | `90000` | Navigation timeout |
+| `--overwrite` | `false` | Overwrite existing files |
+
+## Requirements
+
+- macOS or Linux
+- Chrome with remote debugging enabled on port 9223
+- Node.js ≥ 20
+- pnpm
+
+## Setup
+
+Chrome must be open with remote debugging. One-time setup:
+
+```bash
+open -na "Google Chrome" --args \
+  --remote-debugging-port=9223 \
+  --user-data-dir="$HOME/.chrome-labali-no-proxy" \
+  --no-proxy-server
+```
+
+Then log into x.com in that Chrome window.

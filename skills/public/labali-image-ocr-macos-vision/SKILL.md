@@ -59,6 +59,7 @@ Does **NOT** accept: WebP, SVG, raw camera formats.
 > ```bash
 > sips -s format png input.webp --out input.png
 > ```
+> **After OCR completes, delete the converted file immediately** — it is a temporary artifact. Only the original and `ocr-merge.txt` should remain.
 
 ## Runtime Inputs
 

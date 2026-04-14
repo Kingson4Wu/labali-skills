@@ -1,0 +1,5 @@
+version: 1
+interface:
+  display_name: Labali X Download Post Assets
+  description: Guided browser workflow for X (Twitter) post export: open browser, handle manual login if needed, navigate to post URL, download media assets, and save post metadata.
+  default_prompt: Open X in browser, guide login if needed, then prompt me for post URL and download post images/video to a local directory.
