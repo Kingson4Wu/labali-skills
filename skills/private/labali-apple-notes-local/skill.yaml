@@ -1,0 +1,61 @@
+name: labali-apple-notes-local
+description: Read, manage, and deterministically export local Apple Notes on macOS through Notes.app automation, including stable full-library sync into a filesystem directory for version control.
+executor: scripts/run.ts
+inputs:
+  # Required action selector. Pick one concrete operation only.
+  action:
+    type: string
+    required: true
+    description: One action only. Use list-notes, get-note, search-notes, create-note, update-note, append-note, delete-note, list-folders, create-folder, rename-folder, move-note, delete-folder, export-note, or export-all-notes.
+
+  # Note targeting. Prefer note_id for exact targeting; title is a fallback.
+  note_id:
+    type: string
+    required: false
+    description: Exact Apple Notes note identifier. Preferred for get, update, append, move, and delete operations.
+  title:
+    type: string
+    required: false
+    description: Note title. Use as the new note title for create-note, the preserved or replacement title for update-note, or an exact-match fallback when note_id is unavailable.
+
+  # Folder targeting and note classification.
+  folder_path:
+    type: string
+    required: false
+    description: Source or target folder path like iCloud/Work or iCloud/Work/Subfolder. Required for create-folder, rename-folder, and delete-folder. Also used to scope note lookup or choose where a new note should be created.
+  target_folder_path:
+    type: string
+    required: false
+    description: Destination folder path for move-note, or alternate destination folder for create-note.
+
+  # Note content.
+  content:
+    type: string
+    required: false
+    description: Plain-text note content. Use for create-note, update-note, or append-note when you do not want to provide raw HTML.
+  body_html:
+    type: string
+    required: false
+    description: Explicit HTML note body for create-note or update-note. Use this only when you need exact rich-text structure.
+
+  # Query and pagination.
+  query:
+    type: string
+    required: false
+    description: Search text for search-notes. Matches against note title and plaintext content.
+  output_dir:
+    type: string
+    required: false
+    description: Required for export-note and export-all-notes. Export root directory where the skill writes notes/<encoded-note-id>/note.json, notes/<encoded-note-id>/note.md, manifest.json, and summary.json.
+  limit:
+    type: number
+    required: false
+    default: 50
+    description: Max number of note rows returned by list-notes or search-notes. Default 50.
+
+  # Safety gate for destructive actions.
+  confirm:
+    type: boolean
+    required: false
+    default: false
+    description: Execute destructive actions after preview when true. Leave false to get a preview plan for delete-note, move-note, rename-folder, or delete-folder.

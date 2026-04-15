@@ -1,0 +1,5 @@
+version: 1
+interface:
+  display_name: Labali Apple Notes Local
+  description: Read, operate, and deterministically export local Apple Notes on macOS through Notes.app automation, including stable note-id-based filesystem sync for version control.
+  default_prompt: Manage local Apple Notes on this Mac. I can list notes, search, read note content, create notes, update notes, move them between folders, preview destructive operations before confirmation, and export one note or the full library into stable note-id-based JSON plus Markdown files.
