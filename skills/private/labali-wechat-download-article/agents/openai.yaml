@@ -1,0 +1,5 @@
+version: 1
+interface:
+  display_name: Labali WeChat Download Article
+  description: Guided browser workflow for WeChat public account article export — open browser, navigate to article URL, scroll to trigger lazy-loaded images, capture MHTML, download embedded images, and save article metadata.
+  default_prompt: Open a WeChat article in the browser, then prompt me for the article URL and download the article content, images, and MHTML to a local directory.
