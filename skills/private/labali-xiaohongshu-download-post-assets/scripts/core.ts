@@ -1238,8 +1238,52 @@ export async function isLoginRequired(page: Page, snapshot: PostSnapshot): Promi
 }
 
 const RATE_LIMIT_HINTS = ["操作过于频繁", "请稍后再试", "too many requests", "频繁操作", "访问受限"];
-const CAPTCHA_HINTS = ["滑块验证", "验证码", "人机验证", "captcha", "robot", "安全验证"];
+// Note: "验证码" alone is NOT sufficient — XHS login modals show "手机验证码" as a login option.
+// Only treat it as a CAPTCHA when combined with challenge-specific terms.
+const CAPTCHA_HINTS = ["滑块验证", "人机验证", "captcha", "robot"];
+const CAPTCHA_VERIFY_HINTS = ["安全验证", "验证码"]; // only trigger when NOT inside a login modal
+const LOGIN_MODAL_HINTS = ["手机号登录", "扫码登录", "登录继续查看"];
 const ACCOUNT_ANOMALY_HINTS = ["账号异常", "账号被限制", "安全提醒", "suspicious activity"];
+
+/**
+ * Attempt to dismiss a XHS login modal if present.
+ * The modal is a dismissible overlay — content is accessible underneath.
+ * Silently does nothing if no modal is found.
+ */
+export async function dismissLoginModalIfPresent(page: Page): Promise<boolean> {
+  try {
+    const dismissed = await page.evaluate(() => {
+      // Try common XHS login modal close button selectors
+      const selectors = [
+        '[class*="close"]',
+        '[class*="Close"]',
+        '.close-icon',
+        '.modal-close',
+        '[aria-label="关闭"]',
+        '[aria-label="close"]',
+      ];
+      for (const sel of selectors) {
+        const els = document.querySelectorAll(sel);
+        for (const el of Array.from(els)) {
+          const htmlEl = el as HTMLElement;
+          // Only click if it's inside or near a login modal context
+          const text = htmlEl.closest?.("dialog, [class*='modal'], [class*='Modal'], [class*='popup'], [class*='Popup'], [class*='login'], [class*='Login']")?.textContent ?? "";
+          if (text.includes("登录") || text.includes("Login")) {
+            htmlEl.click();
+            return true;
+          }
+        }
+      }
+      return false;
+    });
+    if (dismissed) {
+      await page.waitForTimeout(500 + Math.random() * 300);
+    }
+    return dismissed;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Check the current page for hard risk signals (CAPTCHA, rate-limit, account anomaly).
@@ -1250,7 +1294,16 @@ export async function checkForRiskSignals(page: Page): Promise<void> {
   const url = page.url();
   const bodyText = await page.evaluate(() => document.body?.innerText?.slice(0, 3000) ?? "");
 
+  // Hard CAPTCHA hints (always a signal regardless of context)
   if (includesAny(bodyText, CAPTCHA_HINTS) || /captcha|verify/i.test(url)) {
+    throw new Error(
+      "[HARD SIGNAL] CAPTCHA or verification challenge detected. Complete it manually in the browser, then retry."
+    );
+  }
+  // "安全验证" / "验证码" are CAPTCHA signals only when NOT inside a login modal
+  // (XHS login popup shows "手机验证码" as a login option — this is NOT a CAPTCHA)
+  const isLoginModal = includesAny(bodyText, LOGIN_MODAL_HINTS);
+  if (!isLoginModal && includesAny(bodyText, CAPTCHA_VERIFY_HINTS)) {
     throw new Error(
       "[HARD SIGNAL] CAPTCHA or verification challenge detected. Complete it manually in the browser, then retry."
     );

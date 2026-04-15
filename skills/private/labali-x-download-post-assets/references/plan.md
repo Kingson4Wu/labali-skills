@@ -121,6 +121,7 @@ Not used for: `withMedia` (CDN download) or `textOnly` (no archive needed).
 | 2 | executor.ts | 334 | `browser.close()` in finally block — closes Chrome CDP after each run, causing "Target page, context or browser has been closed" on next run | Removed `browser.close()` entirely — Chrome stays open and is reused |
 | 3 | core.ts | 528 | Non-article tweets returned `text: ""` (hardcoded empty) — tweet text never extracted | Extract `tweetText` from `[data-testid="tweetText"]` and return it |
 | 4 | core.ts:737 | `getExt()` called `.pathname.split(".").pop()` on Twitter CDN URLs like `.../media/xxx?format=jpg&name=medium` — no path extension, returns undefined | Check `searchParams.get("format")` first; only fall back to pathname |
+| 5 | executor.ts | 161 | `fetch(articleUrl)` to detect X Notes unreliable — X.com is a SPA, returns 200 for any URL; X Note posts incorrectly fell through to status URL and were detected as `withMedia` instead of `article` | Removed fetch check; always navigate to `/article/<id>` first — existing browser-side fallback (line ~194) falls back to `/status/<id>` if article view never renders |
 
 **Key insight:** The script's `browser.close()` was the root cause of the "repeated re-opening" problem. Once removed, Chrome CDP stays alive at `:9222` and subsequent runs reuse it instantly — no new tabs, no re-login.
 

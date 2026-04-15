@@ -47,3 +47,12 @@ When a failure or ambiguous situation is encountered, use this table to decide t
 - Post without publish_time: folder = `unknown-<note_id>`
 - Folder already exists: append `-2`, `-3`, etc. rather than overwriting
 - note_id must always be included in the folder name regardless of whether publish_time is present
+
+## Bugfix Log
+
+| # | File | Location | Bug | Fix |
+|---|------|----------|-----|-----|
+| 1 | core.ts | `checkForRiskSignals` / `CAPTCHA_HINTS` | "验证码" in `CAPTCHA_HINTS` caused false-positive CAPTCHA detection when the XHS login popup was present — the popup shows "手机验证码" as a login option, which is NOT a challenge | Removed "验证码" and "安全验证" from hard `CAPTCHA_HINTS`; they now only trigger when page body does NOT contain login modal indicators ("手机号登录", "扫码登录", "登录继续查看"). Added `dismissLoginModalIfPresent()` which clicks the modal close button before risk-signal check |
+| 2 | executor.ts | before `checkForRiskSignals()` | Login popup blocked extraction but was never dismissed — script aborted with false CAPTCHA error | Added `await dismissLoginModalIfPresent(page)` call before `checkForRiskSignals()` |
+
+**Key insight:** XHS shows a "登录继续查看笔记" modal on cold tab opens. This popup is dismissible — content is fully accessible underneath. Never treat a login modal as a hard stop; dismiss it first and proceed.

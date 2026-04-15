@@ -9,6 +9,7 @@ import {
   canonicalizePostUrl,
   browseAndCaptureImages,
   checkForRiskSignals,
+  dismissLoginModalIfPresent,
   downloadImages,
   downloadVideos,
   simulateVideoPlay,
@@ -226,6 +227,9 @@ export async function execute(inputs: DownloadPostInputs, context?: ExecutorCont
         `Page redirected away from target note. Expected URL to contain note ID "${noteId}", but current URL is: ${currentUrlAfterNav}`
       );
     }
+
+    // Dismiss XHS login modal if present — it's a dismissible popup, content is underneath
+    await dismissLoginModalIfPresent(page);
 
     await checkForRiskSignals(page);
 

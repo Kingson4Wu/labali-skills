@@ -96,6 +96,7 @@ XiaoHongShu applies behavioral analysis to detect automation. Violations of thes
 - **Never issue new outbound HTTP requests for post images** — use response interception or browser cache reads only; falling back to `page.request.get()` for images is a bot signal.
 - **Never use fixed (non-randomized) delays** — deterministic timing is a bot fingerprint; all waits must include a random component.
 - **Never retry automatically after a hard risk signal** (CAPTCHA, rate-limit message, account anomaly) — stop immediately, preserve all downloaded files, log the signal type and last successfully processed item, and surface the error to the user for manual intervention.
+- **Never treat a login modal as a hard stop** — XHS shows a "登录继续查看笔记" dismissible popup on cold tab opens; content is fully accessible underneath. The script calls `dismissLoginModalIfPresent()` before risk-signal checks. Do NOT confuse this modal with an actual login wall. "验证码" in page text is only a CAPTCHA signal when the login modal indicators ("手机号登录", "扫码登录") are absent.
 
 ## Success Criteria
 

@@ -156,13 +156,13 @@ export async function execute(
   const tweetId = parseTweetId(postUrl);
   const handle = extractHandleFromUrl(postUrl);
 
-  // Resolve article URL if possible (X Note preferred)
-  let pageUrl = postUrl;
-  if (!postUrl.includes("/article/")) {
-    const articleUrl = `https://x.com/${handle}/article/${tweetId}`;
-    const testResp = await fetch(articleUrl).catch(() => null);
-    if (testResp?.ok) pageUrl = articleUrl;
-  }
+  // Always try article URL first — browser-side logic (below) falls back to
+  // status URL if the article view never renders (regular tweet, not X Note).
+  // fetch()-based detection is unreliable: X.com is a SPA and returns 200 for
+  // any valid URL regardless of whether the content is an article or a tweet.
+  const pageUrl = postUrl.includes("/article/")
+    ? postUrl
+    : `https://x.com/${handle}/article/${tweetId}`;
 
   log(`[executor] post URL: ${postUrl}`);
   log(`[executor] navigating to: ${pageUrl}`);

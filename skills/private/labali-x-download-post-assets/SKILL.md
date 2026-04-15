@@ -17,6 +17,19 @@ metadata:
 
 > **MANDATORY — load `references/plan.md` before any browser or extraction action begins.**
 
+## ⚠️ NEVER WRITE YOUR OWN SCRIPT
+
+**The download logic is fully implemented. Always invoke the existing script — do NOT write a new one.**
+
+```bash
+cd ~/.claude-stella/skills/labali-x-download-post-assets
+npx tsx scripts/run.ts \
+  --post-url "<url>" \
+  --output-dir "$HOME/Downloads/x"
+```
+
+The sections below (image extraction, anti-detection, MHTML generation) are **implementation documentation for the script itself**, not instructions for you to re-implement. If the script doesn't exist or can't run, report the error — never substitute with hand-written Playwright code.
+
 ### URL Expansion (t.co Shortlinks)
 
 Tweet links render as t.co shortlinks (e.g., `https://t.co/yr4YXZ6SgU`) — both in `href` attributes and `textContent`. **post.md must output the full resolved URL** (e.g., `https://github.com/anthropics/skills/tree/main/skills/pptx`).
