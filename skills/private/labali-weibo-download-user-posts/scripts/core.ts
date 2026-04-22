@@ -98,14 +98,17 @@ function decodeHtmlEntities(input: string): string {
 }
 
 function stripHtml(input: string): string {
-  return normalizeWhitespace(
-    decodeHtmlEntities(
-      input
-        .replace(/<br\s*\/?>/gi, "\n")
-        .replace(/<\/p>/gi, "\n")
-        .replace(/<[^>]+>/g, "")
-    )
-  );
+  let current = decodeHtmlEntities(input);
+  // Loop until no more tags remain, to handle overlapping cases like <scr<script>
+  let prev = "";
+  while (prev !== current) {
+    prev = current;
+    current = current
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/p>/gi, "\n")
+      .replace(/<[^>]*>/g, "");
+  }
+  return normalizeWhitespace(current);
 }
 
 function isHttpUrl(url: string): boolean {
