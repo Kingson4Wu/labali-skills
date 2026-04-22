@@ -1582,8 +1582,17 @@ async function clickCarouselNext(page: Page): Promise<boolean> {
 
 function isXhsPostImageResponse(url: string): boolean {
   const lower = url.toLowerCase();
+
+  let hostname: string;
+  try {
+    hostname = new URL(url).hostname.toLowerCase();
+  } catch {
+    return false;
+  }
+
+  const isXhsCdnHost = hostname === "xhscdn.com" || hostname.endsWith(".xhscdn.com");
   return (
-    lower.includes("xhscdn.com") &&
+    isXhsCdnHost &&
     (lower.includes("notes_pre_post") || lower.includes("notes_pre_images") || lower.includes("sns-webpic"))
   );
 }
