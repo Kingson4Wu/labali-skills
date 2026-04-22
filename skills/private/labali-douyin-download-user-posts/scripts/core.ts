@@ -90,6 +90,15 @@ function isHttpUrl(url: string): boolean {
   return /^https?:\/\//i.test(url);
 }
 
+function isDouyinCdnUrl(url: string): boolean {
+  try {
+    const hostname = new URL(url).hostname;
+    return hostname.endsWith(".douyinpic.com") || hostname === "douyinpic.com";
+  } catch {
+    return false;
+  }
+}
+
 function dedupeUrls(urls: string[]): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
@@ -134,7 +143,7 @@ export function filterImageUrls(urls: string[]): string[] {
       return false;
     }
     return (
-      lower.includes("douyinpic.com") ||
+      isDouyinCdnUrl(url) ||
       lower.includes("tos-cn") ||
       lower.includes("/obj/") ||
       lower.includes("/image/")
@@ -755,7 +764,7 @@ async function extractNoteImageUrlsFromScripts(page: Page): Promise<string[]> {
   const accept = (url: string): boolean => {
     if (!isHttpUrl(url)) return false;
     const lower = url.toLowerCase();
-    if (!lower.includes("douyinpic.com")) return false;
+    if (!isDouyinCdnUrl(url)) return false;
     if (!lower.includes("aweme_images") && !lower.includes("tplv-dy-aweme-images")) return false;
     if (!/\.(webp|jpeg|jpg)(\?|$)/i.test(lower)) return false;
     if (/(avatar|emoji|icon|logo)/i.test(lower)) return false;

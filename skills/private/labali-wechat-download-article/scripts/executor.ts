@@ -87,7 +87,9 @@ export async function execute(
   const browserCtx = contexts[0] ?? (await browser.newContext());
 
   // Find or open WeChat tab
-  let page = browserCtx.pages().find((p) => p.url().includes("mp.weixin.qq.com")) ?? null;
+  let page = browserCtx.pages().find((p) => {
+    try { const h = new URL(p.url()).hostname; return h.endsWith(".mp.weixin.qq.com") || h === "mp.weixin.qq.com"; } catch { return false; }
+  }) ?? null;
   if (!page) {
     page = await browserCtx.newPage();
     log("[wechat] opened new tab");

@@ -17,6 +17,15 @@ const LOGIN_HINTS = ["登录", "扫码登录", "Sign in", "Login", "手机号登
 const IMAGE_EXT_HINTS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".heic", ".avif"];
 const VIDEO_EXT_HINTS = [".mp4", ".mov", ".webm", ".m3u8"];
 
+function isXiaohongshuCdn(url: string): boolean {
+  try {
+    const hostname = new URL(url).hostname;
+    return hostname.endsWith(".xhscdn.com") || hostname === "xhscdn.com";
+  } catch {
+    return false;
+  }
+}
+
 export interface DownloadPostInputs {
   post_url?: string;
   output_dir?: string;
@@ -265,7 +274,7 @@ async function extractImageUrlsByCarouselNavigation(page: Page): Promise<string[
         const el = document.querySelector(sel) as HTMLImageElement | null;
         if (el) {
           const src = (el.currentSrc || el.src || "").split("?")[0];
-          if (src && src.includes("xhscdn.com") && !src.includes("avatar")) return src;
+          if (src && isXiaohongshuCdn(src) && !src.includes("avatar")) return src;
         }
       }
       // Fallback: largest img in .note-slider by naturalWidth * naturalHeight
@@ -275,7 +284,7 @@ async function extractImageUrlsByCarouselNavigation(page: Page): Promise<string[
       for (const img of all) {
         const area = (img.naturalWidth || 0) * (img.naturalHeight || 0);
         const src = (img.currentSrc || img.src || "").split("?")[0];
-        if (area > bestArea && src.includes("xhscdn.com") && !src.includes("avatar")) {
+        if (area > bestArea && isXiaohongshuCdn(src) && !src.includes("avatar")) {
           bestArea = area;
           best = img;
         }

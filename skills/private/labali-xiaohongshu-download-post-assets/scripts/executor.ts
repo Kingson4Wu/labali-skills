@@ -170,7 +170,9 @@ export async function execute(inputs: DownloadPostInputs, context?: ExecutorCont
   try {
     const browserContext = browser.contexts()[0] ?? (await browser.newContext());
     const existingPages = browserContext.pages();
-    const xhsPage = existingPages.find((p) => p.url().includes("xiaohongshu.com"));
+    const xhsPage = existingPages.find((p) => {
+      try { return new URL(p.url()).hostname.endsWith(".xiaohongshu.com") || new URL(p.url()).hostname === "xiaohongshu.com"; } catch { return false; }
+    });
     if (xhsPage) {
       log(`reuse existing Xiaohongshu tab: ${xhsPage.url()}`);
     } else {

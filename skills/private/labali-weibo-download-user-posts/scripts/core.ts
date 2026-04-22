@@ -84,16 +84,27 @@ function normalizeWhitespace(input: string): string {
   return input.replace(/\r/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
+const HTML_ENTITY_MAP: Record<string, string> = {
+  nbsp: " ", amp: "&", lt: "<", gt: ">", quot: '"', apos: "'",
+  copy: "©", reg: "®", trade: "™", yen: "¥", euro: "€", pound: "£",
+};
+
+function decodeHtmlEntities(input: string): string {
+  return input.replace(/&(#x[a-fA-F0-9]+|#[0-9]+|[a-zA-Z]+);/g, (_, p) => {
+    if (p.startsWith("#x")) return String.fromCharCode(parseInt(p.slice(2), 16));
+    if (p.startsWith("#")) return String.fromCharCode(parseInt(p.slice(1), 10));
+    return HTML_ENTITY_MAP[p] ?? `&${p};`;
+  });
+}
+
 function stripHtml(input: string): string {
   return normalizeWhitespace(
-    input
-      .replace(/<br\s*\/?>/gi, "\n")
-      .replace(/<\/p>/gi, "\n")
-      .replace(/<[^>]+>/g, "")
-      .replace(/&nbsp;/g, " ")
-      .replace(/&amp;/g, "&")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
+    decodeHtmlEntities(
+      input
+        .replace(/<br\s*\/?>/gi, "\n")
+        .replace(/<\/p>/gi, "\n")
+        .replace(/<[^>]+>/g, "")
+    )
   );
 }
 

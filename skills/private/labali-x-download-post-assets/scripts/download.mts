@@ -67,9 +67,13 @@ async function download() {
   const pages = ctx.pages();
 
   // Find an existing x.com tab to reuse (don't create new tab)
-  let page = pages.find(
-    (p) => p.url().includes("x.com") && !p.url().startsWith("blob:")
-  );
+  let page = pages.find((p) => {
+    try {
+      const url = p.url();
+      if (url.startsWith("blob:")) return false;
+      return new URL(url).hostname.endsWith(".x.com") || new URL(url).hostname === "x.com";
+    } catch { return false; }
+  });
   if (!page) page = pages[0];
   if (!page) throw new Error("No open tabs found");
 
